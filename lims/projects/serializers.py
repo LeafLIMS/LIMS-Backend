@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from lims.inventory.models import ItemType
 from lims.inventory.serializers import SimpleGenericItemSerializer
-from lims.workflows.serializers import DataEntrySerializer
+#from lims.workflows.serializers import DataEntrySerializer
 from .models import (Project, Product, Comment, WorkLog) 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -23,8 +23,10 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
 
+'''
 class DetailedProductSerializer(ProductSerializer):
     data = DataEntrySerializer(many=True, read_only=True)
+'''
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:

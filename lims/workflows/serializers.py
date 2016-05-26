@@ -5,7 +5,7 @@ from rest_framework.fields import *
 from rest_framework import serializers
 
 from lims.inventory.models import ItemType 
-from lims.projects.serializers import DetailedSampleSerializer, SampleSerializer
+from lims.projects.serializers import ProductSerializer
 from .models import (Workflow, ActiveWorkflow, DataEntry, 
     TaskTemplate, WorkflowProduct, InputFieldTemplate, VariableFieldTemplate,
     OutputFieldTemplate, CalculationFieldTemplate, StepFieldTemplate, 

@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 from django.shortcuts import render
 from django.core.exceptions import ObjectDoesNotExist
-from django.utils.enclimsg import force_text
+from django.utils.encoding import force_text
 
 from rest_framework import viewsets
 from rest_framework.views import APIView
@@ -289,7 +289,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet, TaskMixin):
         return Response({'message': 'You must provide a taskId and data'}, status=400)
 
 class TaskViewSet(viewsets.ModelViewSet, TaskMixin):
-    queryset = TaskTemplate.objects.all().select_subclasses()
+    queryset = TaskTemplate.objects.all()
     serializer_class = TaskTemplateSerializer
     permission_classes = (IsAdminUser, DjangoObjectPermissions,)
     search_fields = ('name', 'created_by__username',)
