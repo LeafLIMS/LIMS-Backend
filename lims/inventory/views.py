@@ -63,7 +63,7 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin):
         return serializer_class
 
     def get_serializer_class(self):
-        if self.request.method == 'POST' and 'of_type' in self.request.data:
+        if self.request.method == 'POST' and hasattr(self.request, 'data') and 'of_type' in self.request.data:
             return self.get_serializer_class_from_name(
                     self.request.data['of_type'])
         else:
