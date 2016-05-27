@@ -19,6 +19,8 @@ from lims.codonusage.views import CodonUsageTableViewSet
 from lims.projects.views import (ProjectViewSet, ProductViewSet)
 from lims.workflows.views import WorkflowViewSet, ActiveWorkflowViewSet, TaskViewSet
 
+from lims.filetemplate.views import FileTemplateViewSet
+
 from lims.equipment.views import EquipmentViewSet, EquipmentReservationViewSet
 
 from lims.crm.views import CRMUserView, CRMProjectView
@@ -48,6 +50,7 @@ router.register(r'products', ProductViewSet, base_name='products')
 router.register(r'workflows', WorkflowViewSet, base_name='workflows')
 router.register(r'activeworkflows', ActiveWorkflowViewSet, base_name='activeworkflows')
 router.register(r'workflowtasks', TaskViewSet, base_name='workflowtasks')
+router.register(r'filetemplates', FileTemplateViewSet, base_name='filetemplates')
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),

@@ -58,6 +58,7 @@ INSTALLED_APPS = (
     'lims.workflows',
     'lims.dashboard',
     'lims.equipment',
+    'lims.filetemplate',
 )
 
 MIDDLEWARE_CLASSES = (
