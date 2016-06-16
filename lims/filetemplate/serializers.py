@@ -7,9 +7,13 @@ from .models import FileTemplate, FileTemplateField
 class FileTemplateFieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = FileTemplateField
+        fields = ('id', 'name', 'required', 'is_identifier',)
+        extra_kwargs = {"id": {"required": False, "read_only": False}}
 
 class FileTemplateSerializer(serializers.ModelSerializer):
+    field_name = serializers.CharField(read_only=True)
     fields = FileTemplateFieldSerializer(many=True) 
+
     class Meta:
         model = FileTemplate
 
@@ -29,7 +33,7 @@ class FileTemplateSerializer(serializers.ModelSerializer):
         instance.save()
 
         field_ids = [item['id'] for item in file_fields_data]
-        for field in file_fields:
+        for field in file_fields.all():
             if field.id not in field_ids:
                 field.delete()
 

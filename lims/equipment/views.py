@@ -14,6 +14,7 @@ class EquipmentViewSet(viewsets.ModelViewSet):
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer
     filter_fields = ('can_reserve',)
+    search_fields = ('name',)
 
 class EquipmentReservationFilter(django_filters.FilterSet):
     class Meta:

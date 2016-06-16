@@ -9,7 +9,7 @@ from jsonfield import JSONField
 from gm2m import GM2MField
 
 from lims.shared.models import Organism
-from lims.inventory.models import Part, ItemType
+from lims.inventory.models import ItemType, Item
 from lims.inventory.helpers import serialized_item_lookup
 from lims.orders.models import Order
 
@@ -88,8 +88,12 @@ class Product(models.Model):
 
     project = models.ForeignKey(Project)
 
+    # One design per product as it should only be making (ultimately) one thing
+    design = models.FileField(blank=True, null=True)
+
     # Anything created or linked in the inventroy to this product
-    linked_inventory = GM2MField() 
+    linked_inventory = models.ManyToManyField(Item, blank=True, 
+            related_name='products')
 
     class Meta:
         permissions = (

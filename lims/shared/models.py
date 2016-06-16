@@ -10,3 +10,11 @@ class Organism(models.Model):
     def __str__(self):
         return self.name
 
+class LimsPermission(models.Model):
+    """
+    Allow access to the LIMS system
+    """
+    class Meta:
+        permissions = (
+            ('lims_access', 'Access LIMS system',),
+        )

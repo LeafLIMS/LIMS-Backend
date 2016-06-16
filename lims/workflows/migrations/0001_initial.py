@@ -9,19 +9,20 @@ import jsonfield.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('projects', '0001_initial'),
-        ('inventory', '0001_initial'),
         ('equipment', '0002_equipment_location'),
+        ('inventory', '0001_initial'),
+        ('projects', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('filetemplate', '0001_initial'),
     ]
 
     operations = [
         migrations.CreateModel(
             name='ActiveWorkflow',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', auto_created=True, serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('date_started', models.DateTimeField(auto_now_add=True)),
-                ('saved', jsonfield.fields.JSONField(null=True, blank=True)),
+                ('saved', jsonfield.fields.JSONField(blank=True, null=True)),
             ],
             options={
                 'ordering': ['-date_started'],
@@ -31,18 +32,18 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='CalculationFieldTemplate',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', auto_created=True, serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('label', models.CharField(max_length=50)),
-                ('description', models.CharField(max_length=200, null=True, blank=True)),
+                ('description', models.CharField(blank=True, null=True, max_length=200)),
                 ('calculation', models.TextField()),
             ],
         ),
         migrations.CreateModel(
             name='DataEntry',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', auto_created=True, serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('date_created', models.DateTimeField(auto_now_add=True)),
-                ('state', models.CharField(max_length=20, choices=[('succeded', 'Succeded'), ('failed', 'Failed'), ('repeat succeded', 'Repeat succeded'), ('repeat failed', 'Repeat Failed')])),
+                ('state', models.CharField(choices=[('succeded', 'Succeded'), ('failed', 'Failed'), ('repeat succeded', 'Repeat succeded'), ('repeat failed', 'Repeat Failed')], max_length=20)),
                 ('data', jsonfield.fields.JSONField(default=dict)),
                 ('created_by', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
                 ('product', models.ForeignKey(to='projects.Product', related_name='data')),
@@ -51,13 +52,13 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='InputFieldTemplate',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', auto_created=True, serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('label', models.CharField(max_length=50)),
-                ('description', models.CharField(max_length=200, null=True, blank=True)),
+                ('description', models.CharField(blank=True, null=True, max_length=200)),
                 ('amount', models.FloatField()),
                 ('from_input_file', models.BooleanField(default=False)),
                 ('from_calculation', models.BooleanField(default=False)),
-                ('calculation_used', models.ForeignKey(null=True, blank=True, to='workflows.CalculationFieldTemplate')),
+                ('calculation_used', models.ForeignKey(null=True, to='workflows.CalculationFieldTemplate', blank=True)),
                 ('lookup_type', models.ForeignKey(to='inventory.ItemType')),
                 ('measure', models.ForeignKey(to='inventory.AmountMeasure')),
             ],
@@ -65,12 +66,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='OutputFieldTemplate',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', auto_created=True, serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('label', models.CharField(max_length=50)),
-                ('description', models.CharField(max_length=200, null=True, blank=True)),
+                ('description', models.CharField(blank=True, null=True, max_length=200)),
                 ('amount', models.FloatField()),
                 ('from_calculation', models.BooleanField(default=False)),
-                ('calculation_used', models.ForeignKey(null=True, blank=True, to='workflows.CalculationFieldTemplate')),
+                ('calculation_used', models.ForeignKey(null=True, to='workflows.CalculationFieldTemplate', blank=True)),
                 ('lookup_type', models.ForeignKey(to='inventory.ItemType')),
                 ('measure', models.ForeignKey(to='inventory.AmountMeasure')),
             ],
@@ -78,7 +79,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='StepFieldProperty',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', auto_created=True, serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('label', models.CharField(max_length=50)),
                 ('amount', models.FloatField()),
                 ('measure', models.ForeignKey(to='inventory.AmountMeasure')),
@@ -87,21 +88,23 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='StepFieldTemplate',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', auto_created=True, serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('label', models.CharField(max_length=50)),
-                ('description', models.CharField(max_length=200, null=True, blank=True)),
+                ('description', models.CharField(blank=True, null=True, max_length=200)),
             ],
         ),
         migrations.CreateModel(
             name='TaskTemplate',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', auto_created=True, serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('name', models.CharField(max_length=100)),
-                ('description', models.TextField(null=True, blank=True)),
+                ('description', models.TextField(blank=True, null=True)),
                 ('date_created', models.DateTimeField(auto_now_add=True)),
-                ('capable_equipment', models.ManyToManyField(blank=True, to='equipment.Equipment')),
+                ('capable_equipment', models.ManyToManyField(to='equipment.Equipment', blank=True)),
                 ('created_by', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
-                ('product_input', models.ForeignKey(null=True, blank=True, to='inventory.ItemType')),
+                ('input_files', models.ManyToManyField(to='filetemplate.FileTemplate', blank=True, related_name='input_file_templates')),
+                ('output_files', models.ManyToManyField(to='filetemplate.FileTemplate', blank=True, related_name='output_file_templates')),
+                ('product_input', models.ForeignKey(to='inventory.ItemType')),
             ],
             options={
                 'permissions': (('view_workflowtask', 'View workflowtask'),),
@@ -110,9 +113,9 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='VariableFieldTemplate',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', auto_created=True, serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('label', models.CharField(max_length=50)),
-                ('description', models.CharField(max_length=200, null=True, blank=True)),
+                ('description', models.CharField(blank=True, null=True, max_length=200)),
                 ('amount', models.FloatField()),
                 ('measure', models.ForeignKey(to='inventory.AmountMeasure')),
                 ('template', models.ForeignKey(to='workflows.TaskTemplate', related_name='variable_fields')),
@@ -121,9 +124,9 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Workflow',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', auto_created=True, serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('name', models.CharField(max_length=50)),
-                ('order', models.CommaSeparatedIntegerField(max_length=200, blank=True)),
+                ('order', models.CommaSeparatedIntegerField(blank=True, max_length=200)),
                 ('date_created', models.DateTimeField(auto_now_add=True)),
                 ('created_by', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
             ],
@@ -134,10 +137,10 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='WorkflowProduct',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', auto_created=True, serialize=False, primary_key=True)),
+                ('id', models.AutoField(auto_created=True, serialize=False, verbose_name='ID', primary_key=True)),
                 ('current_task', models.IntegerField(default=0)),
                 ('task_in_progress', models.BooleanField(default=False)),
-                ('product', models.OneToOneField(to='projects.Product', related_name='on_workflow_as')),
+                ('product', models.OneToOneField(related_name='on_workflow_as', to='projects.Product')),
             ],
         ),
         migrations.AddField(
@@ -178,7 +181,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='activeworkflow',
             name='products',
-            field=models.ManyToManyField(blank=True, to='workflows.WorkflowProduct', related_name='activeworkflow'),
+            field=models.ManyToManyField(to='workflows.WorkflowProduct', blank=True, related_name='activeworkflow'),
         ),
         migrations.AddField(
             model_name='activeworkflow',

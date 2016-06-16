@@ -2,7 +2,6 @@ import re
 
 from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.contenttypes.models import ContentType
 
 from mptt.models import MPTTModel, TreeForeignKey
 from gm2m import GM2MField
@@ -10,17 +9,6 @@ from model_utils.managers import InheritanceManager
 from jsonfield import JSONField
 
 from lims.shared.models import Organism
-
-class PartType(models.Model):
-    """
-    Provides a list of the different types of parts.
-    """
-    name = models.CharField(max_length=50)
-    identifier = models.CharField(max_length=30, blank=True, null=True)
-    of_type = models.ForeignKey('self', blank=True, null=True)
-
-    def __str__(self):
-        return self.name
 
 class ItemType(MPTTModel):
     """
@@ -53,10 +41,10 @@ class Tag(models.Model):
 
 class AmountMeasure(models.Model):
     """
-    A named measurement and letter representation
+    A measurement and corrosponding postfix
     """
-    name = models.CharField(max_length=100)
-    symbol = models.CharField(max_length=10)
+    name = models.CharField(max_length=100, unique=True, db_index=True)
+    symbol = models.CharField(max_length=10, unique=True, db_index=True)
 
     def __str__(self):
         return "{} ({})".format(self.name, self.symbol)
@@ -96,13 +84,12 @@ class Set(models.Model):
     def __str__(self):
         return self.name
 
-class GenericItem(models.Model):
+class Item(models.Model):
     """
-    Represents the common base fields required for an item in a inventory.
+    Represents an item in a inventory
     """
-    name = models.CharField(max_length=100)
-    identifier = models.CharField(max_length=20, null=True, blank=True, db_index=True, unique=True)
-    metadata = JSONField(blank=True, null=True)
+    name = models.CharField(max_length=200, db_index=True)
+    identifier = models.CharField(max_length=128, null=True, blank=True, db_index=True, unique=True)
     description = models.TextField(blank=True, null=True)
     item_type = TreeForeignKey(ItemType)
 
@@ -117,18 +104,12 @@ class GenericItem(models.Model):
     added_on = models.DateTimeField(auto_now_add=True)
     last_updated_on = models.DateTimeField(auto_now=True)
 
-    objects = InheritanceManager()
-    #related = RelatedObjectsDescriptor()
-    #related = GM2MField()
-
     sets = GM2MField(Set, related_name='items', blank=True)
+
+    created_from = models.ManyToManyField('self', blank=True)
 
     def get_tags(self):
         return ", ".join([t.name for t in self.tags.all()])
-
-    def of_type(self):
-        obj = ContentType.objects.get_for_model(self)
-        return obj.model.title()
 
     def location_path(self):
         return ' > '.join([x.name for x in self.location.get_ancestors(include_self=True)])
@@ -136,76 +117,34 @@ class GenericItem(models.Model):
     def save(self, *args, **kwargs):
         if self.amount_available > 0:
             self.in_inventory = True
-        super(GenericItem, self).save(*args, **kwargs)
+        super(Item, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.name
 
-class Part(GenericItem):
+class ItemProperty(models.Model):
     """
-    Represents a nucleotide part in the inventory 
+    Represents a singular user defined property of an item
     """
-    sequence = models.TextField()
-    originating_organism = models.ForeignKey(Organism, related_name='originating_organisms')
-    optimised_for_organism = models.ForeignKey(Organism, blank=True, null=True, related_name='optimised_for_organisms')
-    
-    usage = models.IntegerField(default=0)
-
-    def get_part_types(self):
-        return self.part_type
+    item = models.ForeignKey(Item, related_name='properties')
+    name = models.CharField(max_length=200)
+    value = models.TextField()
 
     def __str__(self):
         return self.name
 
-class Construct(GenericItem):
+class ItemTransfer(models.Model):
     """
-    Represents a construct (e.g. a plasmid) in the inventory before it becomes a part
+    Represents an amount of item in transfer for task
     """
-    sequence = models.TextField()
-    originating_organism = models.ForeignKey(Organism)
+    item = models.ForeignKey(Item, related_name='transfers')
+    amount_taken = models.IntegerField(default=0)
+    amount_measure = models.ForeignKey(AmountMeasure)
+    run_identifier = models.CharField(max_length=64, blank=True, null=True)
+    barcode = models.CharField(max_length=20, blank=True, null=True)
+    coordinates = models.CharField(max_length=2, blank=True, null=True)
+
+    transfer_complete = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.name
-
-class Enzyme(GenericItem):
-    """
-    Represents a enzyme in the inventory
-    """
-    cut_sequence = models.CharField(max_length=50, blank=True, null=True)
-    recognition_sequence = models.CharField(max_length=50, blank=True, null=True)
-    effective_length = models.FloatField(blank=True, null=True)
-    overhang = models.CharField(max_length=20, blank=True, null=True)
-    methylation_sensitivity = models.CharField(max_length=50, blank=True, null=True)
-
-    def searchable_cut_sequence(self):
-        return re.sub(r'[^A-Za-z]+', '', self.cut_sequence)
-
-    def searchable_recognition_sequence(self):
-        return re.sub(r'[^A-Za-z]+', '', self.recognition_sequence)
-
-class Primer(GenericItem):
-    """
-    Represents a primer in the inventory
-    """
-    reference = models.CharField(max_length=50)
-    product = models.CharField(max_length=100, blank=True, null=True)
-    purification = models.CharField(max_length=100, blank=True, null=True)
-    primer_sequence = models.CharField(max_length=100)
-    gc_content = models.FloatField(verbose_name='GC content', blank=True, null=True)
-    tm_c = models.FloatField(verbose_name='Tm (50mM NaCl) C', blank=True, null=True)
-    # was required
-    nmoles = models.FloatField(blank=True, null=True)
-    modifications_and_services = models.CharField(max_length=100, blank=True, null=True)
-    nmoles_od = models.FloatField(verbose_name='nmoles/OD', blank=True, null=True)
-    # was required
-    microg_od = models.FloatField(verbose_name='μg/OD', blank=True, null=True)
-    bases = models.IntegerField(null=True, blank=True)
-
-    def save(self, **kwargs):
-        self.primer_sequence = re.sub(r'[^A-Za-z]', '', self.primer_sequence)
-        super(Primer, self).save(**kwargs)
-
-class Consumable(GenericItem):
-    """
-    Represents a consumable in the inventory
-    """
+        return '{} {}/{}'.format(self.item.name, self.barcode, self.coordinates)

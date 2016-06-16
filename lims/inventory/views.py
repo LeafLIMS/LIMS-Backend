@@ -13,8 +13,8 @@ from rest_framework import filters
 
 from lims.shared.pagination import PageNumberPaginationSmall, PageNumberOnlyPagination
 
-from .models import (Set, GenericItem, Part, Enzyme, Primer, 
-    PartType, ItemType, Consumable, Location, AmountMeasure)
+from .models import (Set, Item, 
+    ItemType, Location, AmountMeasure)
 from .serializers import * 
 from .helpers import csv_to_items 
 
@@ -30,7 +30,6 @@ class LeveledMixin:
             'value': obj.name,
             'root': obj.get_root().name
         }
-
 
 class MeasureViewSet(viewsets.ModelViewSet):
     queryset = AmountMeasure.objects.all()
@@ -51,27 +50,11 @@ class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     search_fields = ('name',)
 
 class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin):
-    queryset = GenericItem.objects.all().select_subclasses()
-    serializer_class = GenericItemSerializer 
+    queryset = Item.objects.all()
+    serializer_class = ItemSerializer 
     permission_classes = (IsAdminUser, ) 
     filter_fields = ('in_inventory', 'item_type__name', 'identifier', 'name')
     search_fields = ('name', 'identifier', 'item_type__name', 'location__name',)
-
-    def get_serializer_class_from_name(self, name):
-        serializer_name = name + 'Serializer'
-        serializer_class = globals()[serializer_name]
-        return serializer_class
-
-    def get_serializer_class(self):
-        if self.request.method == 'POST' and hasattr(self.request, 'data') and 'of_type' in self.request.data:
-            return self.get_serializer_class_from_name(
-                    self.request.data['of_type'])
-        else:
-            try:
-                obj = self.get_object()
-                return self.get_serializer_class_from_name(obj.of_type())
-            except:
-                return self.serializer_class
 
     @list_route(methods=['POST'])
     def importitems(self, request):

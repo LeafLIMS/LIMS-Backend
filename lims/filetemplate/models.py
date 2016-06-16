@@ -1,22 +1,38 @@
 import csv
+import pprint
 
 from django.db import models
 
 class FileTemplate(models.Model):
-    name = models.CharField(max_length=200, db_index=True)
+    FILE_FOR_CHOICES = (
+        ('input', 'Input'),
+        ('output', 'Output'),
+    )
+
+    name = models.CharField(max_length=200, db_index=True, unique=True)
+    file_for = models.CharField(max_length=6, choices=FILE_FOR_CHOICES)
+
+    def field_name(self):
+        return self.name.lower().replace(' ', '_')
 
     def read(self, input_file):
         csv_file = csv.DictReader(input_file) 
         try:
-            identifier_field = self.fields.get(is_identifier=True)
+            identifier_fields = self.fields.filter(is_identifier=True)
         except ObjectDoesNotExist:
             return False
         else:
             indexed = {}
             if self._validate_headers(csv_file.fieldnames):
+                # TODO: Discard extra fields not in headers?
                 for line in csv_file:
-                    identifier = line[identifier_field.name]
-                    indexed[identifier] = line
+                    line = dict([(k, v) for k, v in line.items() if v.strip()])
+                    if any(line):
+                        identifier = tuple(line[n.name] for n in identifier_fields) 
+                        # Get a list of identifiers and remove from line
+                        ifn = [i.name for i in identifier_fields]
+                        line = dict([(k, v) for k, v in line.items() if k not in ifn])
+                        indexed[identifier] = line
                 return indexed
         return False
 

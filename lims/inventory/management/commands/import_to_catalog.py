@@ -3,6 +3,7 @@ import csv
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
 
+'''
 from lims.inventory.models import Catalog, Tag, Part, Primer, RestrictionEnzyme
 
 class Command(BaseCommand):
@@ -47,3 +48,4 @@ class Command(BaseCommand):
                         item.tags.add(t)
 
             inventory.related.connect(item)
+'''

@@ -34,15 +34,12 @@ class ObtainAuthToken(APIView):
     serializer_class = AuthTokenSerializer
 
     def post(self, request):
-        identifier = request.META.get('HTTP_IDENTIFIER', None)
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
             usr = User.objects.get(username=user)
 
-            if (identifier in settings.WEBAPP_STAFF_ONLY and 
-                (settings.WEBAPP_STAFF_ONLY[identifier] == usr.is_staff 
-                or user.is_staff)):
+            if user.has_perm('shared.lims_access') or user.is_superuser:
                 if usr.groups.filter(name='Internal Customer'):
                     group = 'internal'
                 elif usr.is_staff:
@@ -117,6 +114,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             serializer.save()
             user_group, created = Group.objects.get_or_create(name='user')
+            serializer.groups.add(user_group)
             return Response(serializer.data)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
