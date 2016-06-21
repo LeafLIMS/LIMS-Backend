@@ -106,7 +106,7 @@ class Item(models.Model):
 
     sets = GM2MField(Set, related_name='items', blank=True)
 
-    created_from = models.ManyToManyField('self', blank=True)
+    created_from = models.ManyToManyField('self', blank=True, symmetrical=False)
 
     def get_tags(self):
         return ", ".join([t.name for t in self.tags.all()])
@@ -144,7 +144,15 @@ class ItemTransfer(models.Model):
     barcode = models.CharField(max_length=20, blank=True, null=True)
     coordinates = models.CharField(max_length=2, blank=True, null=True)
 
+    date_created = models.DateTimeField(auto_now_add=True)
+
+    # You're adding not taking away
+    is_addition = models.BooleanField(default=False)
+
     transfer_complete = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-date_created']
 
     def __str__(self):
         return '{} {}/{}'.format(self.item.name, self.barcode, self.coordinates)

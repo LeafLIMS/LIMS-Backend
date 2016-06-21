@@ -466,11 +466,14 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
 
                 output_item.created_from.add(*created_from_items)
 
+                # We want to add it to history but say it is
+                # and addition rather than a subtraction
                 tsf = ItemTransfer(
                     item = output_item,
                     amount_taken = float(output['amount']),
                     amount_measure = measure,
                     run_identifier = p.run_identifier,
+                    is_addition = True,
                     )
                 tsf.save()
 
@@ -495,13 +498,12 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
 
         if len(product_ids) > 0:
             products = activeworkflow.product_statuses.filter(product__id__in=product_ids)
-            self._update_products(products[0].current_task, products, activeworkflow, request)
 
             # Update item transfers to indicate now complete
             item_transfers = ItemTransfer.objects.filter(run_identifier=products[0].run_identifier)
             item_transfers.update(transfer_complete=True)
 
-            # Create outputs
+            self._update_products(products[0].current_task, products, activeworkflow, request)
 
             # If there are no more products left on the workflow, complete it.
             if activeworkflow.product_statuses.count() == 0:

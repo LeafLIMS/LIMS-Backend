@@ -45,6 +45,10 @@ class ItemPropertySerializer(serializers.ModelSerializer):
         model = ItemProperty
 
 class ItemTransferSerializer(serializers.ModelSerializer):
+    amount_measure = serializers.SlugRelatedField(
+            queryset=AmountMeasure.objects.all(), 
+            slug_field='symbol'
+        )
     class Meta:
         model = ItemTransfer
 
@@ -61,19 +65,22 @@ class ItemSerializer(serializers.ModelSerializer):
     location = serializers.SlugRelatedField(queryset=Location.objects.all(), slug_field='code')
     location_path = serializers.CharField(read_only=True)
 
-    properties = ItemPropertySerializer(many=True, read_only=True)
-    transfers = ItemTransferSerializer(many=True, read_only=True)
-
     sets = serializers.SlugRelatedField(read_only=True, slug_field='name')
 
     class Meta:
         model = Item
+        read_only_fields = ('transfers', 'created_from',)
 
 class LinkedItemSerializer(serializers.ModelSerializer):
     item_type = serializers.SlugRelatedField(queryset=ItemType.objects.all(), slug_field='name')
     class Meta:
         model = Item
-        fields = ('name', 'identifier', 'item_type',)
+        fields = ('id', 'name', 'identifier', 'item_type',)
+
+class DetailedItemSerializer(ItemSerializer):
+    transfers = ItemTransferSerializer(many=True, read_only=True)
+    properties = ItemPropertySerializer(many=True, read_only=True)
+    created_from = LinkedItemSerializer(many=True, read_only=True)
 
 class SimpleItemSerializer(serializers.ModelSerializer):
     amount_measure = serializers.SlugRelatedField(queryset=AmountMeasure.objects.all(), slug_field='symbol')
