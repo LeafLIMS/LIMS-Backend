@@ -1,9 +1,11 @@
 import datetime
 import pytz
+import pprint
 
 from django.shortcuts import render
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -15,6 +17,7 @@ from django_countries import countries
 from lims.users.serializers import UserSerializer
 from lims.orders.models import Order
 from lims.pricebook.models import Price, PriceBook
+from lims.projects.models import Project
 from .models import CRMAccount, CRMProject, CRMQuote
 
 class CRMUserView(APIView):
@@ -82,6 +85,23 @@ class CRMUserView(APIView):
 
 class CRMProjectView(APIView):
 
+    # THIS IS INSECURE! NEEDS ADMIN ONLY ACCESS!!!
+    def get(self, request, format=None):
+        """
+        Lists all projects on Salesforce.
+        """
+
+        search = request.query_params.get('search', '')
+
+        sf = Salesforce(instance_url=settings.SALESFORCE_URL,
+                username=settings.SALESFORCE_USERNAME,
+                password=settings.SALESFORCE_PASSWORD,
+                security_token=settings.SALESFORCE_TOKEN)
+
+        projects_query = "SELECT Id,Name,Description,CreatedDate FROM Opportunity WHERE Name LIKE '%{}%'".format(search)
+        projects = sf.query(projects_query)
+        return Response(projects['records'])
+
     def post(self, request, format=None):
         """
         Adds a project to Salesforce and creates references on system.
@@ -148,3 +168,80 @@ class CRMProjectView(APIView):
         crm_quote.save()
 
         return Response({'message': 'Project and quote created'})
+
+class CRMLinkView(APIView):
+
+    def post(self, request, format=None):
+        """
+        Links a CRMProject (creating it if not exists) to Project 
+        """
+
+        crm_identifier = request.data.get('identifier', None)
+        project_id = request.data.get('id', None)
+
+        if crm_identifier and project_id:
+
+            try:
+                crm_project = CRMProject.objects.get(project_identifier=crm_identifier) 
+            except ObjectDoesNotExist:
+                sf = Salesforce(instance_url=settings.SALESFORCE_URL,
+                        username=settings.SALESFORCE_USERNAME,
+                        password=settings.SALESFORCE_PASSWORD,
+                        security_token=settings.SALESFORCE_TOKEN)
+                crm_project_query = "SELECT o.Id,o.Name,o.Description,o.CreatedDate,a.id,a.name,(SELECT Id,ContactId,c.name,c.email FROM OpportunityContactRoles cr, cr.Contact c) FROM Opportunity o, o.Account a WHERE o.Id = '{}'".format(crm_identifier)
+                crm_project_data = sf.query(crm_project_query)#Opportunity.get(crm_identifier)
+                pprint.pprint(crm_project_data)
+                if crm_project_data['totalSize'] > 0:
+                    record = crm_project_data['records'][0]
+                    
+                    try:
+                        crm_account = CRMAccount.objects.get(account_identifier=record['Account']['Id'])
+                    except ObjectDoesNotExist:
+                        try:
+                            contact_identifier = record['OpportunityContactRoles']['records'][0]['ContactId']
+                        except:
+                            return Response({'message': 'CRM Project does not have an associated contact role'}, status=400)
+
+                        contact_name = record['OpportunityContactRoles']['records'][0]['Contact']['Name']
+                        contact_email = record['OpportunityContactRoles']['records'][0]['Contact']['Email']
+
+                        try:
+                            u = User.objects.get(username=contact_email)
+                        except:
+                            first_name, last_name = contact_name.rsplit(' ', 1)
+                            u = User.objects.create_user(
+                                contact_email,
+                                email = contact_email
+                                )
+
+                            u.first_name = first_name
+                            u.last_name = last_name
+                            u.save()
+
+                        crm_account = CRMAccount(
+                            contact_identifier=contact_identifier,
+                            account_identifier=record['Account']['Id'],
+                            account_name = record['Account']['Name'],
+                            user=u
+                        )
+                        crm_account.save()
+
+                    crm_project = CRMProject(
+                        project_identifier = crm_identifier,
+                        name = record['Name'],
+                        description = record['Description'],
+                        date_created = record['CreatedDate'],
+                        account=crm_account
+                    )
+                    crm_project.save()
+                else:
+                    return Response({'message': 'Project on CRM with the identifier {} does no exist'.format(crm_identifier)}, status=404)
+            try:
+                project = Project.objects.get(pk=project_id)
+            except ObjectDoesNotExist:
+                return Response({'message': 'Project with ID {} does not exist'.format(project_id)}, status=404)
+
+            project.crm_project = crm_project
+            project.save()
+        return Response({'message': 'CRM Project linked to Project {}'.format(project_id)})
+

@@ -4,6 +4,8 @@ from rest_framework import serializers
 
 from lims.inventory.models import ItemType
 from lims.inventory.serializers import SimpleItemSerializer, LinkedItemSerializer
+from lims.workflows.serializers import DataEntrySerializer
+from lims.crm.serializers import CRMProjectSerializer
 from lims.shared.models import Organism
 from .models import (Project, Product, ProductStatus, Comment, WorkLog) 
 
@@ -13,6 +15,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             queryset = User.objects.filter(is_staff=True),
             slug_field = 'username',
         )
+    crm_project = CRMProjectSerializer(read_only=True)
     class Meta:
         model = Project
         read_only_fields = ('date_started',)
@@ -20,8 +23,9 @@ class ProjectSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     identifier = serializers.CharField(read_only=True)
     product_identifier = serializers.CharField(read_only=True)
-    #on_workflow_as = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     on_workflow_as = serializers.PrimaryKeyRelatedField(read_only=True)
+    on_workflow = serializers.IntegerField(read_only=True)
+    on_workflow_name = serializers.CharField(read_only=True)
     created_by = serializers.SlugRelatedField(
             queryset = User.objects.filter(is_staff=True),
             slug_field = 'username',
@@ -40,15 +44,13 @@ class ProductSerializer(serializers.ModelSerializer):
             queryset = Organism.objects.all(),
             slug_field = 'name',
         )
-    '''
-    linked_inventory_details = LinkedItemSerializer(read_only=True,
-            many=True,
-            source='linked_inventory'
-            )
-    '''
 
     class Meta:
         model = Product
+
+class DetailedProductSerializer(ProductSerializer):
+    linked_inventory = LinkedItemSerializer(many=True, read_only=True)
+    data = DataEntrySerializer(many=True, read_only=True)
 
 class ProductStatusSerializer(serializers.ModelSerializer):
     class Meta:

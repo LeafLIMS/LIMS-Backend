@@ -77,15 +77,15 @@ class ActiveWorkflow(models.Model):
         return self.workflow.name
 
     def __str__(self):
-        return 'Active: {} products on {}'.format(self.products.count, self.workflow)
+        return 'Active: {} products on {}'.format(self.product_statuses.count(), self.workflow)
 
 class DataEntry(models.Model):
 
     STATE = (
         ('active', 'In Progress'),
-        ('succeded', 'Succeded'),
+        ('succeeded', 'Succeded'),
         ('failed', 'Failed'),
-        ('repeat succeded', 'Repeat succeded'),
+        ('repeat succeeded', 'Repeat succeded'),
         ('repeat failed', 'Repeat Failed'),
     )
 
@@ -103,6 +103,9 @@ class DataEntry(models.Model):
 
     def __str__(self):
         return '{}: {}, {}'.format(self.date_created, self.workflow, self.task)
+
+    class Meta:
+        ordering = ['-date_created']
 
 class TaskTemplate(models.Model):
 

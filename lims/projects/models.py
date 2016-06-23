@@ -12,6 +12,7 @@ from lims.shared.models import Organism
 from lims.inventory.models import ItemType, Item
 from lims.inventory.helpers import serialized_item_lookup
 from lims.orders.models import Order
+from lims.crm.models import CRMProject
 
 class Project(models.Model):
     """
@@ -36,6 +37,8 @@ class Project(models.Model):
     project_identifier = models.CharField(default='', max_length=20)
 
     primary_lab_contact = models.ForeignKey(User, limit_choices_to={'is_staff': True})
+
+    crm_project = models.ForeignKey(CRMProject, blank=True, null=True)
 
     class Meta:
         permissions = (
@@ -99,6 +102,18 @@ class Product(models.Model):
         permissions = (
             ('view_product', 'View product',),
         )
+
+    def on_workflow_name(self):
+        if hasattr(self, 'on_workflow_as'):
+            wf = self.on_workflow_as.activeworkflow.all()
+            return wf[0].workflow.name
+        return None
+
+    def on_workflow(self):
+        if hasattr(self, 'on_workflow_as'):
+            wf = self.on_workflow_as.activeworkflow.all()
+            return wf[0].id
+        return None
 
     def create_product_identifier(self):
         """

@@ -37,6 +37,13 @@ from .models import Workflow, ActiveWorkflow, WorkflowProduct, DataEntry, TaskTe
 from .serializers import *
 
 class WorkflowViewSet(viewsets.ModelViewSet):
+    """
+    Provide a list of workflow templates that are available.
+
+    ### query_params
+
+    - _search_: search workflow name and created_by
+    """
     queryset = Workflow.objects.all() 
     serializer_class = WorkflowSerializer
     search_fields = ('name', 'created_by__username',)
@@ -57,6 +64,13 @@ class WorkflowViewSet(viewsets.ModelViewSet):
 
     @detail_route()
     def task_details(self, request, pk=None):
+        """
+        Get a detailed version of a specific task.
+
+        ### query_params
+
+        - _position_ (**required**): The task position in the workflow
+        """
         workflow = self.get_object()
         position = request.query_params.get('position', None)
         if position:
@@ -74,6 +88,9 @@ class WorkflowViewSet(viewsets.ModelViewSet):
         return Response({'message': 'Please provide a task position'}, status=400)
 
 class ActiveWorkflowViewSet(viewsets.ModelViewSet):
+    """
+    Provide a list of all workflows in progress.
+    """
     queryset = ActiveWorkflow.objects.all()
     serializer_class = ActiveWorkflowSerializer
     permission_classes = (IsAdminUser, DjangoObjectPermissions,)
@@ -94,7 +111,11 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def add_product(self, request, pk=None):
         """
-        Add a product to the active workflow
+        Add a product to the specified active workflow
+
+        ### query_params
+
+        - _id_ (**required**): An ID of a valid _Product_
         """
         product_id = request.query_params.get('id', None)
         workflow = self.get_object()
@@ -115,6 +136,10 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
     def remove_product(self, request, pk=None):
         """
         Remove a product from the active workflow
+
+        ### query_params
+
+        - _id_ (**required**): An ID of a valid _WorkflowProduct_
         """
         workflow_product_id = request.query_params.get('id', None)
         workflow = self.get_object()
@@ -136,6 +161,15 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
     def switch_workflow(self, request, pk=None):
         """
         Switch a product to another workflow from the active workflow
+
+        Can either switch to an existing workflow or create a new workflow
+        with this _WorkflowProduct_ on.
+
+        ### query_params
+
+        - _id_ (**required**): An ID of a valid _WorkflowProduct_
+        - _workflow_id_ (**or**): An ID of the _Workflow_ you want to switch to
+        - _active_workflow_id_ (**or**): An ID of an existing _ActiveWorkflow_ to switch to
         """
         workflow_product_id = request.query_params.get('id', None)
         new_workflow_id = request.query_params.get('workflow_id', None)
@@ -180,6 +214,9 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
         return Response({'message': 'You must provide a workflow product ID'}, status=400)
 
     def update_item_amounts(self, identifier, amount, measure, required_amounts, ureg):
+        """
+        Utility function to avoid repetition when updating amounts.
+        """
         if identifier in required_amounts:
             try:
                 required_amounts[identifier] += float(amount) * ureg(measure)
@@ -194,8 +231,24 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def start_task(self, request, pk=None):
         """
-        Mark a task started for a given product
-        ---
+        Start a task creating data entry and removing from inventory.
+
+        Takes in task data, serializes for use in the data entry
+        and takes the relevant amounts from the inventory.
+
+        Can also act in preview mode and just return the info
+        required for the task.
+
+        ### query_params
+
+        - _is_preview_: Don't actually start the task, just return
+                        the task information.
+        
+        ### query data
+
+        - _task_ (**required**): A JSON representation of the task to be serialized
+        - _products_ (**required**): A list of product ID's that are a part of the task
+        - _input_files_: A list of file contents to be used as input for the task 
         """
         task_data = json.loads(self.request.data.get('task', None))
         task_serializer = TaskValuesSerializer(data=task_data)
@@ -393,6 +446,16 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
 
     @detail_route(methods=['GET'])
     def task_status(self, request, pk=None):
+        """
+        Get information on a task that is being run.
+
+        Provides a dict of values matching what was sent to the task.
+
+        ### query_params
+
+        - _run_identifier_ (**required**): The run identifier generated when starting the task
+        - _task_number_ (**required**): The number of the current task being run
+        """
         run_identifier = self.request.query_params.get('run_identifier', None)
         task_number = self.request.query_params.get('task_number', None)
         
@@ -433,6 +496,9 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
         return Response({'message': 'You must provide the number of the task and a run identifier'}, status=400)
 
     def _update_products(self, task_id, products, activeworkflow, request, retry=False):
+        """
+        Utility function to update products at end of task.
+        """
         task_list = activeworkflow.workflow.order.split(',')
 
         for p in products:
@@ -443,7 +509,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                 if retry:
                     entry.state = 'failed'
                 else:
-                    entry.state = 'success'
+                    entry.state = 'succeeded'
                 entry.save()
 
             # Make outputs
@@ -491,7 +557,14 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def complete_task(self, request, pk=None):
         """
-        Complete a task, storing results and setting the next task
+        Complete a task and incrementing the current_task value
+
+        This will mark all data entries as successful, create output items
+        and then increment the current_task value.
+
+        ### query data
+
+        - (**required**): A list of product id's to mark as complete
         """
         product_ids = request.data;
         activeworkflow = self.get_object()
@@ -517,7 +590,14 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def retry_task(self, request, pk=None):
         """
-        Retry a task, storing results and indicating cleared.
+        Complete a task without incrementing the current_task value 
+
+        This will mark all data entries as failed and clear the products
+        ready for a retry.
+
+        ### query data
+
+        - (**required**): A list of product id's to mark as complete
         """
         product_ids = request.data;
         activeworkflow = self.get_object()
@@ -534,6 +614,9 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
         return Response({'message': 'You must provide product IDs'}, status=400)
 
 class TaskFilterSet(django_filters.FilterSet):
+    """
+    Filter for the TaskViewSet
+    """
     id__in = ListFilter(name='id')
     class Meta:
         model = TaskTemplate
@@ -544,6 +627,9 @@ class TaskFilterSet(django_filters.FilterSet):
         }
 
 class TaskViewSet(viewsets.ModelViewSet):
+    """
+    Provide a list of TaskTemplates available
+    """
     queryset = TaskTemplate.objects.all()
     serializer_class = TaskTemplateSerializer
     permission_classes = (IsAdminUser, DjangoObjectPermissions,)
@@ -551,6 +637,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     filter_class = TaskFilterSet
 
     def retrieve(self, request, pk=None):
+        # Do any calculations before sending the task data
         instance = self.get_object()
         instance.handle_calculations();
         serializer = self.get_serializer(instance) #self.get_task(pk)
@@ -558,6 +645,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     @detail_route(methods=["POST"])
     def recalculate(self, request, pk=None):
+        # DEPRECIATED?
         obj = self.get_object()
         serializer = self.get_serializer(obj)
         fields = request.data.get('fields', None)
@@ -570,6 +658,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     @list_route(methods=["POST"])
     def create_task(self, request):
+        # DEPRECIATED?
         task_type = request.query_params.get('type', None)
         if task_type:
             serializer_class = self.get_serializer_class(task_type)
@@ -580,17 +669,26 @@ class TaskViewSet(viewsets.ModelViewSet):
         return Response({'message': 'Please supply a type of task to create'}, status=400)
 
 class TaskFieldViewSet(viewsets.ModelViewSet):
+    """
+    Provides a list of all task fields
+    """
     ordering_fields = ('name',)
 
     def get_serializer_class(self):
-        type_name = self.request.query_params.get('type', '').title()
-        if type_name:
-            serializer_name = type_name + 'FieldTemplateSerializer'
-            serializer_class = globals()[serializer_name]
-            return serializer_class 
+        try:
+            type_name = self.request.query_params.get('type', '').title()
+            if type_name:
+                serializer_name = type_name + 'FieldTemplateSerializer'
+                serializer_class = globals()[serializer_name]
+                return serializer_class 
+        except:
+            pass
         return InputFieldTemplateSerializer
     
     def get_queryset(self):
+        """
+        Pick the type of field so it can be properly serialized.
+        """
         type_name = self.request.query_params.get('type', '').title()
         if type_name:
             object_name = type_name + 'FieldTemplate'

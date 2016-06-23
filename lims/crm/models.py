@@ -8,18 +8,35 @@ class CRMAccount(models.Model):
     contact_identifier = models.CharField(max_length=50)
     account_identifier = models.CharField(max_length=50)
 
+    account_name = models.CharField(max_length=200)
+
     user = models.OneToOneField(User)
+
+    def contact_url(self):
+        return settings.SALESFORCE_URL+'/'+self.contact_identifier 
+
+    def account_url(self):
+        return settings.SALESFORCE_URL+'/'+self.account_identifier 
 
     def __str__(self):
         return self.user.username
 
 class CRMProject(models.Model):
     project_identifier = models.CharField(max_length=50)
+    name = models.CharField(max_length=300)
+    description = models.TextField(blank=True, null=True)
+    date_created = models.DateTimeField()
 
-    order = models.OneToOneField(Order, related_name='crm', null=True)
+    account = models.ForeignKey(CRMAccount)
+
+    # This should be on ORDER not CRM Project
+    order = models.OneToOneField(Order, related_name='crm', null=True, blank=True)
+
+    def project_url(self):
+        return settings.SALESFORCE_URL+'/'+self.project_identifier 
 
     def __str__(self):
-        return self.order.name
+        return self.name
 
 class CRMQuote(models.Model):
     quote_identifier = models.CharField(max_length=50)

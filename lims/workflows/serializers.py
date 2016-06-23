@@ -6,8 +6,7 @@ from rest_framework import serializers
 
 from lims.equipment.models import Equipment
 from lims.filetemplate.models import FileTemplate
-from lims.inventory.models import ItemType, AmountMeasure 
-from lims.projects.serializers import ProductSerializer
+from lims.inventory.models import Item, ItemType, AmountMeasure 
 from .models import (Workflow, ActiveWorkflow, DataEntry, 
     TaskTemplate, WorkflowProduct, InputFieldTemplate, VariableFieldTemplate,
     OutputFieldTemplate, CalculationFieldTemplate, StepFieldTemplate, 
@@ -22,7 +21,6 @@ class WorkflowSerializer(serializers.ModelSerializer):
         model = Workflow
 
 class WorkflowProductSerializer(serializers.ModelSerializer):
-    #product_details = ProductSerializer(read_only=True) 
     product_identifier = serializers.CharField(read_only=True)
     product_name = serializers.CharField(read_only=True)
     product_project = serializers.IntegerField(read_only=True)
@@ -30,6 +28,9 @@ class WorkflowProductSerializer(serializers.ModelSerializer):
         model = WorkflowProduct
 
 class ActiveWorkflowSerializer(serializers.ModelSerializer):
+    """
+    Provides a basic serialisation of active workflow data
+    """
     workflow_data = WorkflowSerializer(read_only=True, source='workflow')
     started_by = serializers.SlugRelatedField(
         queryset = User.objects.all(),
@@ -39,12 +40,27 @@ class ActiveWorkflowSerializer(serializers.ModelSerializer):
         model = ActiveWorkflow
 
 class DetailedActiveWorkflowSerializer(serializers.ModelSerializer):
+    """
+    Provides a more detailed serialisation of active workflows
+    """
     product_statuses = WorkflowProductSerializer(read_only=True, many=True)
     workflow_name = serializers.CharField(read_only=True)
     class Meta:
         model = ActiveWorkflow
 
 class DataEntrySerializer(serializers.ModelSerializer):
+    workflow = serializers.SlugRelatedField(
+            queryset = Workflow.objects.all(),
+            slug_field = 'name'
+            )
+    task = serializers.SlugRelatedField(
+            queryset = TaskTemplate.objects.all(),
+            slug_field = 'name'
+            )
+    item = serializers.SlugRelatedField(
+            queryset = Item.objects.all(),
+            slug_field = 'name'
+            )
     class Meta:
         model = DataEntry
 

@@ -48,13 +48,9 @@ class ProductViewSet(viewsets.ModelViewSet):
     filter_class = ProductFilter #('project', 'status',)
 
     def get_serializer_class(self):
-        '''
-        if hasattr(self.request, 'query_params'):
-            extra = self.request.query_params.get('extra', None)
-            if self.action == 'retrieve':
-                return DetailedProductSerializer
-        '''
-        return self.serializer_class
+        if self.action == 'retrieve':
+            return DetailedProductSerializer
+        return ProductSerializer
 
     def create(self, request, *args, **kwargs):
         request.data['created_by'] = request.user.username 

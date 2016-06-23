@@ -24,7 +24,7 @@ from lims.filetemplate.views import FileTemplateViewSet
 
 from lims.equipment.views import EquipmentViewSet, EquipmentReservationViewSet
 
-from lims.crm.views import CRMUserView, CRMProjectView
+from lims.crm.views import CRMUserView, CRMProjectView, CRMLinkView
 
 router = routers.DefaultRouter()
 router.register(r'orders', OrderViewSet, base_name='orders')
@@ -61,6 +61,7 @@ urlpatterns = [
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     url(r'^crm/user/', CRMUserView.as_view()),
     url(r'^crm/project/', CRMProjectView.as_view()),
-    url(r'^docs/', include('rest_framework_swagger.urls')),
+    url(r'^crm/link/', CRMLinkView.as_view()),
+    url(r'^docs/', include('rest_framework_docs.urls')),
     url(r'^', include(router.urls)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) 
