@@ -18,6 +18,7 @@ Tested on Linux and Mac OSX, your mileage on Windows my vary.
 - Install the dependencies: `env/bin/pip install -r requirements.txt`
 - Create a database in postgreSQL (called lims for ease)
 - Migrate the database tables: `env/bin/python manage.py migrate` 
+- Create a superuser `env/bin/python manage.py createsuperuser` so you can log in
 - Create a run file that contains the correct environmental variables (an example is provided below)
 
 ```
