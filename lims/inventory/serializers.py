@@ -32,7 +32,8 @@ class LocationSerializer(serializers.ModelSerializer):
     parent = serializers.SlugRelatedField(
             queryset=Location.objects.all(),
             slug_field='code',
-            required=False
+            required=False,
+            allow_null=True
             )
     has_children = serializers.BooleanField(read_only=True)
     display_name = serializers.CharField(read_only=True)
