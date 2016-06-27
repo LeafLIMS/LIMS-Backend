@@ -18,6 +18,7 @@ class ItemTypeSerializer(serializers.ModelSerializer):
     parent = serializers.SlugRelatedField(
             queryset=ItemType.objects.all(),
             slug_field='name',
+            required=False,
             allow_null=True
             )
     has_children = serializers.BooleanField(read_only=True)
