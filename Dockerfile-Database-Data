@@ -1,4 +1,0 @@
-# Suggest running this container as 'db_data'
-
-FROM postgres:latest
-VOLUME /var/lib/postgresql/data

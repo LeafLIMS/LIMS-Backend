@@ -1,5 +1,5 @@
 # Suggest running this as 'app'
-# Before running, the database server ('db') must first be started based on Dockerfile-Database-Server
+# Before running, the database server ('db') must first be started
 
 FROM python:3.4
 ENV PYTHONUNBUFFERED 1

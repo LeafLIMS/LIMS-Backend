@@ -13,7 +13,7 @@ env:
         PROJECT_IDENTIFIER_PREFIX='PROJ'
         PROJECT_IDENTIFIER_START=100
 before_script:
-  - psql -c 'create database lims;' -U postgres
+  - psql -c 'create database lims;'
   - python manage.py migrate
   - echo "from django.contrib.auth.models import User; User.objects.create_superuser('test', 'test@example.com', 'test')" | python manage.py shell
 install: "pip install -r requirements.txt"
