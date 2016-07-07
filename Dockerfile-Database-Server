@@ -1,0 +1,4 @@
+# Suggest running this server as 'db'
+
+FROM postgres:latest
+# Must also mount all volumes using --volumes-from Dockerfile-Database-Data ('db_data') - not currently possible in Dockerfiles

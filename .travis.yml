@@ -1,5 +1,5 @@
 language: python
-python: "3.5"
+python: "3.4"
 services: postgresql
 addons:
   postgresql: "9.5"
@@ -7,14 +7,14 @@ env:
     global:
         DB_NAME=lims
         DB_USER=postgres
-        SALESFORCE_USERNAME='<salesforce username>'
-        SALESFORCE_PASSWORD='<salesforce password>'
-        SALESFORCE_TOKEN='<salesforce token>'
+        SALESFORCE_USERNAME='none'
+        SALESFORCE_PASSWORD='none'
+        SALESFORCE_TOKEN='none'
         PROJECT_IDENTIFIER_PREFIX='PROJ'
         PROJECT_IDENTIFIER_START=100
 before_script:
   - psql -c 'create database lims;' -U postgres
-  - manage.py migrate
+  - python manage.py migrate
   - echo "from django.contrib.auth.models import User; User.objects.create_superuser('test', 'test@example.com', 'test')" | python manage.py shell
 install: "pip install -r requirements.txt"
 script: manage.py test
