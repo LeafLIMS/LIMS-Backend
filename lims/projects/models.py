@@ -62,7 +62,7 @@ class ProductStatus(models.Model):
     """
     The status of a product as it moves through workflows
     """
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True, db_index=True)
     description = models.TextField(blank=True, null=True)
 
     def __str__(self):
