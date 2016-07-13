@@ -32,13 +32,13 @@ class FileTemplateSerializer(serializers.ModelSerializer):
         instance.name = validated_data.get('name', instance.name)
         instance.save()
 
-        field_ids = [item['id'] for item in file_fields_data]
+        field_ids = [item['id'] for item in file_fields_data if 'id' in item]
         for field in file_fields.all():
             if field.id not in field_ids:
                 field.delete()
 
-        for field in file_fields_data:
-            field = FileTemplateField(template=instance, **field)
+        for f in file_fields_data:
+            field = FileTemplateField(template=instance, **f)
             field.save()
 
         return instance
