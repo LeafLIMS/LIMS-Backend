@@ -77,7 +77,6 @@ class WorkflowViewSet(viewsets.ModelViewSet):
             try:
                 taskId = workflow.order.split(',')[int(position)] 
                 task = TaskTemplate.objects.get(pk=taskId)
-                task.handle_calculations()
                 serializer = TaskTemplateSerializer(task) 
                 result = serializer.data
             except IndexError:
@@ -639,7 +638,6 @@ class TaskViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, pk=None):
         # Do any calculations before sending the task data
         instance = self.get_object()
-        instance.handle_calculations();
         serializer = self.get_serializer(instance) #self.get_task(pk)
         return Response(serializer.data)
 

@@ -1,3 +1,8 @@
+import pprint
+
+from pint import UnitRegistry
+from pyparsing import ParseException
+
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -11,6 +16,7 @@ from .models import (Workflow, ActiveWorkflow, DataEntry,
     TaskTemplate, WorkflowProduct, InputFieldTemplate, VariableFieldTemplate,
     OutputFieldTemplate, CalculationFieldTemplate, StepFieldTemplate, 
     StepFieldProperty)
+from .calculation import NumericStringParser
 
 class WorkflowSerializer(serializers.ModelSerializer):
     created_by = serializers.SlugRelatedField(
@@ -86,6 +92,7 @@ class InputFieldValueSerializer(serializers.Serializer):
     amount = serializers.FloatField()
     measure = serializers.CharField()
     inventory_identifier = serializers.CharField()
+    from_input_file = serializers.NullBooleanField()
 
 class VariableFieldTemplateSerializer(serializers.ModelSerializer):
     measure = serializers.SlugRelatedField(
@@ -129,7 +136,8 @@ class OutputFieldValueSerializer(serializers.Serializer):
     lookup_type = serializers.CharField()
 
 class CalculationFieldTemplateSerializer(serializers.ModelSerializer):
-    field_name = serializers.CharField()
+    field_name = serializers.CharField(read_only=True)
+
     class Meta:
         model = CalculationFieldTemplate
 
@@ -141,6 +149,7 @@ class CalculationFieldValueSerializer(serializers.Serializer):
     calculation = serializers.CharField()
 
 class StepFieldPropertySerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(allow_null=True)
     measure = serializers.SlugRelatedField(
             queryset = AmountMeasure.objects.all(),
             slug_field = 'symbol'
@@ -176,17 +185,17 @@ class StepFieldTemplateSerializer(serializers.ModelSerializer):
         
         properties = instance.properties
 
-        instance.name = validated_data.get('name', instance.name)
+        instance.name = validated_data.get('label', instance.label)
         instance.description = validated_data.get('description', instance.description)
         instance.save()
 
         property_ids = [item['id'] for item in properties_data]
-        for field in properties:
+        for field in properties.all():
             if field.id not in property_ids:
                 field.delete()
 
-        for field in properties_data:
-            field = StepFieldProperty(step=instance, **field)
+        for f in properties_data:
+            field = StepFieldProperty(step=instance, **f)
             field.save()
 
         return instance
@@ -233,8 +242,71 @@ class TaskTemplateSerializer(serializers.ModelSerializer):
     output_fields = OutputFieldTemplateSerializer(read_only=True, many=True) 
     step_fields = StepFieldTemplateSerializer(read_only=True, many=True) 
     store_labware_as = serializers.CharField(read_only=True)
+
     class Meta:
         model = TaskTemplate
+
+    def to_representation(self, obj):
+        rep = super(TaskTemplateSerializer, self).to_representation(obj)
+        self.handle_calculation(rep)
+        return rep
+
+    def _replace_fields(self, match):
+        """
+        Replace field names with their correct values
+        """
+        mtch = match.group(1)
+        if mtch in self.flat:
+            return str(self.flat[mtch])
+        return 0
+
+    def _perform_calculation(self, calculation): 
+        """                          
+        Parse and perform a calculation using a dict of fields
+
+        Using either a dict of values to field names
+
+        Returns a NaN if the calculation cannot be performed, e.g.
+        incorrect field names.
+        """                                                                       
+        nsp = NumericStringParser()
+        field_regex = r'\{(.+?)\}'
+        interpolated_calculation = re.sub(field_regex, self._replace_fields, calculation)
+        try:
+            result = nsp.eval(interpolated_calculation)
+        except ParseException:
+            return None
+        return result
+
+    def _flatten_values(self, rep):
+        flat_values = {}
+        for field_type in ['input_fields', 'step_fields', 'variable_fields']:
+            if field_type in rep:
+                for field in rep[field_type]:
+                    if field_type == 'step_fields': 
+                        for prop in field['properties']:
+                            flat_values[prop['label']] = prop['amount']
+                    else:
+                        flat_values[field['label']] = field['amount']
+        if 'product_input_amount' in rep:
+            flat_values['product_input_amount'] = rep['product_input_amount']
+        return flat_values
+
+    def handle_calculation(self, rep):
+        """
+        Perform calculations on all calculation fields on the task
+
+        If any data is provided, use that as source for the calculations
+        rather than the defaults on the model.
+        """
+        # Flatten fields into named dict/ordered dict
+        # Will need some sort of defer if not completed calculation dependent on other calculation
+        if 'calculation_fields' in rep:
+            self.flat = self._flatten_values(rep)
+            for calc in rep['calculation_fields']:
+                result = self._perform_calculation(calc['calculation'])
+                calc['result'] = result
+        return rep
 
 class SimpleTaskTemplateSerializer(TaskTemplateSerializer):
     class Meta:

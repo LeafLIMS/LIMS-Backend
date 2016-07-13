@@ -136,45 +136,6 @@ class TaskTemplate(models.Model):
     def store_labware_as(self):
         return 'labware_identifier'
 
-    def _replace_fields(self, match):
-        """
-        Replace field names with their correct values
-        """
-        field = next((item for item in self.fields if item['name'] == match.group(1)), None)
-        if field:
-            return str(field['amount'])
-        return 'NaN'
-
-    def _perform_calculation(self, calculation): 
-        """                          
-        Parse and perform a calculation using a dict of fields
-
-        Using either a dict of values to field names
-
-        Returns a NaN if the calculation cannot be performed, e.g.
-        incorrect field names.
-        """                                                                       
-        nsp = NumericStringParser()
-        field_regex = r'\{(.+?)\}'
-        interpolated_calculation = re.sub(field_regex, self._replace_fields, calculation)
-        try:
-            result = nsp.eval(interpolated_calculation)
-        except ParseException:
-            return 'NaN'
-        return result
-
-    def handle_calculations(self):
-        """
-        Perform calculations on all calculation fields on the task
-
-        If any data is provided, use that as source for the calculations
-        rather than the defaults on the model.
-        """
-        for calc in self.calculation_fields.all():
-            #result = self._perform_calculation(calc['calculation'])
-            #calc['calculation_result'] = result
-            pass
-
     def __str__(self):
         return self.name
 
@@ -187,6 +148,7 @@ class CalculationFieldTemplate(models.Model):
     description = models.CharField(max_length=200, null=True, blank=True)
 
     calculation = models.TextField()
+    result = models.FloatField(null=True, blank=True)
 
     def field_name(self):
         return self.label.lower().replace(' ', '_')
