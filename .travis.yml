@@ -7,7 +7,7 @@ addons:
 env:
     global:
         DB_NAME=lims
-	DB_USER=postgres
+        DB_USER=postgres
         SALESFORCE_USERNAME='none'
         SALESFORCE_PASSWORD='none'
         SALESFORCE_TOKEN='none'
