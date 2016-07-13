@@ -1,18 +1,23 @@
 # Suggest running this as 'app'
 # Before running, the database server ('db') must first be started
 
-FROM python:3.4
+FROM python:3.5
 ENV PYTHONUNBUFFERED 1
 ENV DJANGO_CONFIGURATION Docker
 
 ENV HOME /root
-RUN apt-get install postgresql-client
+RUN apt-get update
+RUN apt-get install -y wget
+RUN wget -O - http://apt.postgresql.org/pub/repos/apt/ACCC4CF8.asc | apt-key add -
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+RUN apt-get update
+RUN apt-get install -y postgresql-client-9.3
 
 WORKDIR /usr/src/app
-RUN git clone -b master https://github.com/GETLIMS/LIMS-Backend lims 
+RUN mkdir lims
+COPY . lims
 
 WORKDIR /usr/src/app/lims
-RUN ls -l
 RUN pip install -r requirements.txt
 
 ENV DB_NAME postgres
@@ -24,8 +29,6 @@ ENV SALESFORCE_PASSWORD none
 ENV SALESFORCE_TOKEN none
 ENV PROJECT_IDENTIFIER_PREFIX GM
 ENV PROJECT_IDENTIFIER_START 100 
-
-RUN python manage.py migrate
 
 CMD ["gunicorn", "lims.wsgi", "-w", "2", "-b", "0.0.0.0:8000", "--log-level", "-"]
 
