@@ -1,8 +1,8 @@
 from django.shortcuts import render
 
 from rest_framework import viewsets
+from rest_framework.serializers import ValidationError
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
-from rest_framework.decorators import list_route
 
 from .models import Address
 from .serializers import AddressSerializer
@@ -22,3 +22,10 @@ class AddressViewSet(viewsets.ModelViewSet):
     serializer_class = AddressSerializer
     permission_classes = [IsAuthenticated, UserIsOwnerAccessOnly]
     filter_backends = [IsOwnerFilterBackend]
+
+    def perform_create(self, serializer):
+        user_id_in_new_address = serializer.validated_data["user"].id
+        if user_id_in_new_address != self.request.user.id and not self.request.user.is_staff:
+            raise ValidationError('Must specify your own user ID in user field of new object')
+        else:
+            super().perform_create(serializer)
