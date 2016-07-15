@@ -141,6 +141,12 @@ class CalculationFieldTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CalculationFieldTemplate
 
+class CalculationFieldIDTemplateSerializer(CalculationFieldTemplateSerializer):
+    """
+    Used for when an ID is also needed
+    """
+    id = serializers.IntegerField()
+
 class CalculationFieldValueSerializer(serializers.Serializer):
     """
     Serializes the values from an input field
@@ -307,6 +313,22 @@ class TaskTemplateSerializer(serializers.ModelSerializer):
                 result = self._perform_calculation(calc['calculation'])
                 calc['result'] = result
         return rep
+
+class RecalculateTaskTemplateSerializer(TaskTemplateSerializer):
+    """
+    Same as TaskTemplateSerializer but with ID's + no save
+    """
+    id = serializers.IntegerField()
+    input_fields = InputFieldTemplateSerializer(many=True) 
+    variable_fields = VariableFieldTemplateSerializer(many=True) 
+    calculation_fields = CalculationFieldIDTemplateSerializer(many=True) 
+    output_fields = OutputFieldTemplateSerializer(many=True) 
+    step_fields = StepFieldTemplateSerializer(many=True) 
+    store_labware_as = serializers.CharField()
+
+    def save(self):
+        # NEVER allow this serializer to create a new object
+        return False
 
 class SimpleTaskTemplateSerializer(TaskTemplateSerializer):
     class Meta:
