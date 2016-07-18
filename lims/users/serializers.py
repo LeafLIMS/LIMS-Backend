@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User, Group, Permission
+from django.conf import settings
 
 from rest_framework import serializers
 from rest_framework.utils import model_meta
@@ -8,10 +9,9 @@ from lims.crm.serializers import CRMAccountSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):
-    addresses = AddressSerializer(many=True, read_only=True)
-    # groups = serializers.PrimaryKeyRelatedField(many=True, required=False, read_only=True)
-    groups = serializers.SlugRelatedField(queryset=Group.objects.all(),
-                                          many=True, slug_field='name', required=False)
+    addresses = AddressSerializer(many=True, read_only=True) 
+    groups = serializers.SlugRelatedField(queryset=Group.objects.all(), 
+            many=True, slug_field='name', required=False)
 
     crmaccount = CRMAccountSerializer(read_only=True)
 
@@ -60,6 +60,11 @@ class UserSerializer(serializers.ModelSerializer):
         if many_to_many:
             for field_name, value in many_to_many.items():
                 setattr(instance, field_name, value)
+
+        # All users are automatically added to the user group.
+        # The user is created on boot so no try.
+        group = Group.objects.get(name='user')
+        instance.groups.add(group)
 
         return instance
 
