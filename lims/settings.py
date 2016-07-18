@@ -242,6 +242,16 @@ PROJECT_IDENTIFIER_PREFIX = os.environ.get('PROJECT_IDENTIFIER_PREFIX', 'P')
 PROJECT_IDENTIFIER_START = os.environ.get('PROJECT_IDENTIFIER_START', 100)
 
 #
+# Default groups and permissions
+#
+DEFAULT_GROUPS = ('user', 'admin')
+DEFAULT_USER_PERMISSIONS = (
+    'add_equipmentreservation',
+    'change_equipmentreservation',
+    'delete_equipmentreservation',
+)
+
+#
 # API DOCS SETTINGS
 #
 SWAGGER_SETTINGS = {
