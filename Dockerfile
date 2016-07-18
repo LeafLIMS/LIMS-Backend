@@ -21,6 +21,7 @@ WORKDIR /usr/src/app/lims
 RUN pip install -r requirements.txt
 
 ENV DB_NAME postgres
+# ENV DB_PASSWORD password
 ENV DB_USER postgres
 ENV DB_HOST db 
 ENV DB_PORT 5432
