@@ -33,7 +33,10 @@ export SALESFORCE_TOKEN='<salesforce token>'
 export PROJECT_IDENTIFIER_PREFIX='PROJ'
 export PROJECT_IDENTIFIER_START=100 
 
-env/bin/python manage.py runserver
+export LISTEN_HOST=0.0.0.0
+export LISTEN_PORT=8000
+
+env/bin/python manage.py runserver $LISTEN_HOST:$LISTEN_PORT
 ```
 
 # To test

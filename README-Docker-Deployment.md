@@ -7,7 +7,7 @@
    - `docker run -d --name db --volumes-from db_data postgres:latest`
 
 - Build the Backend image (`getlims/lims:v<version>`) from a Dockerfile in the current working directory
-- NB. Edit the Dockerfile first to specify key environment variables
+   - NB. Edit the Dockerfile first to specify key environment variables e.g. server and port to listen on
    - `docker build --no-cache -t getlims/lims:v<version> .`
    
 - Migrate (update) the database:
@@ -16,7 +16,7 @@
 - First time only, add superuser:
    - `docker run -t -i --link db:db getlims/lims:v<version> python manage.py createsuperuser`
 
-- Run the Backend container (`app`):
+- Run the Backend container (`app`): (NB. Update 8000 to the port number you specified in the Dockerfile ENV settings)
    - `docker run -p 8000:8000 --link db:db --name app -d getlims/lims:v<version>`
 
 - Package Backend image, bundling in GetLIMS-Backend, with references to db image but not including it:
