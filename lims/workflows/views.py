@@ -14,7 +14,7 @@ import django_filters
 
 from rest_framework import viewsets
 from rest_framework.response import Response
-from rest_framework.decorators import detail_route, list_route
+from rest_framework.decorators import detail_route
 from rest_framework.permissions import IsAdminUser, DjangoObjectPermissions
 
 
@@ -29,7 +29,8 @@ from .models import (Workflow, ActiveWorkflow, WorkflowProduct, DataEntry,
 from .serializers import (WorkflowSerializer, SimpleTaskTemplateSerializer,
                           TaskTemplateSerializer, ActiveWorkflowSerializer,
                           DetailedActiveWorkflowSerializer, TaskValuesSerializer,
-                          InputFieldTemplateSerializer)
+                          InputFieldTemplateSerializer,
+                          RecalculateTaskTemplateSerializer)
 
 
 class WorkflowViewSet(viewsets.ModelViewSet):
@@ -73,7 +74,7 @@ class WorkflowViewSet(viewsets.ModelViewSet):
             try:
                 taskId = workflow.order.split(',')[int(position)]
                 task = TaskTemplate.objects.get(pk=taskId)
-                serializer = TaskTemplateSerializer(task) 
+                serializer = TaskTemplateSerializer(task)
                 result = serializer.data
             except IndexError:
                 return Response({'message': 'Invalid position'}, status=400)
@@ -291,7 +292,8 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
             fields_from_file = []
             data_items = {}
 
-            # Look for items for use as inputs to the task and add the amounts that are required to the list
+            # Look for items for use as inputs to the task and add the amounts that
+            # are required to the list
             for prd in products:
                 items = Item.objects.filter(
                     products__id=prd.id, item_type__name=task_data['product_input'])
@@ -315,7 +317,8 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                                              task_serializer.data['product_input_measure'],
                                              required_amounts, ureg)
 
-            # Look through any input files for matching identifiers and add their amounts to the list
+            # Look through any input files for matching identifiers and add their amounts
+            # to the list
             for key, row in input_file_data.items():
                 for header, value in row.items():
                     # If the header has identifier/amount combo then
@@ -373,13 +376,14 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                         self.update_item_amounts(ti.identifier, amount,
                                                  measure, required_amounts, ureg)
 
-                        # Record this field has data from a file and does not need to be processed again
+                        # Record this field has data from a file and does not need to
+                        # be processed again
                         fields_from_file.append(label)
 
             # Now just read through the fields left and fill in any more details
             for itm in task_serializer.data['input_fields']:
                 # If we already have set the value in a file we don't want to overwrite it
-                if itm['label'] not in fields_from_file and itm['from_input_file'] == False:
+                if itm['label'] not in fields_from_file and itm['from_input_file'] is False:
                     try:
                         ti = Item.objects.get(identifier=itm['inventory_identifier'])
                     except ObjectDoesNotExist:
@@ -390,8 +394,10 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                     self.update_item_amounts(ti.identifier, itm['amount'], itm[
                                              'measure'], required_amounts, ureg)
                 # But if it's suposed to have been from a file and is still here, return an error
-                elif itm['label'] not in fields_from_file and itm['from_input_file'] == True:
-                    return Response({'message': 'The value for field "{}" is not present in file'.format(itm['label'])}, status=400)
+                elif itm['label'] not in fields_from_file and itm['from_input_file'] is True:
+                    return Response({'message':
+                                     'The value for field "{}" is not present in file'
+                                     .format(itm['label'])}, status=400)
 
             # input checks
             preview_data = []
@@ -399,7 +405,8 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
             amount_error_messages = []
             for item in input_items:
                 # Check enough of each item is avilable.
-                # First, translate to a known amount (if possible) or just be presented as a raw number
+                # First, translate to a known amount (if possible) or just be presented as
+                # a raw number
                 try:
                     available = item.amount_available * ureg(item.amount_measure.symbol)
                 except UndefinedUnitError:
@@ -413,7 +420,8 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                         'Inventory item {} ({}) is short of amount by {}'.format(
                             item.identifier, item.name, missing))
 
-                # If it's a preview then just serialize the amount, don't actually do anything with it
+                # If it's a preview then just serialize the amount, don't actually
+                # do anything with it
                 if is_preview:
                     amount = required_amounts[item.identifier]
                     amount_symbol = '{:~}'.format(amount).split(' ')[1]
@@ -691,7 +699,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         """
         obj = self.get_object()
         task_data = request.data
-        if task_data: 
+        if task_data:
             serializer = RecalculateTaskTemplateSerializer(data=task_data)
             if serializer.is_valid(raise_exception=True):
                 return Response(serializer.data)

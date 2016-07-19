@@ -1,7 +1,3 @@
-import re
-
-from pyparsing import ParseException
-
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -11,7 +7,6 @@ from lims.projects.models import Product
 from lims.equipment.models import Equipment
 from lims.inventory.models import Item, ItemType, AmountMeasure
 from lims.filetemplate.models import FileTemplate
-from .calculation import NumericStringParser
 
 
 class Workflow(models.Model):

@@ -1,6 +1,8 @@
+import re
 from django.contrib.auth.models import User
 
 from rest_framework import serializers
+from pyparsing import ParseException
 
 from lims.equipment.models import Equipment
 from lims.filetemplate.models import FileTemplate
@@ -154,11 +156,13 @@ class CalculationFieldTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CalculationFieldTemplate
 
+
 class CalculationFieldIDTemplateSerializer(CalculationFieldTemplateSerializer):
     """
     Used for when an ID is also needed
     """
     id = serializers.IntegerField()
+
 
 class CalculationFieldValueSerializer(serializers.Serializer):
     """
@@ -287,15 +291,15 @@ class TaskTemplateSerializer(serializers.ModelSerializer):
             return str(self.flat[mtch])
         return 0
 
-    def _perform_calculation(self, calculation): 
-        """                          
+    def _perform_calculation(self, calculation):
+        """
         Parse and perform a calculation using a dict of fields
 
         Using either a dict of values to field names
 
         Returns a NaN if the calculation cannot be performed, e.g.
         incorrect field names.
-        """                                                                       
+        """
         nsp = NumericStringParser()
         field_regex = r'\{(.+?)\}'
         interpolated_calculation = re.sub(field_regex, self._replace_fields, calculation)
@@ -310,7 +314,7 @@ class TaskTemplateSerializer(serializers.ModelSerializer):
         for field_type in ['input_fields', 'step_fields', 'variable_fields']:
             if field_type in rep:
                 for field in rep[field_type]:
-                    if field_type == 'step_fields': 
+                    if field_type == 'step_fields':
                         for prop in field['properties']:
                             flat_values[prop['label']] = prop['amount']
                     else:
@@ -335,21 +339,23 @@ class TaskTemplateSerializer(serializers.ModelSerializer):
                 calc['result'] = result
         return rep
 
+
 class RecalculateTaskTemplateSerializer(TaskTemplateSerializer):
     """
     Same as TaskTemplateSerializer but with ID's + no save
     """
     id = serializers.IntegerField()
-    input_fields = InputFieldTemplateSerializer(many=True) 
-    variable_fields = VariableFieldTemplateSerializer(many=True) 
-    calculation_fields = CalculationFieldIDTemplateSerializer(many=True) 
-    output_fields = OutputFieldTemplateSerializer(many=True) 
-    step_fields = StepFieldTemplateSerializer(many=True) 
+    input_fields = InputFieldTemplateSerializer(many=True)
+    variable_fields = VariableFieldTemplateSerializer(many=True)
+    calculation_fields = CalculationFieldIDTemplateSerializer(many=True)
+    output_fields = OutputFieldTemplateSerializer(many=True)
+    step_fields = StepFieldTemplateSerializer(many=True)
     store_labware_as = serializers.CharField()
 
     def save(self):
         # NEVER allow this serializer to create a new object
         return False
+
 
 class SimpleTaskTemplateSerializer(TaskTemplateSerializer):
 
