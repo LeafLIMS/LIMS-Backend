@@ -10,11 +10,9 @@ from rest_framework.decorators import detail_route, list_route
 from rest_framework.permissions import IsAdminUser
 
 
-from .models import (Set, Item, GenericItem, ItemTransfer,
-                     ItemType, Location, AmountMeasure)
-from .serializers import (AmountMeasureSerializer, ItemTypeSerializer,
-                          LocationSerializer, ItemSerializer, DetailedItemSerializer,
-                          SetSerializer, GenericItemSerializer)
+from .models import Set, Item, ItemTransfer, ItemType, Location, AmountMeasure
+from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationSerializer,
+                          ItemSerializer, DetailedItemSerializer, SetSerializer)
 from .helpers import csv_to_items
 
 
@@ -160,7 +158,7 @@ class SetViewSet(viewsets.ModelViewSet):
             queryset = [o for o in item.items.all() if o.item_type.name == limit_to]
         else:
             queryset = item.items.all()
-        serializer = GenericItemSerializer(queryset, many=True)
+        serializer = ItemSerializer(queryset, many=True)
         return Response(serializer.data)
 
     @detail_route(methods=['POST'])
@@ -168,7 +166,7 @@ class SetViewSet(viewsets.ModelViewSet):
         item_id = request.query_params.get('id', None)
         inventoryset = self.get_object()
         if item_id:
-            item = GenericItem.objects.get(pk=item_id)
+            item = Item.objects.get(pk=item_id)
             item.sets.add(inventoryset)
             return Response(status=201)
         return Response(
@@ -179,7 +177,7 @@ class SetViewSet(viewsets.ModelViewSet):
         item_id = request.query_params.get('id', None)
         inventoryset = self.get_object()
         if item_id:
-            item = GenericItem.objects.get(pk=item_id)
+            item = Item.objects.get(pk=item_id)
             inventoryset.items.remove(item)
             return Response(status=201)
         return Response(

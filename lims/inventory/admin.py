@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from .models import (Organism, Tag, Set, ItemType,
-                     Item, AmountMeasure, Location)
+from lims.shared.models import Organism
+from .models import Tag, Set, ItemType, Item, AmountMeasure, Location
 
 
 class ItemAdmin(admin.ModelAdmin):

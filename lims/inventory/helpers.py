@@ -2,7 +2,7 @@ import csv
 from itertools import groupby
 
 from lims.shared.models import Organism
-from lims.inventory.models import (ItemType, GenericItem, Location, AmountMeasure)
+from lims.inventory.models import ItemType, Item, Location, AmountMeasure
 
 
 def get_serializer_class_from_name(name):
@@ -17,7 +17,7 @@ def serialized_item_lookup(item_type: ItemType, item_identifier: str):
     """
     item_type_name = item_type.get_root()
     try:
-        item = GenericItem.objects.get_subclass(
+        item = Item.objects.get_subclass(
             item_type__name=item_type_name,
             identifier=item_identifier)
     except:
