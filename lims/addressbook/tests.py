@@ -7,27 +7,36 @@ from .models import Address
 
 class AddressTestCase(TestCase):
     def setUp(self):
-        # These objects are recreated afresh for every test method below. Data updated or created in a test method
-        # will not persist to another test method.
+        # These objects are recreated afresh for every test method below.
+        # Data updated or created in a test method will not persist to another test method.
         self._client = APIClient()
 
-        self._joeBloggs = User.objects.create_user(username='Joe Bloggs', email='joe@tgac.com', password='top_secret')
-        self._janeDoe = User.objects.create_user(username='Jane Doe', email='jane@tgac.com', password='widget')
+        self._joeBloggs = User.objects.create_user(username='Joe Bloggs',
+                                                   email='joe@tgac.com', password='top_secret')
+        self._janeDoe = User.objects.create_user(username='Jane Doe',
+                                                 email='jane@tgac.com', password='widget')
 
         self._joeBloggsAddress = \
-            Address.objects.create(institution_name="Beetroot Institute", address_1="12 Muddy Field",
-                                   address_2="Long Lane", city="Norwich", postcode="NR1 1AA", country="UK",
+            Address.objects.create(institution_name="Beetroot Institute",
+                                   address_1="12 Muddy Field",
+                                   address_2="Long Lane",
+                                   city="Norwich",
+                                   postcode="NR1 1AA",
+                                   country="UK",
                                    user=self._joeBloggs)
         self._janeDoeAddress = \
-            Address.objects.create(institution_name="Onion Institute", address_1="110a Deep Dark Wood",
-                                   address_2="Bridge Street", city="Ipswich", postcode="IP1 1AA", country="UK",
+            Address.objects.create(institution_name="Onion Institute",
+                                   address_1="110a Deep Dark Wood",
+                                   address_2="Bridge Street",
+                                   city="Ipswich",
+                                   postcode="IP1 1AA",
+                                   country="UK",
                                    user=self._janeDoe)
 
     # Utility function to switch user
     def _asJoeBloggs(self):
         self._client.logout()
         self._client.login(username="Joe Bloggs", password="top_secret")
-
 
     # Utility function to switch user
     def _asJaneDoe(self):
@@ -64,7 +73,8 @@ class AddressTestCase(TestCase):
         self.assertEqual(address2.user, self._janeDoe)
         self.assertEqual("%s" % address2, "Jane Doe: Onion Institute")
 
-    # Anonymous users or users with invalid credentials cannot see the address list or individual addresses
+    # Anonymous users or users with invalid credentials
+    # cannot see the address list or individual addresses
     def test_002a_rest_no_anonymous_or_invalid_access(self):
         self._asAnonymous()
         response = self._client.get('/addresses/')
@@ -169,7 +179,8 @@ class AddressTestCase(TestCase):
     def test_008_rest_update_address(self):
         self._asJaneDoe()
         updated_address = {"institution_name": "Onion Institute Revised"}
-        response = self._client.patch("/addresses/%d/" % self._janeDoeAddress.id, updated_address, format='json')
+        response = self._client.patch("/addresses/%d/" % self._janeDoeAddress.id,
+                                      updated_address, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         address = Address.objects.get(institution_name="Onion Institute Revised")
@@ -186,7 +197,8 @@ class AddressTestCase(TestCase):
     def test_009_rest_update_address_permissions(self):
         self._asJoeBloggs()
         updated_address = {"institution_name": "Toast Co."}
-        response = self._client.put("/addresses/%d/" % self._janeDoeAddress.id, updated_address, format='json')
+        response = self._client.put("/addresses/%d/" % self._janeDoeAddress.id,
+                                    updated_address, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIs(Address.objects.filter(institution_name="Onion Institute").exists(), True)
         self.assertIs(Address.objects.filter(institution_name="Toast Co.").exists(), False)
