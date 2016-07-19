@@ -3,7 +3,6 @@ from django.db import models
 from django.contrib.auth.models import User
 
 from mptt.models import MPTTModel, TreeForeignKey
-from gm2m import GM2MField
 
 
 class ItemType(MPTTModel):
@@ -105,7 +104,7 @@ class Item(models.Model):
     added_on = models.DateTimeField(auto_now_add=True)
     last_updated_on = models.DateTimeField(auto_now=True)
 
-    sets = GM2MField(Set, related_name='items', blank=True)
+    sets = models.ManyToManyField(Set, related_name='items', blank=True)
 
     created_from = models.ManyToManyField('self', blank=True, symmetrical=False)
 
