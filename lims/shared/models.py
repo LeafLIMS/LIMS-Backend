@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Organism(models.Model):
     """
     Basic information on an Organism
@@ -9,6 +10,7 @@ class Organism(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class LimsPermission(models.Model):
     """

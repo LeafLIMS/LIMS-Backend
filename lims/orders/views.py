@@ -1,7 +1,4 @@
-import json
 
-from django.shortcuts import render
-from django.contrib.auth.models import User
 from django.conf import settings
 from django.db.models import Q
 
@@ -10,13 +7,12 @@ from simple_salesforce import Salesforce
 from rest_framework import viewsets
 from rest_framework.decorators import list_route
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
-from rest_framework.pagination import PageNumberPagination
 
 from lims.shared.pagination import PageNumberPaginationSmall
 
-from .models import Order 
+from .models import Order
 from .serializers import OrderSerializer
+
 
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
@@ -37,9 +33,9 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         sf = Salesforce(instance_url=settings.SALESFORCE_URL,
-                username=settings.SALESFORCE_USERNAME,
-                password=settings.SALESFORCE_PASSWORD,
-                security_token=settings.SALESFORCE_TOKEN)
+                        username=settings.SALESFORCE_USERNAME,
+                        password=settings.SALESFORCE_PASSWORD,
+                        security_token=settings.SALESFORCE_TOKEN)
         instance = self.get_object()
         try:
             sf.Opportunity.delete(instance.crm.project_identifier)
@@ -50,7 +46,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @list_route()
     def autocomplete(self, request):
-        st = request.query_params.get('q', '') 
+        st = request.query_params.get('q', '')
         results = self.get_queryset().filter(Q(name__icontains=st))
         serializer = self.get_serializer(results, many=True)
         return Response(serializer.data)

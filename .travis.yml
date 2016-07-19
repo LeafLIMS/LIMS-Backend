@@ -18,4 +18,6 @@ before_script:
   - python manage.py migrate
   - echo "from django.contrib.auth.models import User; User.objects.create_superuser('test', 'test@example.com', 'test')" | python manage.py shell
 install: "pip install -r requirements.txt"
-script: python manage.py test
+script: 
+  - flake8
+  - python manage.py test

@@ -1,6 +1,4 @@
 from django.contrib.auth.models import User, Group, Permission
-from django.contrib.auth.hashers import make_password
-from django.conf import settings
 from django.db.models import Q
 
 from rest_framework import parsers, renderers
@@ -10,17 +8,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
-from rest_framework.decorators import detail_route, list_route
+from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import list_route
 
 import django_filters
 
 from .serializers import (UserSerializer, StaffUserSerializer, SuperUserSerializer,
-        GroupSerializer, PermissionSerializer)
-from .permissions import UserIsOwnerAccessOnly, IsThisUser, IsSuperUser 
-from .filters import IsOwnerFilterBackend
+                          GroupSerializer, PermissionSerializer)
+from .permissions import IsSuperUser
+from .permissions import IsThisUser
 
-from lims.addressbook.models import Address
 
 class ObtainAuthToken(APIView):
     """
@@ -50,8 +48,10 @@ class ObtainAuthToken(APIView):
                 token, created = Token.objects.get_or_create(user=user)
                 return Response({'token': token.key, 'status': group, 'id': usr.id})
             else:
-                return Response({'message': 'You do not have permissions to use this resource'}, status=403)
+                return Response(
+                    {'message': 'You do not have permissions to use this resource'}, status=403)
         return Response({'message': 'Username/password incorrect'}, status=400)
+
 
 class UserFilter(django_filters.FilterSet):
     has_crm_details = django_filters.MethodFilter()
@@ -67,6 +67,7 @@ class UserFilter(django_filters.FilterSet):
         model = User
         fields = ['has_crm_details']
 
+
 class UserViewSet(viewsets.ModelViewSet):
     """
     User data.
@@ -74,7 +75,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated, IsThisUser] 
+    permission_classes = [IsAuthenticated, IsThisUser]
     filter_class = UserFilter
 
     def get_queryset(self):
@@ -94,7 +95,8 @@ class UserViewSet(viewsets.ModelViewSet):
     def autocomplete(self, request):
         st = request.query_params.get('q', '')
         results = self.get_queryset().filter(
-            Q(username__icontains=st) | Q(email__icontains=st) | Q(first_name__icontains=st) | Q(last_name__icontains=st))
+            Q(username__icontains=st) | Q(email__icontains=st) |
+            Q(first_name__icontains=st) | Q(last_name__icontains=st))
         serializer = self.get_serializer(results, many=True)
         return Response(serializer.data)
 
@@ -119,10 +121,12 @@ class UserViewSet(viewsets.ModelViewSet):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = (IsSuperUser, ) 
+    permission_classes = (IsSuperUser, )
+
 
 class PermissionViewSet(viewsets.ModelViewSet):
     queryset = Permission.objects.all()

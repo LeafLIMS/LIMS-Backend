@@ -1,18 +1,20 @@
-from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework import serializers
 
 from .models import FileTemplate, FileTemplateField
 
+
 class FileTemplateFieldSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = FileTemplateField
         fields = ('id', 'name', 'required', 'is_identifier',)
         extra_kwargs = {"id": {"required": False, "read_only": False}}
 
+
 class FileTemplateSerializer(serializers.ModelSerializer):
     field_name = serializers.CharField(read_only=True)
-    fields = FileTemplateFieldSerializer(many=True) 
+    fields = FileTemplateFieldSerializer(many=True)
 
     class Meta:
         model = FileTemplate
@@ -26,7 +28,7 @@ class FileTemplateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         file_fields_data = validated_data.pop('fields')
-        
+
         file_fields = instance.fields
 
         instance.name = validated_data.get('name', instance.name)
@@ -42,4 +44,3 @@ class FileTemplateSerializer(serializers.ModelSerializer):
             field.save()
 
         return instance
-        

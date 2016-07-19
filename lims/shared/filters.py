@@ -6,15 +6,19 @@ from rest_framework.filters import OrderingFilter
 from django_filters import Filter
 from django_filters.fields import Lookup
 
+
 class ListFilter(Filter):
+
     def filter(self, qs, value):
         return super(ListFilter, self).filter(qs, Lookup(value.split(u","), "in"))
+
 
 class RelatedOrderingFilter(OrderingFilter):
     """
     Extends OrderingFilter to support ordering by fields in related models
     using the Django ORM __ notation
     """
+
     def is_valid_field(self, model, field):
         """
         Return true if the field exists within the model (or in the related
@@ -37,5 +41,5 @@ class RelatedOrderingFilter(OrderingFilter):
             return False
 
     def remove_invalid_fields(self, queryset, ordering, view):
-        return [term for term in ordering 
-            if self.is_valid_field(queryset.model, term.lstrip('-'))]
+        return [term for term in ordering
+                if self.is_valid_field(queryset.model, term.lstrip('-'))]

@@ -21,6 +21,7 @@ WORKDIR /usr/src/app/lims
 RUN pip install -r requirements.txt
 
 ENV DB_NAME postgres
+# ENV DB_PASSWORD password
 ENV DB_USER postgres
 ENV DB_HOST db 
 ENV DB_PORT 5432
@@ -28,7 +29,9 @@ ENV SALESFORCE_USERNAME none
 ENV SALESFORCE_PASSWORD none
 ENV SALESFORCE_TOKEN none
 ENV PROJECT_IDENTIFIER_PREFIX GM
-ENV PROJECT_IDENTIFIER_START 100 
+ENV PROJECT_IDENTIFIER_START 100
+ENV LISTEN_HOST 0.0.0.0
+ENV LISTEN_PORT 8000
 
-CMD ["gunicorn", "lims.wsgi", "-w", "2", "-b", "0.0.0.0:8000", "--log-level", "-"]
+CMD ["sh", "-c", "gunicorn lims.wsgi -w 2 -b $LISTEN_HOST:$LISTEN_PORT --log-level -"]
 

@@ -1,9 +1,5 @@
 from io import TextIOWrapper
 
-from django.shortcuts import render
-from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from pint import UnitRegistry, UndefinedUnitError
@@ -11,51 +7,57 @@ from pint import UnitRegistry, UndefinedUnitError
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route
-from rest_framework.permissions import DjangoModelPermissions, IsAdminUser
-from rest_framework import filters
+from rest_framework.permissions import IsAdminUser
 
-from lims.shared.pagination import PageNumberPaginationSmall, PageNumberOnlyPagination
 
-from .models import (Set, Item, 
-    ItemType, Location, AmountMeasure)
-from .serializers import * 
-from .helpers import csv_to_items 
+from .models import (Set, Item, GenericItem, ItemTransfer,
+                     ItemType, Location, AmountMeasure)
+from .serializers import (AmountMeasureSerializer, ItemTypeSerializer,
+                          LocationSerializer, ItemSerializer, DetailedItemSerializer,
+                          SetSerializer, GenericItemSerializer)
+from .helpers import csv_to_items
+
 
 class LeveledMixin:
+
     def _to_leveled(self, obj):
-        level = getattr(obj, obj._mptt_meta.level_attr) 
+        level = getattr(obj, obj._mptt_meta.level_attr)
         if level == 0:
-            display_value = obj.name 
+            display_value = obj.name
         else:
             display_value = '{} {}'.format('--' * level, obj.name)
         return {
-            'display_value': display_value, 
+            'display_value': display_value,
             'value': obj.name,
             'root': obj.get_root().name
         }
 
+
 class MeasureViewSet(viewsets.ModelViewSet):
     queryset = AmountMeasure.objects.all()
     serializer_class = AmountMeasureSerializer
-    permission_classes = (IsAdminUser, ) 
+    permission_classes = (IsAdminUser, )
     search_fields = ('symbol', 'name',)
+
 
 class ItemTypeViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = ItemType.objects.all()
     serializer_class = ItemTypeSerializer
-    permission_classes = (IsAdminUser, ) 
+    permission_classes = (IsAdminUser, )
     search_fields = ('name',)
+
 
 class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
-    permission_classes = (IsAdminUser, ) 
+    permission_classes = (IsAdminUser, )
     search_fields = ('name',)
+
 
 class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = Item.objects.all()
-    serializer_class = ItemSerializer 
-    permission_classes = (IsAdminUser, ) 
+    serializer_class = ItemSerializer
+    permission_classes = (IsAdminUser, )
     filter_fields = ('in_inventory', 'item_type__name', 'identifier', 'name')
     search_fields = ('name', 'identifier', 'item_type__name', 'location__name',)
 
@@ -74,7 +76,7 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin):
             response_data = {
                 'saved': saved,
                 'rejected': rejected
-                }
+            }
         return Response(response_data)
 
     @detail_route(methods=['POST'])
@@ -100,7 +102,7 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin):
             ureg = UnitRegistry()
 
             raw_amount = transfer_details.get('amount', 0)
-            raw_measure = transfer_details.get('measure', item.amount_measure.symbol) 
+            raw_measure = transfer_details.get('measure', item.amount_measure.symbol)
 
             addition = transfer_details.get('is_addition', False)
 
@@ -110,38 +112,41 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin):
                 available = item.amount_available
 
             try:
-                required = raw_amount * ureg(raw_measure) 
+                required = raw_amount * ureg(raw_measure)
             except UndefinedUnitError:
                 required = raw_amount
 
             is_complete = False
             is_addition = False
 
-            if addition: 
-                new_amount = available + required 
+            if addition:
+                new_amount = available + required
                 is_complete = True
                 is_addition = True
             else:
                 if available < required:
                     missing = (available - required * -1)
-                    return Response({'message': 'Inventory item {} ({}) is short of amount by {}'.format(item.identifier, item.name, missing)}, status=400)
+                    return Response(
+                        {'message': 'Inventory item {} ({}) is short of amount by {}'.format(
+                         item.identifier, item.name, missing)}, status=400)
                 new_amount = available - required
 
-            item.amount_available = new_amount.magnitude 
+            item.amount_available = new_amount.magnitude
             item.save()
 
             tfr = ItemTransfer(
-                item = item, 
-                amount_taken = required.magnitude, 
-                amount_measure = AmountMeasure.objects.get(symbol=raw_measure), 
-                barcode = transfer_details.get('barcode', ''),
-                coordinates = transfer_details.get('coodinates', ''),
-                transfer_complete = is_complete,
-                is_addition = is_addition
+                item=item,
+                amount_taken=required.magnitude,
+                amount_measure=AmountMeasure.objects.get(symbol=raw_measure),
+                barcode=transfer_details.get('barcode', ''),
+                coordinates=transfer_details.get('coodinates', ''),
+                transfer_complete=is_complete,
+                is_addition=is_addition
             )
             tfr.save()
             return Response({'message': 'Transfer created'})
         return Response({'message': 'You must provide a transfer ID'}, status=400)
+
 
 class SetViewSet(viewsets.ModelViewSet):
     queryset = Set.objects.all()
@@ -152,7 +157,7 @@ class SetViewSet(viewsets.ModelViewSet):
         limit_to = request.query_params.get('limit_to', None)
         item = self.get_object()
         if limit_to:
-            queryset = [o for o in item.items.all() if o.item_type.name == limit_to] 
+            queryset = [o for o in item.items.all() if o.item_type.name == limit_to]
         else:
             queryset = item.items.all()
         serializer = GenericItemSerializer(queryset, many=True)
@@ -166,7 +171,8 @@ class SetViewSet(viewsets.ModelViewSet):
             item = GenericItem.objects.get(pk=item_id)
             item.sets.add(inventoryset)
             return Response(status=201)
-        return Response({message: 'The id of the item to add to the inventory is required'}, status=400)
+        return Response(
+            {'message': 'The id of the item to add to the inventory is required'}, status=400)
 
     @detail_route(methods=['DELETE'])
     def remove(self, request, pk=None):
@@ -176,4 +182,5 @@ class SetViewSet(viewsets.ModelViewSet):
             item = GenericItem.objects.get(pk=item_id)
             inventoryset.items.remove(item)
             return Response(status=201)
-        return Response({message: 'The id of the item to add to the inventory is required'}, status=400)
+        return Response(
+            {'message': 'The id of the item to add to the inventory is required'}, status=400)

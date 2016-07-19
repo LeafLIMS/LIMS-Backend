@@ -1,14 +1,14 @@
-from django.shortcuts import render
 
 from rest_framework import viewsets
 from rest_framework.serializers import ValidationError
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 
 from .models import Address
 from .serializers import AddressSerializer
 
 from lims.users.permissions import UserIsOwnerAccessOnly
-from lims.users.filters import IsOwnerFilterBackend 
+from lims.users.filters import IsOwnerFilterBackend
+
 
 class AddressViewSet(viewsets.ModelViewSet):
     """

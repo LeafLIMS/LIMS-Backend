@@ -1,6 +1,4 @@
-import inspect
-import pprint
-from operator import itemgetter, attrgetter
+from operator import itemgetter
 from uuid import uuid4
 from io import TextIOWrapper
 import json
@@ -9,32 +7,30 @@ import datetime
 
 from pint import UnitRegistry, UndefinedUnitError
 
-from collections import OrderedDict
 
-from django.shortcuts import render
 from django.core.exceptions import ObjectDoesNotExist
-from django.utils.encoding import force_text
 
 import django_filters
 
 from rest_framework import viewsets
-from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route
-from rest_framework.metadata import SimpleMetadata
 from rest_framework.permissions import IsAdminUser, DjangoObjectPermissions
-from rest_framework.parsers import JSONParser
 
-from rest_framework.utils.field_mapping import ClassLookupDict
 
 from lims.shared.filters import ListFilter
 
-import lims.workflows.models as AvailableModels
 from lims.projects.models import Product
-from lims.inventory.models import Item, ItemTransfer, AmountMeasure, Location
-from lims.inventory.serializers import ItemTransferSerializer, ItemTransferPreviewSerializer
-from .models import Workflow, ActiveWorkflow, WorkflowProduct, DataEntry, TaskTemplate
-from .serializers import *
+from lims.filetemplate.models import FileTemplate
+from lims.inventory.models import Item, ItemTransfer, AmountMeasure, Location, ItemType
+from lims.inventory.serializers import ItemTransferPreviewSerializer
+from .models import (Workflow, ActiveWorkflow, WorkflowProduct, DataEntry,
+                     TaskTemplate, InputFieldTemplate)
+from .serializers import (WorkflowSerializer, SimpleTaskTemplateSerializer,
+                          TaskTemplateSerializer, ActiveWorkflowSerializer,
+                          DetailedActiveWorkflowSerializer, TaskValuesSerializer,
+                          InputFieldTemplateSerializer)
+
 
 class WorkflowViewSet(viewsets.ModelViewSet):
     """
@@ -44,7 +40,7 @@ class WorkflowViewSet(viewsets.ModelViewSet):
 
     - _search_: search workflow name and created_by
     """
-    queryset = Workflow.objects.all() 
+    queryset = Workflow.objects.all()
     serializer_class = WorkflowSerializer
     search_fields = ('name', 'created_by__username',)
     permission_classes = (IsAdminUser, DjangoObjectPermissions,)
@@ -59,7 +55,7 @@ class WorkflowViewSet(viewsets.ModelViewSet):
         for t in tasks:
             serializer_task = SimpleTaskTemplateSerializer(t)
             tasklist.append(serializer_task.data)
-        result['tasks'] = tasklist;
+        result['tasks'] = tasklist
         return Response(result)
 
     @detail_route()
@@ -75,10 +71,10 @@ class WorkflowViewSet(viewsets.ModelViewSet):
         position = request.query_params.get('position', None)
         if position:
             try:
-                taskId = workflow.order.split(',')[int(position)] 
+                taskId = workflow.order.split(',')[int(position)]
                 task = TaskTemplate.objects.get(pk=taskId)
                 task.handle_calculations()
-                serializer = TaskTemplateSerializer(task) 
+                serializer = TaskTemplateSerializer(task)
                 result = serializer.data
             except IndexError:
                 return Response({'message': 'Invalid position'}, status=400)
@@ -86,6 +82,7 @@ class WorkflowViewSet(viewsets.ModelViewSet):
                 return Response({'message': 'Task does not exist'}, status=400)
             return Response(result)
         return Response({'message': 'Please provide a task position'}, status=400)
+
 
 class ActiveWorkflowViewSet(viewsets.ModelViewSet):
     """
@@ -142,7 +139,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
         - _id_ (**required**): An ID of a valid _WorkflowProduct_
         """
         workflow_product_id = request.query_params.get('id', None)
-        workflow = self.get_object()
+        self.get_object()
         if workflow_product_id:
             try:
                 ws = WorkflowProduct.objects.get(pk=workflow_product_id)
@@ -153,7 +150,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
             current_workflow = ws.activeworkflow.all()[0]
             ws.delete()
             if current_workflow.product_statuses.count() == 0:
-                current_workflow.delete()    
+                current_workflow.delete()
             return Response(status=201)
         return Response({'message': 'You must provide a workflow product ID'}, status=400)
 
@@ -174,7 +171,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
         workflow_product_id = request.query_params.get('id', None)
         new_workflow_id = request.query_params.get('workflow_id', None)
         existing_workflow_id = request.query_params.get('active_workflow_id', None)
-        workflow = self.get_object()
+        self.get_object()
         if workflow_product_id and (new_workflow_id or existing_workflow_id):
             try:
                 ws = WorkflowProduct.objects.get(pk=workflow_product_id)
@@ -192,7 +189,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                     return Response({
                         'message': 'Active workflow with the id {} does not exist'
                         .format(existing_workflow_id)}, status=404)
-                current_workflow.products.remove(ws) 
+                current_workflow.products.remove(ws)
                 aw.products.add(ws)
             else:
                 try:
@@ -209,7 +206,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                 current_workflow.products.remove(ws)
 
             if current_workflow.product_statuses.count() == 0:
-                current_workflow.delete()    
+                current_workflow.delete()
             return Response(status=201)
         return Response({'message': 'You must provide a workflow product ID'}, status=400)
 
@@ -243,12 +240,12 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
 
         - _is_preview_: Don't actually start the task, just return
                         the task information.
-        
+
         ### query data
 
         - _task_ (**required**): A JSON representation of the task to be serialized
         - _products_ (**required**): A list of product ID's that are a part of the task
-        - _input_files_: A list of file contents to be used as input for the task 
+        - _input_files_: A list of file contents to be used as input for the task
         """
         task_data = json.loads(self.request.data.get('task', None))
         task_serializer = TaskValuesSerializer(data=task_data)
@@ -276,26 +273,33 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
             else:
                 parsed_file = ft.read(TextIOWrapper(f.file, encoding=f.charset))
                 if parsed_file:
-                    for key, row in parsed_file.items(): 
+                    for key, row in parsed_file.items():
                         if key not in input_file_data:
                             input_file_data[key] = {}
                         input_file_data[key].update(row)
                 else:
-                    return Response({'message': 'Input file "{}" has incorrect headers/format'.format(f.name)}, status=400)
+                    return Response(
+                        {'message':
+                         'Input file "{}" has incorrect headers/format'.format(f.name)},
+                        status=400)
 
         products = Product.objects.filter(id__in=[p['product'] for p in product_data])
 
         if task_serializer.is_valid(raise_exception=True) and len(products) > 0:
             # A dict of items and amounts required from inputs
             required_amounts = {}
-            input_items = [];
+            input_items = []
             fields_from_file = []
             data_items = {}
 
             for prd in products:
-                items = Item.objects.filter(products__id=prd.id, item_type__name=task_data['product_input']) 
+                items = Item.objects.filter(
+                    products__id=prd.id, item_type__name=task_data['product_input'])
                 if items.count() == 0:
-                    return Response({'message': '{}: {} does not contain any items to use as input'.format(prd.product_identifier, prd.name)}, status=400)
+                    return Response(
+                        {'message':
+                         '{}: {} does not contain any items to use as input'.format(
+                             prd.product_identifier, prd.name)}, status=400)
                 input_items.extend(items)
 
                 # Add items from Product's to the list
@@ -306,10 +310,13 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                         'product': prd,
                         'item': itm
                     }
-                    self.update_item_amounts(itm.identifier, task_serializer.data['product_input_amount'], task_serializer.data['product_input_measure'], required_amounts, ureg) 
+                    self.update_item_amounts(itm.identifier,
+                                             task_serializer.data['product_input_amount'],
+                                             task_serializer.data['product_input_measure'],
+                                             required_amounts, ureg)
 
-            for key,row in input_file_data.items():
-                for header,value in row.items():
+            for key, row in input_file_data.items():
+                for header, value in row.items():
                     # If the header has identifier/amount combo then
                     # is aplicable to an item in the product
                     # if not, it is applicable TO the product
@@ -320,7 +327,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                         identifier = value
                         amount_field_name = '{} amount'.format(label)
                         if amount_field_name in row.keys():
-                            amount = row[amount_field_name] 
+                            amount = row[amount_field_name]
                             matched_headers.extend([header, amount_field_name])
                             exists = True
                     elif header.endswith('amount') and header not in matched_headers:
@@ -333,7 +340,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                         elif identifier_field_name not in row.keys() and header in row.keys():
                             # This value is directly for an amount on the item
                             # rather than another input
-                            identifier = key[1] 
+                            identifier = key[1]
                             amount = value
                             label = header.replace(' ', '_')
                             measure_label = label.replace('amount', 'measure')
@@ -342,7 +349,8 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                     if exists:
 
                         try:
-                            data_entry_field = next((fld for fld in data_items[key]['data']['input_fields'] if fld['label'] == label))
+                            data_entry_field = next((fld for fld in data_items[key]['data'][
+                                                    'input_fields'] if fld['label'] == label))
                             data_entry_field['amount'] = amount
                             measure = data_entry_field['measure']
                         except StopIteration:
@@ -352,13 +360,16 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                         try:
                             ti = Item.objects.get(identifier=identifier)
                         except ObjectDoesNotExist:
-                            return Response({'message': '{} does not exist in the inventory'.format(identifier)}, status=400)
+                            return Response(
+                                {'message':
+                                 '{} does not exist in the inventory'.format(identifier)},
+                                status=400)
                         if ti not in input_items:
                             input_items.append(ti)
-                        self.update_item_amounts(ti.identifier, amount, measure, required_amounts, ureg) 
+                        self.update_item_amounts(ti.identifier, amount,
+                                                 measure, required_amounts, ureg)
 
                         fields_from_file.append(label)
-
 
             # Now just read through the fields left and fill in any more details
             for itm in task_serializer.data['input_fields']:
@@ -367,15 +378,17 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                     try:
                         ti = Item.objects.get(identifier=itm['inventory_identifier'])
                     except ObjectDoesNotExist:
-                        return Response({'message': '{} does not exist in the inventory'.format(itm['inventory_identifier'])}, status=400)
+                        return Response({'message': '{} does not exist in the inventory'.format(
+                            itm['inventory_identifier'])}, status=400)
                     if ti not in input_items:
                         input_items.append(ti)
-                    self.update_item_amounts(ti.identifier, itm['amount'], itm['measure'], required_amounts, ureg) 
+                    self.update_item_amounts(ti.identifier, itm['amount'], itm[
+                                             'measure'], required_amounts, ureg)
 
             # input checks
             preview_data = []
             valid_amounts = True
-            amount_error_messages = [];
+            amount_error_messages = []
             for item in input_items:
                 try:
                     available = item.amount_available * ureg(item.amount_measure.symbol)
@@ -385,15 +398,17 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                 if available < required:
                     missing = (available - required_amounts[item.identifier]) * -1
                     valid_amounts = False
-                    amount_error_messages.append('Inventory item {} ({}) is short of amount by {}'.format(item.identifier, item.name, missing))
+                    amount_error_messages.append(
+                        'Inventory item {} ({}) is short of amount by {}'.format(
+                            item.identifier, item.name, missing))
 
                 if is_preview:
                     amount = required_amounts[item.identifier]
                     amount_symbol = '{:~}'.format(amount).split(' ')[1]
                     item_transfer = ItemTransfer(
-                        item = item, 
-                        amount_taken = amount.magnitude, 
-                        amount_measure = AmountMeasure.objects.get(symbol=amount_symbol)
+                        item=item,
+                        amount_taken=amount.magnitude,
+                        amount_measure=AmountMeasure.objects.get(symbol=amount_symbol)
                     )
                     sit = ItemTransferPreviewSerializer(item_transfer)
                     preview_data.append(sit.data)
@@ -406,32 +421,32 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                         amount = required_amounts[item.identifier]
                         amount_symbol = '{:~}'.format(amount).split(' ')[1]
                         item_transfer = ItemTransfer(
-                            item = item, 
-                            run_identifier = uuid,
-                            amount_taken = amount.magnitude, 
-                            amount_measure = AmountMeasure.objects.get(symbol=amount_symbol)
+                            item=item,
+                            run_identifier=uuid,
+                            amount_taken=amount.magnitude,
+                            amount_measure=AmountMeasure.objects.get(symbol=amount_symbol)
                         )
                         item_transfer.save()
 
                         new_amount = available - required_amounts[item.identifier]
-                        item.amount_available = new_amount.magnitude 
+                        item.amount_available = new_amount.magnitude
                         item.save()
                 else:
                     return Response({'message': '\n'.join(amount_error_messages)}, status=400)
 
                 # make data entries
                 task = TaskTemplate.objects.get(pk=task_data['id'])
-                for key,data in data_items.items():
+                for key, data in data_items.items():
                     entry = DataEntry(
-                        run_identifier = uuid, 
-                        product = data['product'], 
-                        item = data['item'],
-                        created_by = self.request.user,
-                        state = 'active', 
-                        data = data['data'],
-                        workflow = active_workflow.workflow,
-                        task = task 
-                    ) 
+                        run_identifier=uuid,
+                        product=data['product'],
+                        item=data['item'],
+                        created_by=self.request.user,
+                        state='active',
+                        data=data['data'],
+                        workflow=active_workflow.workflow,
+                        task=task
+                    )
                     entry.save()
 
                     # update products that task started
@@ -458,12 +473,14 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
         """
         run_identifier = self.request.query_params.get('run_identifier', None)
         task_number = self.request.query_params.get('task_number', None)
-        
-        if run_identifier and task_number: 
-            active_products = self.get_object().product_statuses.filter(run_identifier=run_identifier, current_task=task_number)
+
+        if run_identifier and task_number:
+            active_products = self.get_object().product_statuses.filter(
+                run_identifier=run_identifier, current_task=task_number)
             product_ids = [ap.product.id for ap in active_products]
-            
-            data_items = DataEntry.objects.filter(product__id__in=product_ids, run_identifier=run_identifier).order_by('product__id')
+
+            data_items = DataEntry.objects.filter(
+                product__id__in=product_ids, run_identifier=run_identifier).order_by('product__id')
 
             if data_items.count() > 0:
                 response_data = {
@@ -475,25 +492,33 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                 for d in data_items:
                     td = {
                         'id': d.product.id,
-                        'product_name': '{}: {}'.format(d.product.product_identifier, d.product.name),
+                        'product_name':
+                            '{}: {}'.format(d.product.product_identifier, d.product.name),
                         'item_name': '{}: {}'.format(d.item.identifier, d.item.name),
                         'fields': [],
                     }
                     td['fields'].append({
                         'label': 'Task input',
-                        'value': '{} {} {}'.format(d.data['product_input'], d.data['product_input_amount'], d.data['product_input_measure'])
-                        })
+                        'value':
+                            '{} {} {}'.format(
+                                d.data['product_input'],
+                                d.data['product_input_amount'], d.data['product_input_measure'])
+                    })
                     for ip in d.data['input_fields']:
                         td['fields'].append({
                             'label': ip['label'],
-                            'value': '{} {} {}'.format(ip['inventory_identifier'], ip['amount'], ip['measure'])
-                            })
+                            'value':
+                                '{} {} {}'.format(
+                                    ip['inventory_identifier'], ip['amount'], ip['measure'])
+                        })
                     table.append(td)
                 table.sort(key=itemgetter('product_name'))
-                response_data['items'] = {k:list(g) for k,g in groupby(table, itemgetter('product_name'))}
+                response_data['items'] = {k: list(g) for k, g in groupby(
+                    table, itemgetter('product_name'))}
                 return Response(response_data)
             return Response({'message': 'Task complete'}, status=410)
-        return Response({'message': 'You must provide the number of the task and a run identifier'}, status=400)
+        return Response(
+            {'message': 'You must provide the number of the task and a run identifier'}, status=400)
 
     def _update_products(self, task_id, products, activeworkflow, request, retry=False):
         """
@@ -519,14 +544,14 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                 measure = AmountMeasure.objects.get(symbol=output['measure'])
                 location = Location.objects.get(name='Lab')
                 output_item = Item(
-                    name = '{} {}'.format(p.product_identifier(), output['lookup_type']),
-                    identifier = '{}OPT{}'.format(p.product_identifier(), datetime.datetime.now()),
-                    item_type = item_type,
-                    in_inventory = True,
-                    amount_available = float(output['amount']),
-                    amount_measure = measure,
-                    location = location, 
-                    added_by = request.user,
+                    name='{} {}'.format(p.product_identifier(), output['lookup_type']),
+                    identifier='{}OPT{}'.format(p.product_identifier(), datetime.datetime.now()),
+                    item_type=item_type,
+                    in_inventory=True,
+                    amount_available=float(output['amount']),
+                    amount_measure=measure,
+                    location=location,
+                    added_by=request.user,
                 )
                 output_item.save()
 
@@ -535,12 +560,12 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                 # We want to add it to history but say it is
                 # and addition rather than a subtraction
                 tsf = ItemTransfer(
-                    item = output_item,
-                    amount_taken = float(output['amount']),
-                    amount_measure = measure,
-                    run_identifier = p.run_identifier,
-                    is_addition = True,
-                    )
+                    item=output_item,
+                    amount_taken=float(output['amount']),
+                    amount_measure=measure,
+                    run_identifier=p.run_identifier,
+                    is_addition=True,
+                )
                 tsf.save()
 
             p.run_identifier = ''
@@ -566,7 +591,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
 
         - (**required**): A list of product id's to mark as complete
         """
-        product_ids = request.data;
+        product_ids = request.data
         activeworkflow = self.get_object()
 
         if len(product_ids) > 0:
@@ -590,7 +615,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
     @detail_route(methods=['POST'])
     def retry_task(self, request, pk=None):
         """
-        Complete a task without incrementing the current_task value 
+        Complete a task without incrementing the current_task value
 
         This will mark all data entries as failed and clear the products
         ready for a retry.
@@ -599,12 +624,13 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
 
         - (**required**): A list of product id's to mark as complete
         """
-        product_ids = request.data;
+        product_ids = request.data
         activeworkflow = self.get_object()
 
         if len(product_ids) > 0:
             products = activeworkflow.product_statuses.filter(product__id__in=product_ids)
-            self._update_products(products[0].current_task, products, activeworkflow, request, retry=True)
+            self._update_products(products[0].current_task, products,
+                                  activeworkflow, request, retry=True)
 
             # Update item transfers to indicate now complete
             item_transfers = ItemTransfer.objects.filter(run_identifier=products[0].run_identifier)
@@ -613,18 +639,21 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
             return Response({'message': 'Task ready for retry'})
         return Response({'message': 'You must provide product IDs'}, status=400)
 
+
 class TaskFilterSet(django_filters.FilterSet):
     """
     Filter for the TaskViewSet
     """
     id__in = ListFilter(name='id')
+
     class Meta:
         model = TaskTemplate
         fields = {
             'id': ['exact', 'in'],
-            'name': ['exact'], 
-            'created_by__username': ['exact'], 
+            'name': ['exact'],
+            'created_by__username': ['exact'],
         }
+
 
 class TaskViewSet(viewsets.ModelViewSet):
     """
@@ -639,8 +668,8 @@ class TaskViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, pk=None):
         # Do any calculations before sending the task data
         instance = self.get_object()
-        instance.handle_calculations();
-        serializer = self.get_serializer(instance) #self.get_task(pk)
+        instance.handle_calculations()
+        serializer = self.get_serializer(instance)  # self.get_task(pk)
         return Response(serializer.data)
 
     @detail_route(methods=["POST"])
@@ -649,7 +678,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         obj = self.get_object()
         serializer = self.get_serializer(obj)
         fields = request.data.get('fields', None)
-        if fields: 
+        if fields:
             obj.fields = request.data.get('fields')
             obj.handle_calculations()
             serializer = self.get_serializer(obj)
@@ -668,6 +697,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 return Response(serializer.data)
         return Response({'message': 'Please supply a type of task to create'}, status=400)
 
+
 class TaskFieldViewSet(viewsets.ModelViewSet):
     """
     Provides a list of all task fields
@@ -680,11 +710,11 @@ class TaskFieldViewSet(viewsets.ModelViewSet):
             if type_name:
                 serializer_name = type_name + 'FieldTemplateSerializer'
                 serializer_class = globals()[serializer_name]
-                return serializer_class 
+                return serializer_class
         except:
             pass
         return InputFieldTemplateSerializer
-    
+
     def get_queryset(self):
         """
         Pick the type of field so it can be properly serialized.

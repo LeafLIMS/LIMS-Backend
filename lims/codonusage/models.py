@@ -2,11 +2,13 @@ from django.db import models
 
 from lims.shared.models import Organism
 
+
 class CodonUsageTable(models.Model):
-    species = models.ForeignKey(Organism) 
+    species = models.ForeignKey(Organism)
 
     def __str__(self):
         return self.species.name
+
 
 class CodonUsage(models.Model):
     name = models.CharField(max_length=3)
