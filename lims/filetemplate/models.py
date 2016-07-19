@@ -29,7 +29,7 @@ class FileTemplate(models.Model):
                 for line in csv_file:
                     line = dict([(k, v) for k, v in line.items() if v.strip()])
                     if any(line):
-                        identifier = tuple(line[n.name] for n in identifier_fields)
+                        identifier = frozenset(line[n.name] for n in identifier_fields) 
                         # Get a list of identifiers and remove from line
                         ifn = [i.name for i in identifier_fields]
                         line = dict([(k, v) for k, v in line.items() if k not in ifn])

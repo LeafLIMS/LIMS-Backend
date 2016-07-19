@@ -73,8 +73,7 @@ class WorkflowViewSet(viewsets.ModelViewSet):
             try:
                 taskId = workflow.order.split(',')[int(position)]
                 task = TaskTemplate.objects.get(pk=taskId)
-                task.handle_calculations()
-                serializer = TaskTemplateSerializer(task)
+                serializer = TaskTemplateSerializer(task) 
                 result = serializer.data
             except IndexError:
                 return Response({'message': 'Invalid position'}, status=400)
@@ -292,6 +291,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
             fields_from_file = []
             data_items = {}
 
+            # Look for items for use as inputs to the task and add the amounts that are required to the list
             for prd in products:
                 items = Item.objects.filter(
                     products__id=prd.id, item_type__name=task_data['product_input'])
@@ -304,7 +304,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
 
                 # Add items from Product's to the list
                 for itm in items:
-                    identifier = (prd.product_identifier, itm.identifier)
+                    identifier = frozenset([prd.product_identifier, itm.identifier])
                     data_items[identifier] = {
                         'data': task_serializer.data,
                         'product': prd,
@@ -315,6 +315,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                                              task_serializer.data['product_input_measure'],
                                              required_amounts, ureg)
 
+            # Look through any input files for matching identifiers and add their amounts to the list
             for key, row in input_file_data.items():
                 for header, value in row.items():
                     # If the header has identifier/amount combo then
@@ -323,6 +324,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                     exists = False
                     matched_headers = []
                     label = header.rstrip(' identifier').rstrip(' amount')
+                    # Look for _amount + _identifier combos and math them up
                     if header.endswith('identifier') and header not in matched_headers:
                         identifier = value
                         amount_field_name = '{} amount'.format(label)
@@ -348,6 +350,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                             exists = True
                     if exists:
 
+                        # Look for the matching pairs
                         try:
                             data_entry_field = next((fld for fld in data_items[key]['data'][
                                                     'input_fields'] if fld['label'] == label))
@@ -357,6 +360,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                             data_items[key]['data'][label] = amount
                             measure = data_items[key]['data'][measure_label]
 
+                        # Try to get the item from the inventory and add to list
                         try:
                             ti = Item.objects.get(identifier=identifier)
                         except ObjectDoesNotExist:
@@ -369,12 +373,13 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                         self.update_item_amounts(ti.identifier, amount,
                                                  measure, required_amounts, ureg)
 
+                        # Record this field has data from a file and does not need to be processed again
                         fields_from_file.append(label)
 
             # Now just read through the fields left and fill in any more details
             for itm in task_serializer.data['input_fields']:
                 # If we already have set the value in a file we don't want to overwrite it
-                if itm['label'] not in fields_from_file:
+                if itm['label'] not in fields_from_file and itm['from_input_file'] == False:
                     try:
                         ti = Item.objects.get(identifier=itm['inventory_identifier'])
                     except ObjectDoesNotExist:
@@ -384,17 +389,23 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                         input_items.append(ti)
                     self.update_item_amounts(ti.identifier, itm['amount'], itm[
                                              'measure'], required_amounts, ureg)
+                # But if it's suposed to have been from a file and is still here, return an error
+                elif itm['label'] not in fields_from_file and itm['from_input_file'] == True:
+                    return Response({'message': 'The value for field "{}" is not present in file'.format(itm['label'])}, status=400)
 
             # input checks
             preview_data = []
             valid_amounts = True
             amount_error_messages = []
             for item in input_items:
+                # Check enough of each item is avilable.
+                # First, translate to a known amount (if possible) or just be presented as a raw number
                 try:
                     available = item.amount_available * ureg(item.amount_measure.symbol)
                 except UndefinedUnitError:
                     available = item.amount_available
                 required = required_amounts[item.identifier]
+                # The actual check
                 if available < required:
                     missing = (available - required_amounts[item.identifier]) * -1
                     valid_amounts = False
@@ -402,6 +413,7 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                         'Inventory item {} ({}) is short of amount by {}'.format(
                             item.identifier, item.name, missing))
 
+                # If it's a preview then just serialize the amount, don't actually do anything with it
                 if is_preview:
                     amount = required_amounts[item.identifier]
                     amount_symbol = '{:~}'.format(amount).split(' ')[1]
@@ -428,13 +440,14 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
                         )
                         item_transfer.save()
 
+                        # Alter amounts in DB to corrospond to the amount taken
                         new_amount = available - required_amounts[item.identifier]
                         item.amount_available = new_amount.magnitude
                         item.save()
                 else:
                     return Response({'message': '\n'.join(amount_error_messages)}, status=400)
 
-                # make data entries
+                # make data entries to record the values of the task
                 task = TaskTemplate.objects.get(pk=task_data['id'])
                 for key, data in data_items.items():
                     entry = DataEntry(
@@ -668,34 +681,22 @@ class TaskViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, pk=None):
         # Do any calculations before sending the task data
         instance = self.get_object()
-        instance.handle_calculations()
         serializer = self.get_serializer(instance)  # self.get_task(pk)
         return Response(serializer.data)
 
     @detail_route(methods=["POST"])
     def recalculate(self, request, pk=None):
-        # DEPRECIATED?
+        """
+        Given task data recalculate and return task.
+        """
         obj = self.get_object()
-        serializer = self.get_serializer(obj)
-        fields = request.data.get('fields', None)
-        if fields:
-            obj.fields = request.data.get('fields')
-            obj.handle_calculations()
-            serializer = self.get_serializer(obj)
-            return Response(serializer.data)
-        return Response(serializer.data)
-
-    @list_route(methods=["POST"])
-    def create_task(self, request):
-        # DEPRECIATED?
-        task_type = request.query_params.get('type', None)
-        if task_type:
-            serializer_class = self.get_serializer_class(task_type)
-            serializer = serializer_class(request.data)
+        task_data = request.data
+        if task_data: 
+            serializer = RecalculateTaskTemplateSerializer(data=task_data)
             if serializer.is_valid(raise_exception=True):
-                serializer.save()
                 return Response(serializer.data)
-        return Response({'message': 'Please supply a type of task to create'}, status=400)
+        serializer = TaskTemplateSerializer(obj)
+        return Response(serializer.data)
 
 
 class TaskFieldViewSet(viewsets.ModelViewSet):
