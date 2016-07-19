@@ -4,6 +4,7 @@ from django.conf import settings
 
 from lims.orders.models import Order
 
+
 class CRMAccount(models.Model):
     contact_identifier = models.CharField(max_length=50)
     account_identifier = models.CharField(max_length=50)
@@ -13,13 +14,14 @@ class CRMAccount(models.Model):
     user = models.OneToOneField(User)
 
     def contact_url(self):
-        return settings.SALESFORCE_URL+'/'+self.contact_identifier 
+        return settings.SALESFORCE_URL + '/' + self.contact_identifier
 
     def account_url(self):
-        return settings.SALESFORCE_URL+'/'+self.account_identifier 
+        return settings.SALESFORCE_URL + '/' + self.account_identifier
 
     def __str__(self):
         return self.user.username
+
 
 class CRMProject(models.Model):
     project_identifier = models.CharField(max_length=50)
@@ -33,10 +35,11 @@ class CRMProject(models.Model):
     order = models.OneToOneField(Order, related_name='crm', null=True, blank=True)
 
     def project_url(self):
-        return settings.SALESFORCE_URL+'/'+self.project_identifier 
+        return settings.SALESFORCE_URL + '/' + self.project_identifier
 
     def __str__(self):
         return self.name
+
 
 class CRMQuote(models.Model):
     quote_identifier = models.CharField(max_length=50)
@@ -50,7 +53,7 @@ class CRMQuote(models.Model):
     project = models.ForeignKey(CRMProject, related_name='quotes')
 
     def quote_url(self):
-        return settings.SALESFORCE_URL+'/'+self.quote_identifier 
+        return settings.SALESFORCE_URL + '/' + self.quote_identifier
 
     def __str__(self):
-        return self.project.order.name + ': '+ self.quote_identifier
+        return self.project.order.name + ': ' + self.quote_identifier

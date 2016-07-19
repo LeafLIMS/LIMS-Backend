@@ -74,7 +74,7 @@ MIDDLEWARE_CLASSES = (
 )
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend', # default
+    'django.contrib.auth.backends.ModelBackend',  # default
     'guardian.backends.ObjectPermissionBackend',
 )
 
@@ -84,7 +84,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'lims/templates') 
+            os.path.join(BASE_DIR, 'lims/templates')
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -134,13 +134,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR+'/static/'
+STATIC_ROOT = BASE_DIR + '/static/'
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "lims/static"),
 )
 
 # Media location (for quotes etc.)
-MEDIA_ROOT = BASE_DIR+'/files/'
+MEDIA_ROOT = BASE_DIR + '/files/'
 MEDIA_URL = '/files/'
 
 #
@@ -187,10 +187,10 @@ LOGGING = {
 # Per webapp permissions
 #
 WEBAPP_STAFF_ONLY = {
-        'customerportal': False,
-        'EquipmentReservations': False,
-        'lims': True,
-    }
+    'customerportal': False,
+    'EquipmentReservations': False,
+    'lims': True,
+}
 
 #
 # REST framework settings
@@ -213,14 +213,14 @@ REST_FRAMEWORK = {
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_HEADERS = (
-        'x-requested-with',
-        'content-type',
-        'accept',
-        'origin',
-        'authorization',
-        'x-csrftoken',
-        'Identifier'
-    )
+    'x-requested-with',
+    'content-type',
+    'accept',
+    'origin',
+    'authorization',
+    'x-csrftoken',
+    'Identifier'
+)
 
 #
 # App configuration

@@ -1,21 +1,18 @@
 import re
 
-from pint import UnitRegistry
 from pyparsing import ParseException
 
 from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 
 from jsonfield import JSONField
-from model_utils.managers import InheritanceManager
 
-from lims.projects.models import Product, Project
+from lims.projects.models import Product
 from lims.equipment.models import Equipment
 from lims.inventory.models import Item, ItemType, AmountMeasure
 from lims.filetemplate.models import FileTemplate
 from .calculation import NumericStringParser
+
 
 class Workflow(models.Model):
     name = models.CharField(max_length=50)
@@ -41,6 +38,7 @@ class Workflow(models.Model):
     def __str__(self):
         return self.name
 
+
 class WorkflowProduct(models.Model):
     current_task = models.IntegerField(default=0)
     task_in_progress = models.BooleanField(default=False)
@@ -57,13 +55,14 @@ class WorkflowProduct(models.Model):
         return self.product.project.id
 
     def __str__(self):
-        return '{} at task #{}'.format(self.product.product_identifier, 
-            self.current_task)
+        return '{} at task #{}'.format(self.product.product_identifier,
+                                       self.current_task)
+
 
 class ActiveWorkflow(models.Model):
     workflow = models.ForeignKey(Workflow)
-    product_statuses = models.ManyToManyField(WorkflowProduct, blank=True, 
-        related_name='activeworkflow')
+    product_statuses = models.ManyToManyField(WorkflowProduct, blank=True,
+                                              related_name='activeworkflow')
     date_started = models.DateTimeField(auto_now_add=True)
     started_by = models.ForeignKey(User)
 
@@ -78,6 +77,7 @@ class ActiveWorkflow(models.Model):
 
     def __str__(self):
         return 'Active: {} products on {}'.format(self.product_statuses.count(), self.workflow)
+
 
 class DataEntry(models.Model):
 
@@ -107,6 +107,7 @@ class DataEntry(models.Model):
     class Meta:
         ordering = ['-date_created']
 
+
 class TaskTemplate(models.Model):
 
     name = models.CharField(max_length=100)
@@ -122,8 +123,10 @@ class TaskTemplate(models.Model):
 
     capable_equipment = models.ManyToManyField(Equipment, blank=True)
 
-    input_files = models.ManyToManyField(FileTemplate, blank=True, related_name='input_file_templates')
-    output_files = models.ManyToManyField(FileTemplate, blank=True, related_name='output_file_templates')
+    input_files = models.ManyToManyField(
+        FileTemplate, blank=True, related_name='input_file_templates')
+    output_files = models.ManyToManyField(
+        FileTemplate, blank=True, related_name='output_file_templates')
 
     created_by = models.ForeignKey(User)
     date_created = models.DateTimeField(auto_now_add=True)
@@ -145,15 +148,15 @@ class TaskTemplate(models.Model):
             return str(field['amount'])
         return 'NaN'
 
-    def _perform_calculation(self, calculation): 
-        """                          
+    def _perform_calculation(self, calculation):
+        """
         Parse and perform a calculation using a dict of fields
 
         Using either a dict of values to field names
 
         Returns a NaN if the calculation cannot be performed, e.g.
         incorrect field names.
-        """                                                                       
+        """
         nsp = NumericStringParser()
         field_regex = r'\{(.+?)\}'
         interpolated_calculation = re.sub(field_regex, self._replace_fields, calculation)
@@ -171,12 +174,13 @@ class TaskTemplate(models.Model):
         rather than the defaults on the model.
         """
         for calc in self.calculation_fields.all():
-            #result = self._perform_calculation(calc['calculation'])
-            #calc['calculation_result'] = result
+            # result = self._perform_calculation(calc['calculation'])
+            # calc['calculation_result'] = result
             pass
 
     def __str__(self):
         return self.name
+
 
 class CalculationFieldTemplate(models.Model):
     """
@@ -194,10 +198,11 @@ class CalculationFieldTemplate(models.Model):
     def __str__(self):
         return self.label
 
+
 class InputFieldTemplate(models.Model):
     """
-    An input to a task. 
-    
+    An input to a task.
+
     Can read amounts from either a calculationor an input file
     """
     template = models.ForeignKey(TaskTemplate, related_name='input_fields')
@@ -218,7 +223,8 @@ class InputFieldTemplate(models.Model):
         return 'inventory_identifier'
 
     def __str__(self):
-        return self.label 
+        return self.label
+
 
 class VariableFieldTemplate(models.Model):
     template = models.ForeignKey(TaskTemplate, related_name='variable_fields')
@@ -232,7 +238,8 @@ class VariableFieldTemplate(models.Model):
         return self.label.lower().replace(' ', '_')
 
     def __str__(self):
-        return self.label 
+        return self.label
+
 
 class OutputFieldTemplate(models.Model):
     template = models.ForeignKey(TaskTemplate, related_name='output_fields')
@@ -249,7 +256,8 @@ class OutputFieldTemplate(models.Model):
         return self.label.lower().replace(' ', '_')
 
     def __str__(self):
-        return self.label 
+        return self.label
+
 
 class StepFieldTemplate(models.Model):
     template = models.ForeignKey(TaskTemplate, related_name='step_fields')
@@ -260,10 +268,11 @@ class StepFieldTemplate(models.Model):
         return self.label.lower().replace(' ', '_')
 
     def __str__(self):
-        return self.label 
+        return self.label
+
 
 class StepFieldProperty(models.Model):
-    step = models.ForeignKey(StepFieldTemplate, related_name='properties') 
+    step = models.ForeignKey(StepFieldTemplate, related_name='properties')
     label = models.CharField(max_length=50)
     amount = models.FloatField()
     measure = models.ForeignKey(AmountMeasure)
@@ -275,4 +284,4 @@ class StepFieldProperty(models.Model):
         return self.label.lower().replace(' ', '_')
 
     def __str__(self):
-        return self.label 
+        return self.label

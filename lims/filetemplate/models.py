@@ -1,7 +1,8 @@
 import csv
-import pprint
 
 from django.db import models
+from django.core.exceptions import ObjectDoesNotExist
+
 
 class FileTemplate(models.Model):
     FILE_FOR_CHOICES = (
@@ -16,7 +17,7 @@ class FileTemplate(models.Model):
         return self.name.lower().replace(' ', '_')
 
     def read(self, input_file):
-        csv_file = csv.DictReader(input_file) 
+        csv_file = csv.DictReader(input_file)
         try:
             identifier_fields = self.fields.filter(is_identifier=True)
         except ObjectDoesNotExist:
@@ -28,7 +29,7 @@ class FileTemplate(models.Model):
                 for line in csv_file:
                     line = dict([(k, v) for k, v in line.items() if v.strip()])
                     if any(line):
-                        identifier = tuple(line[n.name] for n in identifier_fields) 
+                        identifier = tuple(line[n.name] for n in identifier_fields)
                         # Get a list of identifiers and remove from line
                         ifn = [i.name for i in identifier_fields]
                         line = dict([(k, v) for k, v in line.items() if k not in ifn])
@@ -44,13 +45,15 @@ class FileTemplate(models.Model):
 
     def write(self, output_file, data):
         fieldnames = [item.name for item in self.fields.all()]
-        csv_output = csv.DictWriter(output_file, fieldnames=fieldnames, extrasaction='ignore', lineterminator='\n')
+        csv_output = csv.DictWriter(output_file, fieldnames=fieldnames,
+                                    extrasaction='ignore', lineterminator='\n')
         csv_output.writeheader()
         csv_output.writerows(data)
-        return output_file 
+        return output_file
 
     def __str__(self):
         return self.name
+
 
 class FileTemplateField(models.Model):
     name = models.CharField(max_length=50)

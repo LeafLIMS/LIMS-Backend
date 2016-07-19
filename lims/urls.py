@@ -13,12 +13,12 @@ from lims.orders.views import OrderViewSet
 from lims.addressbook.views import AddressViewSet
 from lims.pricebook.views import PriceBookViewSet
 
-from lims.inventory.views import (InventoryViewSet, 
-        SetViewSet, MeasureViewSet, ItemTypeViewSet, LocationViewSet)
+from lims.inventory.views import (InventoryViewSet,
+                                  SetViewSet, MeasureViewSet, ItemTypeViewSet, LocationViewSet)
 from lims.codonusage.views import CodonUsageTableViewSet
 from lims.projects.views import (ProjectViewSet, ProductViewSet, ProductStatusViewSet)
-from lims.workflows.views import (WorkflowViewSet, ActiveWorkflowViewSet, 
-        TaskViewSet, TaskFieldViewSet)
+from lims.workflows.views import (WorkflowViewSet, ActiveWorkflowViewSet,
+                                  TaskViewSet, TaskFieldViewSet)
 
 from lims.filetemplate.views import FileTemplateViewSet
 
@@ -44,7 +44,8 @@ router.register(r'itemtypes', ItemTypeViewSet, base_name='itemtypes')
 router.register(r'locations', LocationViewSet, base_name='locations')
 
 router.register(r'equipment', EquipmentViewSet, base_name='equipment')
-router.register(r'equipmentreservation', EquipmentReservationViewSet, base_name='equipmentreservation')
+router.register(r'equipmentreservation', EquipmentReservationViewSet,
+                base_name='equipmentreservation')
 
 router.register(r'projects', ProjectViewSet, base_name='projects')
 router.register(r'products', ProductViewSet, base_name='products')
@@ -64,4 +65,4 @@ urlpatterns = [
     url(r'^crm/link/', CRMLinkView.as_view()),
     url(r'^docs/', include('rest_framework_docs.urls')),
     url(r'^', include(router.urls)),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) 
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

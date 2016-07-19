@@ -1,18 +1,13 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 
-from jsonfield import JSONField
-
-from gm2m import GM2MField
 
 from lims.shared.models import Organism
 from lims.inventory.models import ItemType, Item
-from lims.inventory.helpers import serialized_item_lookup
 from lims.orders.models import Order
 from lims.crm.models import CRMProject
+
 
 class Project(models.Model):
     """
@@ -58,6 +53,7 @@ class Project(models.Model):
     def __str__(self):
         return self.name
 
+
 class ProductStatus(models.Model):
     """
     The status of a product as it moves through workflows
@@ -68,6 +64,7 @@ class ProductStatus(models.Model):
     def __str__(self):
         return self.name
 
+
 class Product(models.Model):
     """
     A representation of a product as it progresses through the system
@@ -75,7 +72,7 @@ class Product(models.Model):
 
     identifier = models.IntegerField(default=0)
     name = models.CharField(max_length=200)
-    status = models.ForeignKey(ProductStatus) 
+    status = models.ForeignKey(ProductStatus)
     flag_issue = models.BooleanField(default=False)
     product_type = models.ForeignKey(ItemType)
     optimised_for = models.ForeignKey(Organism, blank=True, null=True)
@@ -95,8 +92,8 @@ class Product(models.Model):
     design = models.FileField(blank=True, null=True)
 
     # Anything created or linked in the inventroy to this product
-    linked_inventory = models.ManyToManyField(Item, blank=True, 
-            related_name='products')
+    linked_inventory = models.ManyToManyField(Item, blank=True,
+                                              related_name='products')
 
     class Meta:
         permissions = (
@@ -117,7 +114,7 @@ class Product(models.Model):
 
     def create_product_identifier(self):
         """
-        Create a prefixed version of the identifier based on the project 
+        Create a prefixed version of the identifier based on the project
         it is part of
         """
         return '{}-{}'.format(self.project.project_identifier, self.identifier)
@@ -135,17 +132,19 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
+
 class Comment(models.Model):
     """
-    A user identifiable comment on a Product 
+    A user identifiable comment on a Product
     """
     product = models.ForeignKey(Product)
     user = models.ForeignKey(User, limit_choices_to={'is_staff': True})
     date_created = models.DateTimeField(auto_now_add=True)
-    text = models.TextField() 
+    text = models.TextField()
 
     def __str__(self):
         return '{}: {}'.format(self.product, self.date_created)
+
 
 class WorkLog(models.Model):
     project = models.ForeignKey(Project)
@@ -156,7 +155,7 @@ class WorkLog(models.Model):
 
     def hours(self):
         diff = self.finish_time - self.start_time
-        return diff//3600
+        return diff // 3600
 
     def __str__(self):
         return '{}: {} ({})'.format(self.project, self.task, self.user.username)

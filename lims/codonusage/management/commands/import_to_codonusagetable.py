@@ -1,11 +1,12 @@
 import re
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
-from lims.codonusage.models import CodonUsageTable, CodonUsage 
+from lims.codonusage.models import CodonUsageTable, CodonUsage
+
 
 class Command(BaseCommand):
-    help = 'Imports a codon usgae file into the database' 
+    help = 'Imports a codon usgae file into the database'
 
     def add_arguments(self, parser):
         parser.add_argument('table_id', type=int)

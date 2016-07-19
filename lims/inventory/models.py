@@ -1,14 +1,10 @@
-import re
 
 from django.db import models
 from django.contrib.auth.models import User
 
 from mptt.models import MPTTModel, TreeForeignKey
 from gm2m import GM2MField
-from model_utils.managers import InheritanceManager
-from jsonfield import JSONField
 
-from lims.shared.models import Organism
 
 class ItemType(MPTTModel):
     """
@@ -33,11 +29,13 @@ class ItemType(MPTTModel):
     def __str__(self):
         return self.name
 
+
 class Tag(models.Model):
     name = models.CharField(max_length=30)
 
     def __str__(self):
         return self.name
+
 
 class AmountMeasure(models.Model):
     """
@@ -48,6 +46,7 @@ class AmountMeasure(models.Model):
 
     def __str__(self):
         return "{} ({})".format(self.name, self.symbol)
+
 
 class Location(MPTTModel):
     """
@@ -70,6 +69,7 @@ class Location(MPTTModel):
             return '{} ({})'.format(self.name, self.parent.name)
         return self.name
 
+
 class Set(models.Model):
     """
     A named set of items in the inventory
@@ -83,6 +83,7 @@ class Set(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class Item(models.Model):
     """
@@ -122,6 +123,7 @@ class Item(models.Model):
     def __str__(self):
         return self.name
 
+
 class ItemProperty(models.Model):
     """
     Represents a singular user defined property of an item
@@ -132,6 +134,7 @@ class ItemProperty(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class ItemTransfer(models.Model):
     """

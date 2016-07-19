@@ -3,27 +3,30 @@ from django.contrib.auth.models import User
 
 from jsonfield import JSONField
 
+
 class Service(models.Model):
     name = models.CharField(max_length=20, unique=True)
 
     def __str__(self):
         return self.name
 
+
 class Order(models.Model):
 
     STATUS_BAR_CHOICES = (
-            ('Submitted', 'Submitted'),
-            ('Quote Sent', 'Quote Sent'),
-            ('Order Received', 'Order Received'),
-            ('Project in Progress', 'Project in Progress'),
-            ('Project Shipped', 'Project Shipped'),
-        )
+        ('Submitted', 'Submitted'),
+        ('Quote Sent', 'Quote Sent'),
+        ('Order Received', 'Order Received'),
+        ('Project in Progress', 'Project in Progress'),
+        ('Project Shipped', 'Project Shipped'),
+    )
 
     name = models.CharField(max_length=200)
     status = models.CharField(max_length=100)
     services = models.ManyToManyField(Service)
     data = JSONField()
-    status_bar_status = models.CharField(max_length=30, choices=STATUS_BAR_CHOICES, default="Submitted")
+    status_bar_status = models.CharField(
+        max_length=30, choices=STATUS_BAR_CHOICES, default="Submitted")
 
     user = models.ForeignKey(User)
 

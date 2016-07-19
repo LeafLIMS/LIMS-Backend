@@ -6,19 +6,20 @@ from rest_framework.utils import model_meta
 from lims.addressbook.serializers import AddressSerializer
 from lims.crm.serializers import CRMAccountSerializer
 
+
 class UserSerializer(serializers.ModelSerializer):
-    addresses = AddressSerializer(many=True, read_only=True) 
-    #groups = serializers.PrimaryKeyRelatedField(many=True, required=False, read_only=True)
-    groups = serializers.SlugRelatedField(queryset=Group.objects.all(), 
-            many=True, slug_field='name', required=False)
+    addresses = AddressSerializer(many=True, read_only=True)
+    # groups = serializers.PrimaryKeyRelatedField(many=True, required=False, read_only=True)
+    groups = serializers.SlugRelatedField(queryset=Group.objects.all(),
+                                          many=True, slug_field='name', required=False)
 
     crmaccount = CRMAccountSerializer(read_only=True)
 
     class Meta:
         model = User
-        fields = ('id', 'password', 'username', 
-                'first_name', 'last_name', 'groups', 
-                'email', 'addresses', 'crmaccount')
+        fields = ('id', 'password', 'username',
+                  'first_name', 'last_name', 'groups',
+                  'email', 'addresses', 'crmaccount')
         read_only_fields = ('id', 'addresses', 'crmaccount', 'groups',)
         extra_kwargs = {'password': {'write_only': True}}
 
@@ -35,8 +36,8 @@ class UserSerializer(serializers.ModelSerializer):
                 many_to_many[field_name] = validated_data.pop(field_name)
 
         try:
-            instance = ModelClass(**validated_data)		
-       	    instance.set_password(validated_data['password'])
+            instance = ModelClass(**validated_data)
+            instance.set_password(validated_data['password'])
             instance.save()
         except TypeError as exc:
             msg = (
@@ -62,28 +63,36 @@ class UserSerializer(serializers.ModelSerializer):
 
         return instance
 
+
 class StaffUserSerializer(UserSerializer):
+
     class Meta(UserSerializer.Meta):
-        fields = ('id', 'password', 'is_superuser', 'username', 
-                'first_name', 'last_name', 
-                'email', 'is_staff', 'groups', 
-                'addresses', 'crmaccount')
+        fields = ('id', 'password', 'is_superuser', 'username',
+                  'first_name', 'last_name',
+                  'email', 'is_staff', 'groups',
+                  'addresses', 'crmaccount')
         read_only_fields = ('id', 'is_superuser', 'addresses', 'crmaccount',)
 
+
 class SuperUserSerializer(UserSerializer):
+
     class Meta(UserSerializer.Meta):
-        fields = ('id', 'password', 'is_superuser', 'username', 
-                'first_name', 'last_name', 
-                'email', 'is_staff', 'groups', 
-                'addresses', 'crmaccount')
+        fields = ('id', 'password', 'is_superuser', 'username',
+                  'first_name', 'last_name',
+                  'email', 'is_staff', 'groups',
+                  'addresses', 'crmaccount')
         read_only_fields = ('id', 'addresses', 'crmaccount',)
 
+
 class GroupSerializer(serializers.ModelSerializer):
-    permissions = serializers.SlugRelatedField(queryset=Permission.objects.all(), 
-            many=True, slug_field='name', required=False)
+    permissions = serializers.SlugRelatedField(queryset=Permission.objects.all(),
+                                               many=True, slug_field='name', required=False)
+
     class Meta:
         model = Group
 
+
 class PermissionSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Permission

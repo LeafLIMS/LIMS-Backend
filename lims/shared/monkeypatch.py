@@ -1,5 +1,4 @@
 import inspect
-from collections import OrderedDict, namedtuple
 
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
@@ -15,6 +14,8 @@ gm2m returning an instance of a GM2MTo object rather
 than a class or string. Return the concrete class
 instead as a stopgap measure.
 """
+
+
 def _resolve_model(obj):
     """
     Resolve supplied `obj` to a Django model class.
@@ -41,6 +42,7 @@ def _resolve_model(obj):
     raise ValueError("{0} is not a Django model".format(obj))
 
 model_meta._resolve_model = _resolve_model
+
 
 def _get_to_field(field):
     return getattr(field, 'to_fields', None) and field.to_fields[0]

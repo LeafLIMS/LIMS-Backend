@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+
 class Address(models.Model):
     institution_name = models.CharField(max_length=200)
     address_1 = models.CharField(max_length=100)
