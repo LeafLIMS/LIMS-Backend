@@ -1,4 +1,3 @@
-
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -11,6 +10,11 @@ class ItemType(MPTTModel):
     """
     name = models.CharField(max_length=150, unique=True, db_index=True)
     parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
+
+    class Meta:
+        permissions = (
+            ('view_itemtype', 'View item type',),
+        )
 
     def has_children(self):
         return True if self.get_descendant_count() > 0 else False
@@ -43,6 +47,11 @@ class AmountMeasure(models.Model):
     name = models.CharField(max_length=100, unique=True, db_index=True)
     symbol = models.CharField(max_length=10, unique=True, db_index=True)
 
+    class Meta:
+        permissions = (
+            ('view_amountmeasure', 'View measure',),
+        )
+
     def __str__(self):
         return "{} ({})".format(self.name, self.symbol)
 
@@ -54,6 +63,11 @@ class Location(MPTTModel):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=6, unique=True, null=True)
     parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
+
+    class Meta:
+        permissions = (
+            ('view_location', 'View location',),
+        )
 
     def has_children(self):
         return True if self.get_descendant_count() > 0 else False
@@ -76,6 +90,11 @@ class Set(models.Model):
     name = models.CharField(max_length=40)
     is_public = models.BooleanField(default=False)
     is_partset = models.BooleanField(default=False)
+
+    class Meta:
+        permissions = (
+            ('view_set', 'View item set',),
+        )
 
     def number_of_items(self):
         return self.items.count()
@@ -107,6 +126,11 @@ class Item(models.Model):
     sets = models.ManyToManyField(Set, related_name='items', blank=True)
 
     created_from = models.ManyToManyField('self', blank=True, symmetrical=False)
+
+    class Meta:
+        permissions = (
+            ('view_item', 'View item',),
+        )
 
     def get_tags(self):
         return ", ".join([t.name for t in self.tags.all()])

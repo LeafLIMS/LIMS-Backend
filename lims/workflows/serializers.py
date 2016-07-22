@@ -1,5 +1,4 @@
 import re
-from django.contrib.auth.models import User
 
 from rest_framework import serializers
 from pyparsing import ParseException
@@ -16,8 +15,8 @@ from .calculation import NumericStringParser
 
 class WorkflowSerializer(serializers.ModelSerializer):
     created_by = serializers.SlugRelatedField(
-        queryset=User.objects.all(),
-        slug_field='username'
+        slug_field='username',
+        read_only=True
     )
 
     class Meta:
@@ -39,8 +38,8 @@ class ActiveWorkflowSerializer(serializers.ModelSerializer):
     """
     workflow_data = WorkflowSerializer(read_only=True, source='workflow')
     started_by = serializers.SlugRelatedField(
-        queryset=User.objects.all(),
-        slug_field='username'
+        slug_field='username',
+        read_only=True
     )
 
     class Meta:
@@ -237,8 +236,8 @@ class StepFieldValueSerializer(serializers.Serializer):
 
 class TaskTemplateSerializer(serializers.ModelSerializer):
     created_by = serializers.SlugRelatedField(
-        queryset=User.objects.filter(is_staff=True),
-        slug_field='username'
+        slug_field='username',
+        read_only=True
     )
     product_input = serializers.SlugRelatedField(
         queryset=ItemType.objects.all(),

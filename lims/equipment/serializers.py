@@ -27,7 +27,7 @@ class EquipmentReservationSerializer(serializers.ModelSerializer):
         queryset=User.objects.all(),
         slug_field='username')
     reserved_by = serializers.SlugRelatedField(
-        queryset=User.objects.all(),
+        read_only=True,
         slug_field='username')
 
     class Meta:

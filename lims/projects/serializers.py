@@ -16,6 +16,10 @@ class ProjectSerializer(serializers.ModelSerializer):
         queryset=User.objects.filter(is_staff=True),
         slug_field='username',
     )
+    created_by = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username',
+    )
     crm_project = CRMProjectSerializer(read_only=True)
 
     class Meta:
@@ -30,7 +34,7 @@ class ProductSerializer(serializers.ModelSerializer):
     on_workflow = serializers.IntegerField(read_only=True)
     on_workflow_name = serializers.CharField(read_only=True)
     created_by = serializers.SlugRelatedField(
-        queryset=User.objects.filter(is_staff=True),
+        read_only=True,
         slug_field='username',
     )
     product_type = serializers.SlugRelatedField(

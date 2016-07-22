@@ -27,6 +27,7 @@ class Project(models.Model):
     identifier = models.IntegerField(default=create_identifier)
     order = models.ForeignKey(Order, related_name='associated_projects', blank=True, null=True)
     date_started = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, related_name='created_by')
     archive = models.BooleanField(default=False)
 
     project_identifier = models.CharField(default='', max_length=20)
@@ -60,6 +61,11 @@ class ProductStatus(models.Model):
     """
     name = models.CharField(max_length=100, unique=True, db_index=True)
     description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        permissions = (
+            ('view_productstatus', 'View product status',),
+        )
 
     def __str__(self):
         return self.name
@@ -141,6 +147,11 @@ class Comment(models.Model):
     user = models.ForeignKey(User, limit_choices_to={'is_staff': True})
     date_created = models.DateTimeField(auto_now_add=True)
     text = models.TextField()
+
+    class Meta:
+        permissions = (
+            ('view_comment', 'View comment',),
+        )
 
     def __str__(self):
         return '{}: {}'.format(self.product, self.date_created)

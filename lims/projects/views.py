@@ -1,11 +1,10 @@
 import django_filters
 
 from rest_framework import viewsets
-from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, DjangoObjectPermissions
 
 from lims.shared.filters import ListFilter
+from lims.permissions.permissions import IsInAdminGroupOrRO
 
 from .models import (Product, ProductStatus, Project)
 from .serializers import (ProjectSerializer, ProductSerializer, DetailedProductSerializer,
@@ -17,6 +16,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     permission_classes = (IsAdminUser, DjangoObjectPermissions,)
     search_fields = ('project_identifier', 'name', 'primary_lab_contact__username')
+
+    def perform_create(self, serializer):
+        serializer, permissions = self.clean_serializer_of_permissions(serializer)
+        instance = serializer.save(created_by=self.request.user)
+        self.assign_permissions(instance, permissions)
 
 
 class ProductFilter(django_filters.FilterSet):
@@ -52,15 +56,13 @@ class ProductViewSet(viewsets.ModelViewSet):
             return DetailedProductSerializer
         return ProductSerializer
 
-    def create(self, request, *args, **kwargs):
-        request.data['created_by'] = request.user.username
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    def perform_create(self, serializer):
+        serializer, permissions = self.clean_serializer_of_permissions(serializer)
+        instance = serializer.save(created_by=self.request.user)
+        self.assign_permissions(instance, permissions)
 
 
 class ProductStatusViewSet(viewsets.ModelViewSet):
     queryset = ProductStatus.objects.all()
     serializer_class = ProductStatusSerializer
+    permission_classes = (IsAdminUser, IsInAdminGroupOrRO)

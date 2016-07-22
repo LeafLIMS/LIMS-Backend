@@ -46,6 +46,11 @@ class WorkflowViewSet(viewsets.ModelViewSet):
     search_fields = ('name', 'created_by__username',)
     permission_classes = (IsAdminUser, DjangoObjectPermissions,)
 
+    def perform_create(self, serializer):
+        serializer, permissions = self.clean_serializer_of_permissions(serializer)
+        instance = serializer.save(created_by=self.request.user)
+        self.assign_permissions(instance, permissions)
+
     @detail_route()
     def tasks(self, request, pk=None):
         workflow = self.get_object()
@@ -96,6 +101,11 @@ class ActiveWorkflowViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return DetailedActiveWorkflowSerializer
         return self.serializer_class
+
+    def perform_create(self, serializer):
+        serializer, permissions = self.clean_serializer_of_permissions(serializer)
+        instance = serializer.save(started_by=self.request.user)
+        self.assign_permissions(instance, permissions)
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -685,6 +695,11 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAdminUser, DjangoObjectPermissions,)
     search_fields = ('name', 'created_by__username', )
     filter_class = TaskFilterSet
+
+    def perform_create(self, serializer):
+        serializer, permissions = self.clean_serializer_of_permissions(serializer)
+        instance = serializer.save(created_by=self.request.user)
+        self.assign_permissions(instance, permissions)
 
     def retrieve(self, request, pk=None):
         # Do any calculations before sending the task data

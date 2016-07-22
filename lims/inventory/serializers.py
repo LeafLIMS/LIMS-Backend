@@ -1,7 +1,6 @@
-from django.contrib.auth.models import User
-
 from rest_framework import serializers
 
+from lims.permissions.permissions import SerializerPermissionsMixin
 from .models import (Set, Item, ItemProperty, ItemTransfer,
                      ItemType,
                      AmountMeasure, Location)
@@ -69,10 +68,12 @@ class ItemTransferPreviewSerializer(serializers.ModelSerializer):
         depth = 2
 
 
-class ItemSerializer(serializers.ModelSerializer):
+class ItemSerializer(serializers.ModelSerializer, SerializerPermissionsMixin):
     tags = serializers.SlugRelatedField(many=True, read_only=True, slug_field='name')
     added_by = serializers.SlugRelatedField(
-        queryset=User.objects.filter(is_staff=True), slug_field='username')
+        read_only=True,
+        slug_field='username'
+    )
     amount_measure = serializers.SlugRelatedField(
         queryset=AmountMeasure.objects.all(), slug_field='symbol')
     item_type = serializers.SlugRelatedField(queryset=ItemType.objects.all(), slug_field='name')

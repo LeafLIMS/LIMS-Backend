@@ -5,7 +5,8 @@ from django.conf import settings
 
 from rest_framework import routers
 
-from lims.users.views import ObtainAuthToken, UserViewSet, GroupViewSet, PermissionViewSet
+from lims.users.views import ObtainAuthToken, UserViewSet, GroupViewSet
+from lims.permissions.views import PermissionViewSet
 
 from lims.shared.views import OrganismViewSet
 

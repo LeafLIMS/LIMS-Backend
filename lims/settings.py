@@ -244,11 +244,52 @@ PROJECT_IDENTIFIER_START = os.environ.get('PROJECT_IDENTIFIER_START', 100)
 #
 # Default groups and permissions
 #
-DEFAULT_GROUPS = ('user', 'admin')
+DEFAULT_GROUPS = ('user', 'staff', 'admin',)
 DEFAULT_USER_PERMISSIONS = (
-    'add_equipmentreservation',
-    'change_equipmentreservation',
-    'delete_equipmentreservation',
+    "Can add equipment reservation",
+    "Can change equipment reservation",
+    "Can delete equipment reservation",
+)
+DEFAULT_STAFF_PERMISSIONS = (
+    "Can add address",
+    "Can change address",
+    "Can delete address",
+    "Can change equipment",
+    "Can add equipment reservation",
+    "Can change equipment reservation",
+    "Can delete equipment reservation",
+    "Can add item",
+    "Can add item property",
+    "Can change item property",
+    "Can delete item property",
+    "Can add item transfer",
+    "Can add set",
+    "Can change set",
+    "Can delete set",
+    "Can add tag",
+    "Can change tag",
+    "Can delete tag",
+    "Can add order",
+    "Can change order",
+    "Can delete order",
+    "Can add comment",
+    "Can change comment",
+    "Can delete comment",
+    "Can add product",
+    "Can add project",
+    "Can add work log",
+    "Can change work log",
+    "Can delete work log",
+    "Access LIMS system",
+    "Can add active workflow",
+    "Can change active workflow",
+    "Can delete active workflow",
+    "View activeworkflow",
+    "View workflowtask",
+    "View workflow",
+    "Can add workflow product",
+    "Can change workflow product",
+    "Can delete workflow product"
 )
 
 #

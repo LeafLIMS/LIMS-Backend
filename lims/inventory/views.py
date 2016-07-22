@@ -10,6 +10,7 @@ from rest_framework.decorators import detail_route, list_route
 from rest_framework.permissions import IsAdminUser
 
 
+from lims.permissions.permissions import ViewPermissionsMixin, IsSuperUser, IsInAdminGroupOrRO
 from .models import Set, Item, ItemTransfer, ItemType, Location, AmountMeasure
 from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationSerializer,
                           ItemSerializer, DetailedItemSerializer, SetSerializer)
@@ -34,25 +35,25 @@ class LeveledMixin:
 class MeasureViewSet(viewsets.ModelViewSet):
     queryset = AmountMeasure.objects.all()
     serializer_class = AmountMeasureSerializer
-    permission_classes = (IsAdminUser, )
+    permission_classes = (IsSuperUser, IsInAdminGroupOrRO,)
     search_fields = ('symbol', 'name',)
 
 
 class ItemTypeViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = ItemType.objects.all()
     serializer_class = ItemTypeSerializer
-    permission_classes = (IsAdminUser, )
+    permission_classes = (IsSuperUser, IsInAdminGroupOrRO,)
     search_fields = ('name',)
 
 
 class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
-    permission_classes = (IsAdminUser, )
+    permission_classes = (IsSuperUser, IsInAdminGroupOrRO,)
     search_fields = ('name',)
 
 
-class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin):
+class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
     permission_classes = (IsAdminUser, )
@@ -63,6 +64,11 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin):
         if self.action == 'retrieve':
             return DetailedItemSerializer
         return self.serializer_class
+
+    def perform_create(self, serializer):
+        serializer, permissions = self.clean_serializer_of_permissions(serializer)
+        instance = serializer.save(added_by=self.request.user)
+        self.assign_permissions(instance, permissions)
 
     @list_route(methods=['POST'])
     def importitems(self, request):

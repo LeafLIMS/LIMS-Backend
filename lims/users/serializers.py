@@ -1,5 +1,4 @@
 from django.contrib.auth.models import User, Group, Permission
-from django.conf import settings
 
 from rest_framework import serializers
 from rest_framework.utils import model_meta
@@ -9,9 +8,10 @@ from lims.crm.serializers import CRMAccountSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):
-    addresses = AddressSerializer(many=True, read_only=True) 
-    groups = serializers.SlugRelatedField(queryset=Group.objects.all(), 
-            many=True, slug_field='name', required=False)
+    addresses = AddressSerializer(many=True, read_only=True)
+    groups = serializers.SlugRelatedField(queryset=Group.objects.all(),
+                                          many=True, slug_field='name',
+                                          required=False)
 
     crmaccount = CRMAccountSerializer(read_only=True)
 

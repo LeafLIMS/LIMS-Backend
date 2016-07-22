@@ -9,15 +9,13 @@ from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import list_route
 
 import django_filters
 
 from .serializers import (UserSerializer, StaffUserSerializer, SuperUserSerializer,
                           GroupSerializer, PermissionSerializer)
-from .permissions import IsSuperUser
-from .permissions import IsThisUser
+from lims.permissions.permissions import IsInAdminGroupOrRO, IsThisUser, IsSuperUser
 
 
 class ObtainAuthToken(APIView):
@@ -75,7 +73,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated, IsThisUser]
+    permission_classes = (IsThisUser, IsInAdminGroupOrRO,)
     filter_class = UserFilter
 
     def get_queryset(self):
@@ -125,10 +123,10 @@ class UserViewSet(viewsets.ModelViewSet):
 class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = (IsSuperUser, )
+    permission_classes = (IsSuperUser, IsInAdminGroupOrRO,)
 
 
 class PermissionViewSet(viewsets.ModelViewSet):
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
-    permission_classes = (IsSuperUser, )
+    permission_classes = (IsSuperUser, IsInAdminGroupOrRO,)
