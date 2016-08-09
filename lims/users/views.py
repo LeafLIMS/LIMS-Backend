@@ -15,7 +15,7 @@ import django_filters
 
 from .serializers import (UserSerializer, StaffUserSerializer, SuperUserSerializer,
                           GroupSerializer, PermissionSerializer)
-from lims.permissions.permissions import (IsInAdminGroupOrRO, IsThisUser) 
+from lims.permissions.permissions import (IsInAdminGroupOrRO, IsThisUser)
 
 
 class ObtainAuthToken(APIView):

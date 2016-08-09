@@ -1,20 +1,19 @@
 import django_filters
 
 from rest_framework import viewsets
-from rest_framework.permissions import IsAdminUser
-from rest_framework.filters import DjangoObjectPermissionsFilter
 from rest_framework.validators import ValidationError
 
 from guardian.shortcuts import get_group_perms
 
 from lims.shared.filters import ListFilter
-from lims.permissions.permissions import (IsInAdminGroupOrRO, 
-        ViewPermissionsMixin, ExtendedObjectPermissions, 
-        ExtendedObjectPermissionsFilter)
+from lims.permissions.permissions import (IsInAdminGroupOrRO,
+                                          ViewPermissionsMixin,
+                                          ExtendedObjectPermissions,
+                                          ExtendedObjectPermissionsFilter)
 
 from .models import (Product, ProductStatus, Project)
-from .serializers import (ProjectSerializer, ProductSerializer, 
-        DetailedProductSerializer, ProductStatusSerializer)
+from .serializers import (ProjectSerializer, ProductSerializer,
+                          DetailedProductSerializer, ProductStatusSerializer)
 
 
 class ProjectViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):

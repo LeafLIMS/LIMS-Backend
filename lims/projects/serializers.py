@@ -6,7 +6,8 @@ from lims.inventory.models import ItemType
 from lims.inventory.serializers import LinkedItemSerializer
 from lims.workflows.serializers import DataEntrySerializer
 from lims.crm.serializers import CRMProjectSerializer
-from lims.permissions.permissions import SerializerPermissionsMixin, SerializerReadOnlyPermissionsMixin 
+from lims.permissions.permissions import (SerializerPermissionsMixin,
+                                          SerializerReadOnlyPermissionsMixin)
 from lims.shared.models import Organism
 from .models import (Project, Product, ProductStatus, Comment, WorkLog)
 

@@ -15,15 +15,14 @@ import django_filters
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
-from rest_framework.permissions import IsAdminUser
 from rest_framework.validators import ValidationError
 
 from guardian.shortcuts import get_group_perms
 
 from lims.shared.filters import ListFilter
-from lims.permissions.permissions import (IsInAdminGroupOrRO, 
-        ViewPermissionsMixin, ExtendedObjectPermissions, 
-        ExtendedObjectPermissionsFilter)
+from lims.permissions.permissions import (ViewPermissionsMixin,
+                                          ExtendedObjectPermissions,
+                                          ExtendedObjectPermissionsFilter)
 
 from lims.projects.models import Product
 from lims.filetemplate.models import FileTemplate

@@ -3,7 +3,8 @@ import re
 from rest_framework import serializers
 from pyparsing import ParseException
 
-from lims.permissions.permissions import SerializerPermissionsMixin, SerializerReadOnlyPermissionsMixin 
+from lims.permissions.permissions import (SerializerPermissionsMixin,
+                                          SerializerReadOnlyPermissionsMixin)
 
 from lims.equipment.models import Equipment
 from lims.filetemplate.models import FileTemplate

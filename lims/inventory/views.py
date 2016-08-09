@@ -7,12 +7,11 @@ from pint import UnitRegistry, UndefinedUnitError
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route
-from rest_framework.permissions import IsAdminUser
 
 
-from lims.permissions.permissions import (IsInAdminGroupOrRO, 
-        ViewPermissionsMixin, ExtendedObjectPermissions, 
-        ExtendedObjectPermissionsFilter)
+from lims.permissions.permissions import (IsInAdminGroupOrRO,
+                                          ViewPermissionsMixin, ExtendedObjectPermissions,
+                                          ExtendedObjectPermissionsFilter)
 from .models import Set, Item, ItemTransfer, ItemType, Location, AmountMeasure
 from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationSerializer,
                           ItemSerializer, DetailedItemSerializer, SetSerializer)

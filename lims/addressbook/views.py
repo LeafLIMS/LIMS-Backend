@@ -4,7 +4,6 @@ from rest_framework import viewsets
 from .models import Address
 from .serializers import AddressSerializer
 
-from lims.users.permissions import UserIsOwnerAccessOnly
 from lims.users.filters import IsOwnerFilterBackend
 
 
