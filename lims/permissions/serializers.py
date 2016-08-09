@@ -4,5 +4,8 @@ from rest_framework import serializers
 
 
 class PermissionSerializer(serializers.ModelSerializer):
+    """
+    Serialize Permission model
+    """
     class Meta:
         model = Permission

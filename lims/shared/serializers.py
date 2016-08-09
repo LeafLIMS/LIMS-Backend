@@ -9,11 +9,3 @@ class OrganismSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Organism
-
-
-class ContentTypeMixin(serializers.Serializer):
-
-    content_type_id = serializers.SerializerMethodField()
-
-    def get_content_type_id(self, obj):
-        return ContentType.objects.get_for_model(obj).id

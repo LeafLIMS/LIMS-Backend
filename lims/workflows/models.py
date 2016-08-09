@@ -128,7 +128,7 @@ class TaskTemplate(models.Model):
 
     class Meta:
         permissions = (
-            ('view_workflowtask', 'View workflowtask',),
+            ('view_tasktemplate', 'View workflow task template',),
         )
 
     def store_labware_as(self):

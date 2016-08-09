@@ -32,7 +32,7 @@ class Project(models.Model):
 
     project_identifier = models.CharField(default='', max_length=20)
 
-    primary_lab_contact = models.ForeignKey(User, limit_choices_to={'is_staff': True})
+    primary_lab_contact = models.ForeignKey(User)
 
     crm_project = models.ForeignKey(CRMProject, blank=True, null=True)
 

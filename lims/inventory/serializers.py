@@ -6,7 +6,7 @@ from .models import (Set, Item, ItemProperty, ItemTransfer,
                      AmountMeasure, Location)
 
 
-class SetSerializer(serializers.ModelSerializer):
+class SetSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
     number_of_items = serializers.IntegerField(read_only=True)
 
     class Meta:

@@ -10,7 +10,9 @@ from rest_framework.decorators import detail_route, list_route
 from rest_framework.permissions import IsAdminUser
 
 
-from lims.permissions.permissions import ViewPermissionsMixin, IsSuperUser, IsInAdminGroupOrRO
+from lims.permissions.permissions import (IsInAdminGroupOrRO, 
+        ViewPermissionsMixin, ExtendedObjectPermissions, 
+        ExtendedObjectPermissionsFilter)
 from .models import Set, Item, ItemTransfer, ItemType, Location, AmountMeasure
 from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationSerializer,
                           ItemSerializer, DetailedItemSerializer, SetSerializer)
@@ -18,6 +20,9 @@ from .helpers import csv_to_items
 
 
 class LeveledMixin:
+    """
+    Provide a display value for a heirarchy of elements
+    """
 
     def _to_leveled(self, obj):
         level = getattr(obj, obj._mptt_meta.level_attr)
@@ -35,28 +40,29 @@ class LeveledMixin:
 class MeasureViewSet(viewsets.ModelViewSet):
     queryset = AmountMeasure.objects.all()
     serializer_class = AmountMeasureSerializer
-    permission_classes = (IsSuperUser, IsInAdminGroupOrRO,)
+    permission_classes = (IsInAdminGroupOrRO,)
     search_fields = ('symbol', 'name',)
 
 
 class ItemTypeViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = ItemType.objects.all()
     serializer_class = ItemTypeSerializer
-    permission_classes = (IsSuperUser, IsInAdminGroupOrRO,)
+    permission_classes = (IsInAdminGroupOrRO,)
     search_fields = ('name',)
 
 
 class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
-    permission_classes = (IsSuperUser, IsInAdminGroupOrRO,)
+    permission_classes = (IsInAdminGroupOrRO,)
     search_fields = ('name',)
 
 
 class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
-    permission_classes = (IsAdminUser, )
+    permission_classes = (ExtendedObjectPermissions, )
+    filter_backends = (ExtendedObjectPermissionsFilter,)
     filter_fields = ('in_inventory', 'item_type__name', 'identifier', 'name')
     search_fields = ('name', 'identifier', 'item_type__name', 'location__name',)
 
@@ -155,6 +161,8 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
 class SetViewSet(viewsets.ModelViewSet):
     queryset = Set.objects.all()
     serializer_class = SetSerializer
+    permission_classes = (ExtendedObjectPermissions, )
+    filter_backends = (ExtendedObjectPermissionsFilter,)
 
     @detail_route()
     def items(self, request, pk=None):

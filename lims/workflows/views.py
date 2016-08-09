@@ -15,10 +15,15 @@ import django_filters
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
-from rest_framework.permissions import IsAdminUser, DjangoObjectPermissions
+from rest_framework.permissions import IsAdminUser
+from rest_framework.validators import ValidationError
 
+from guardian.shortcuts import get_group_perms
 
 from lims.shared.filters import ListFilter
+from lims.permissions.permissions import (IsInAdminGroupOrRO, 
+        ViewPermissionsMixin, ExtendedObjectPermissions, 
+        ExtendedObjectPermissionsFilter)
 
 from lims.projects.models import Product
 from lims.filetemplate.models import FileTemplate
@@ -33,7 +38,7 @@ from .serializers import (WorkflowSerializer, SimpleTaskTemplateSerializer,
                           RecalculateTaskTemplateSerializer)
 
 
-class WorkflowViewSet(viewsets.ModelViewSet):
+class WorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     """
     Provide a list of workflow templates that are available.
 
@@ -44,7 +49,8 @@ class WorkflowViewSet(viewsets.ModelViewSet):
     queryset = Workflow.objects.all()
     serializer_class = WorkflowSerializer
     search_fields = ('name', 'created_by__username',)
-    permission_classes = (IsAdminUser, DjangoObjectPermissions,)
+    permission_classes = (ExtendedObjectPermissions,)
+    filter_backends = (ExtendedObjectPermissionsFilter,)
 
     def perform_create(self, serializer):
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
@@ -89,23 +95,34 @@ class WorkflowViewSet(viewsets.ModelViewSet):
         return Response({'message': 'Please provide a task position'}, status=400)
 
 
-class ActiveWorkflowViewSet(viewsets.ModelViewSet):
+class ActiveWorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     """
     Provide a list of all workflows in progress.
     """
     queryset = ActiveWorkflow.objects.all()
     serializer_class = ActiveWorkflowSerializer
-    permission_classes = (IsAdminUser, DjangoObjectPermissions,)
+    permission_classes = (ExtendedObjectPermissions,)
+    filter_backends = (ExtendedObjectPermissionsFilter,)
 
     def get_serializer_class(self):
+        """
+        Provide a more detailed serializer when not a list
+        """
         if self.action == 'retrieve':
             return DetailedActiveWorkflowSerializer
         return self.serializer_class
 
     def perform_create(self, serializer):
-        serializer, permissions = self.clean_serializer_of_permissions(serializer)
-        instance = serializer.save(started_by=self.request.user)
-        self.assign_permissions(instance, permissions)
+        # Ensure that only workflows that the user has permissions
+        # for are able to be used.
+        # TODO: Check for permissions on product statuses?
+        workflow = serializer.validated_data['workflow']
+        if 'view_workflow' in get_group_perms(self.request.user, workflow):
+            instance = serializer.save(started_by=self.request.user)
+            # Inherit workflow group permissions
+            self.clone_group_permissions(instance.workflow, instance)
+        else:
+            raise ValidationError('You do not have permission to create this')
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -686,13 +703,14 @@ class TaskFilterSet(django_filters.FilterSet):
         }
 
 
-class TaskViewSet(viewsets.ModelViewSet):
+class TaskViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     """
     Provide a list of TaskTemplates available
     """
     queryset = TaskTemplate.objects.all()
     serializer_class = TaskTemplateSerializer
-    permission_classes = (IsAdminUser, DjangoObjectPermissions,)
+    permission_classes = (ExtendedObjectPermissions,)
+    filter_backends = (ExtendedObjectPermissionsFilter,)
     search_fields = ('name', 'created_by__username', )
     filter_class = TaskFilterSet
 
@@ -700,12 +718,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
         instance = serializer.save(created_by=self.request.user)
         self.assign_permissions(instance, permissions)
-
-    def retrieve(self, request, pk=None):
-        # Do any calculations before sending the task data
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)  # self.get_task(pk)
-        return Response(serializer.data)
 
     @detail_route(methods=["POST"])
     def recalculate(self, request, pk=None):
@@ -727,6 +739,8 @@ class TaskFieldViewSet(viewsets.ModelViewSet):
     Provides a list of all task fields
     """
     ordering_fields = ('name',)
+    permission_classes = (ExtendedObjectPermissions,)
+    filter_backends = (ExtendedObjectPermissionsFilter,)
 
     def get_serializer_class(self):
         try:

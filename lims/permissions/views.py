@@ -10,4 +10,4 @@ from .serializers import PermissionSerializer
 class PermissionViewSet(viewsets.ModelViewSet):
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
-    permission_classes = (IsAdminUser, ExtendedObjectPermissions,)
+    permission_classes = (ExtendedObjectPermissions,)

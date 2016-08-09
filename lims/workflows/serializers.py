@@ -3,6 +3,8 @@ import re
 from rest_framework import serializers
 from pyparsing import ParseException
 
+from lims.permissions.permissions import SerializerPermissionsMixin, SerializerReadOnlyPermissionsMixin 
+
 from lims.equipment.models import Equipment
 from lims.filetemplate.models import FileTemplate
 from lims.inventory.models import Item, ItemType, AmountMeasure
@@ -13,7 +15,7 @@ from .models import (Workflow, ActiveWorkflow, DataEntry,
 from .calculation import NumericStringParser
 
 
-class WorkflowSerializer(serializers.ModelSerializer):
+class WorkflowSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
     created_by = serializers.SlugRelatedField(
         slug_field='username',
         read_only=True
@@ -23,7 +25,7 @@ class WorkflowSerializer(serializers.ModelSerializer):
         model = Workflow
 
 
-class WorkflowProductSerializer(serializers.ModelSerializer):
+class WorkflowProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSerializer):
     product_identifier = serializers.CharField(read_only=True)
     product_name = serializers.CharField(read_only=True)
     product_project = serializers.IntegerField(read_only=True)
@@ -32,7 +34,7 @@ class WorkflowProductSerializer(serializers.ModelSerializer):
         model = WorkflowProduct
 
 
-class ActiveWorkflowSerializer(serializers.ModelSerializer):
+class ActiveWorkflowSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSerializer):
     """
     Provides a basic serialisation of active workflow data
     """
@@ -234,7 +236,7 @@ class StepFieldValueSerializer(serializers.Serializer):
     properties = StepFieldPropertyValueSerializer(many=True)
 
 
-class TaskTemplateSerializer(serializers.ModelSerializer):
+class TaskTemplateSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
     created_by = serializers.SlugRelatedField(
         slug_field='username',
         read_only=True

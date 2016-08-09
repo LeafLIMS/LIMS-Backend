@@ -6,14 +6,16 @@ from lims.inventory.models import ItemType
 from lims.inventory.serializers import LinkedItemSerializer
 from lims.workflows.serializers import DataEntrySerializer
 from lims.crm.serializers import CRMProjectSerializer
+from lims.permissions.permissions import SerializerPermissionsMixin, SerializerReadOnlyPermissionsMixin 
 from lims.shared.models import Organism
 from .models import (Project, Product, ProductStatus, Comment, WorkLog)
 
 
-class ProjectSerializer(serializers.ModelSerializer):
+class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
     project_identifier = serializers.CharField(read_only=True)
+    identifier = serializers.IntegerField(read_only=True)
     primary_lab_contact = serializers.SlugRelatedField(
-        queryset=User.objects.filter(is_staff=True),
+        queryset=User.objects.filter(groups__name='staff'),
         slug_field='username',
     )
     created_by = serializers.SlugRelatedField(
@@ -27,7 +29,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         read_only_fields = ('date_started',)
 
 
-class ProductSerializer(serializers.ModelSerializer):
+class ProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSerializer):
     identifier = serializers.CharField(read_only=True)
     product_identifier = serializers.CharField(read_only=True)
     on_workflow_as = serializers.PrimaryKeyRelatedField(read_only=True)

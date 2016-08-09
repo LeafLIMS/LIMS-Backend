@@ -1,9 +1,11 @@
 from django.contrib.auth.models import Group
+from django.db.models import Model
 
 from guardian.shortcuts import get_groups_with_perms, assign_perm
 
 from rest_framework import serializers
 from rest_framework import permissions
+from rest_framework import filters
 
 
 class IsSuperUser(permissions.BasePermission):
@@ -46,9 +48,25 @@ class IsInAdminGroupOrRO(permissions.BasePermission):
             return False
 
 
+class ExtendedObjectPermissionsFilter(filters.DjangoObjectPermissionsFilter):
+    """
+    Allow admin group users full access to all items
+    """
+
+    def filter_queryset(self, request, queryset, view):
+        # If we're the admin group allow access otherwise test
+        # for the correct permissions.
+        if request.user.groups.filter(name='admin').exists():
+            return queryset
+        return super(ExtendedObjectPermissionsFilter, self).filter_queryset(
+                request, queryset, view)
+
+
 class ExtendedObjectPermissions(permissions.DjangoObjectPermissions):
     """
-    Extends permissions to include 'view' for GET/HEAD/OPTIONS
+    Extends object permissions to include 'view' for GET/HEAD/OPTIONS
+
+    Allows admin group users full access to all items.
     """
     perms_map = {
         'GET': ['%(app_label)s.view_%(model_name)s'],
@@ -60,9 +78,27 @@ class ExtendedObjectPermissions(permissions.DjangoObjectPermissions):
         'DELETE': ['%(app_label)s.delete_%(model_name)s'],
     }
 
+    def has_permission(self, request, view):
+        # If we're the admin group allow access otherwise test
+        # for the correct permissions.
+        if request.user.groups.filter(name='admin').exists():
+            return True
+        return super(ExtendedObjectPermissions, self).has_permission(
+                request, view)
+
+    def has_object_permission(self, request, view, obj):
+        # If we're the admin group allow access otherwise test
+        # for the correct permissions.
+        if request.user.groups.filter(name='admin').exists():
+            return True
+        return super(ExtendedObjectPermissions, self).has_object_permission(
+                request, view, obj)
+
 
 class SerializerPermissionsMixin(serializers.Serializer):
-
+    """
+    Mixin to add fields to serializer for add/list of permissions
+    """
     # A dict of permissions that indicate which groups
     # can and cannot edit this object.
     permissions = serializers.SerializerMethodField()
@@ -77,9 +113,17 @@ class SerializerPermissionsMixin(serializers.Serializer):
         # used to actually limit anything, that is done
         # in the view
         perms = {}
-        for grp, p in get_groups_with_perms(obj, attach_perms=True).items():
-            perms[grp.name] = p
+        if isinstance(obj, Model):
+            for grp, p in get_groups_with_perms(obj, attach_perms=True).items():
+                perms[grp.name] = p
         return perms
+
+
+class SerializerReadOnlyPermissionsMixin(SerializerPermissionsMixin):
+    """
+    As SerializerPermissionsMixin but with assign_groups read only
+    """
+    assign_groups = serializers.ReadOnlyField()
 
 
 class ViewPermissionsMixin():
@@ -117,9 +161,28 @@ class ViewPermissionsMixin():
                 # Only give read permissions
                 assign_perm('view_%s' % model_name, grp, instance)
 
+    def clone_group_permissions(self, clone_from, clone_to):
+        """
+        Takes group permissions from one object and applies to another
+
+        This will translate model names so can match permissions of e.g.
+        a Project to that of its child Products
+        """
+        # NEED TO CHECK IF MEMBER OF AT LEAST ONE GROUP BEFORE CLONE!!!!
+        permissions = get_groups_with_perms(clone_from, attach_perms=True)
+        model_name = clone_to._meta.model_name
+        for group, perms in permissions.items():
+            for p in perms:
+                # Split permission to get operator e.g. change
+                operator = p.split('_')[0]
+                assign_perm('{}_{}'.format(operator, model_name), group, clone_to)
+
     def perform_create(self, serializer):
         """
         By default override perform_create to add permissions
+
+        Most of the views actually have a perform_create function already
+        in place so this is more of a template.
         """
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
         instance = serializer.save()

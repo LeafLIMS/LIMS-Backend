@@ -15,7 +15,7 @@ import django_filters
 
 from .serializers import (UserSerializer, StaffUserSerializer, SuperUserSerializer,
                           GroupSerializer, PermissionSerializer)
-from lims.permissions.permissions import IsInAdminGroupOrRO, IsThisUser, IsSuperUser
+from lims.permissions.permissions import (IsInAdminGroupOrRO, IsThisUser) 
 
 
 class ObtainAuthToken(APIView):
@@ -123,10 +123,10 @@ class UserViewSet(viewsets.ModelViewSet):
 class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = (IsSuperUser, IsInAdminGroupOrRO,)
+    permission_classes = (IsInAdminGroupOrRO,)
 
 
 class PermissionViewSet(viewsets.ModelViewSet):
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
-    permission_classes = (IsSuperUser, IsInAdminGroupOrRO,)
+    permission_classes = (IsInAdminGroupOrRO,)
