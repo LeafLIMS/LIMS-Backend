@@ -1,11 +1,14 @@
 from django.contrib.auth.models import Group
 from django.db.models import Model
 
-from guardian.shortcuts import get_groups_with_perms, assign_perm
+from guardian.shortcuts import (get_groups_with_perms, assign_perm, remove_perm,
+                                get_perms)
 
 from rest_framework import serializers
 from rest_framework import permissions
 from rest_framework import filters
+from rest_framework.response import Response
+from rest_framework.decorators import detail_route
 
 
 class IsSuperUser(permissions.BasePermission):
@@ -105,6 +108,7 @@ class SerializerPermissionsMixin(serializers.Serializer):
     # A dict of groups -> permission string with the signature
     # rw (read/write). Write allows editing as the user already
     # has to have permissions to create an instance
+    # example: {"admin": "rw", "staff": "r"}
     assign_groups = serializers.DictField(allow_null=True,
                                           write_only=True)
 
@@ -128,6 +132,12 @@ class SerializerReadOnlyPermissionsMixin(SerializerPermissionsMixin):
 
 class ViewPermissionsMixin():
 
+    PERM_TEMPLATE = (
+        'change_{}',
+        'delete_{}',
+        'view_{}',
+    )
+
     def clean_serializer_of_permissions(self, serializer):
         """
         Remove assign_groups from serializer before it is saved
@@ -139,27 +149,53 @@ class ViewPermissionsMixin():
         serializer.is_valid()
         return serializer, permissions
 
+    def current_permissions(self, group, instance):
+        """
+        Get permissions for group on this instance
+
+        Returns a string of 'rw' for change and 'r' for
+        view only.
+        """
+        model_name = instance._meta.model_name
+        current_permissions = get_perms(group, instance)
+        if 'change_{}'.format(model_name) in current_permissions:
+            return 'rw'
+        return 'r'
+
+    def remove_group_permissions(self, instance, group):
+        """
+        Remove permissions from instance for group
+        """
+        model_name = instance._meta.model_name
+        for perm in self.PERM_TEMPLATE:
+            remove_perm(perm.format(model_name), group, instance)
+        return True
+
     def assign_permissions(self, instance, permissions):
         """
         Assign the relevant permissions to a user for an object
+
+        Can be used to change permissions from rw/r and vice versa
         """
-        perm_template = (
-            'change_{}',
-            'delete_{}',
-            'view_{}',
-        )
         model_name = instance._meta.model_name
         for group, perm in permissions.items():
-            grp = Group.objects.get(name=group)
+            try:
+                grp = Group.objects.get(name=group)
+            except Group.DoesNotExist:
+                return False
+            current_permission = self.current_permissions(grp, instance)
             if perm == 'rw':
                 # Give read and write permissions
                 # Iterate through templates and build the
                 # permission codename based on model name
-                for pt in perm_template:
+                for pt in self.PERM_TEMPLATE:
                     assign_perm(pt.format(model_name), grp, instance)
             else:
                 # Only give read permissions
+                if current_permission == 'rw':
+                    self.remove_group_permissions(instance, grp)
                 assign_perm('view_%s' % model_name, grp, instance)
+            return True
 
     def clone_group_permissions(self, clone_from, clone_to):
         """
@@ -187,3 +223,41 @@ class ViewPermissionsMixin():
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
         instance = serializer.save()
         self.assign_permissions(instance, permissions)
+
+    @detail_route(methods=['POST'])
+    def set_permissions(self, request, pk=None):
+        """
+        Set permissions on the object provided.
+
+        Permissions in the same format as assign_groups field
+        on the SerializerPermissionsMixin.
+        """
+        # TODO: watch on set permission to change child permissions?
+        # Could look for parent id or something?
+        obj = self.get_object()
+        try:
+            permissions = request.data
+        except:
+            return Response({'message': 'Please provide permissions in correct format'}, status=400)
+        if permissions:
+            if self.assign_permissions(obj, permissions):
+                return Response({'message': 'Permissions set for {}'.format(obj)})
+            else:
+                return Response({'message': 'Permission set failure, check group'}, status=400)
+        return Response({'message': 'Please provide a list of permissions'}, status=400)
+
+    @detail_route(methods=['DELETE'])
+    def remove_permissions(self, request, pk=None):
+        obj = self.get_object()
+        groups_to_remove = request.query_params.getlist('groups', None)
+        if groups_to_remove:
+            model_name = obj._meta.model_name
+            for g in groups_to_remove:
+                try:
+                    group = Group.objects.get(name=g)
+                except Group.DoesNotExist:
+                    return Response({'message': 'Group does not exist'})
+                for perm in self.PERM_TEMPLATE:
+                    remove_perm(perm.format(model_name), group, obj)
+            return Response({'message': '{} groups removed'.format(len(groups_to_remove))})
+        return Response({'message': 'Please provide a list of groups'}, status=400)
