@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import DateTimeRangeField
+from django.utils import timezone
 
 from psycopg2.extras import DateTimeTZRange
 
@@ -18,9 +19,20 @@ class Equipment(models.Model):
     name = models.CharField(max_length=50, unique=True)
     location = models.ForeignKey(Location)
 
-    status = models.CharField(choices=EQUIPMENT_STATUS_CHOICES, max_length=30)
+    status = models.CharField(choices=EQUIPMENT_STATUS_CHOICES,
+                              default='idle',
+                              max_length=30)
 
     can_reserve = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['id']
+
+    def next_three_reservations(self):
+        # Limit the number of reservations returned to three
+        # as we really don't need all of them.
+        now = timezone.now()
+        return self.reservations.filter(start__gte=now).order_by('start')[:3]
 
     def __str__(self):
         return self.name
@@ -34,7 +46,7 @@ class EquipmentReservation(models.Model):
 
     reserved_for = models.CharField(max_length=200, null=True, blank=True)
     reserved_by = models.ForeignKey(User, related_name='reserved_by')
-    equipment_reserved = models.ForeignKey(Equipment)
+    equipment_reserved = models.ForeignKey(Equipment, related_name='reservations')
 
     is_confirmed = models.BooleanField(default=False)
     confirmed_by = models.ForeignKey(User, null=True, blank=True)
