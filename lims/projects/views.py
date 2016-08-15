@@ -2,6 +2,9 @@ import django_filters
 
 from rest_framework import viewsets
 from rest_framework.validators import ValidationError
+from rest_framework.filters import (OrderingFilter,
+                                    SearchFilter,
+                                    DjangoFilterBackend)
 
 from guardian.shortcuts import get_group_perms
 
@@ -26,7 +29,8 @@ class ProjectViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
     permission_classes = (ExtendedObjectPermissions,)
-    filter_backends = (ExtendedObjectPermissionsFilter,)
+    filter_backends = (SearchFilter, DjangoFilterBackend,
+                       OrderingFilter, ExtendedObjectPermissionsFilter,)
     search_fields = ('project_identifier', 'name', 'primary_lab_contact__username')
 
     def perform_create(self, serializer):
@@ -63,7 +67,8 @@ class ProductViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     permission_classes = (ExtendedObjectPermissions,)
-    filter_backends = (ExtendedObjectPermissionsFilter,)
+    filter_backends = (SearchFilter, DjangoFilterBackend,
+                       OrderingFilter, ExtendedObjectPermissionsFilter,)
     search_fields = ('product_identifier', 'name',)
     filter_class = ProductFilter
 

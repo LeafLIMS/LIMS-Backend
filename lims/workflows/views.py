@@ -16,6 +16,9 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 from rest_framework.validators import ValidationError
+from rest_framework.filters import (OrderingFilter,
+                                    SearchFilter,
+                                    DjangoFilterBackend)
 
 from guardian.shortcuts import get_group_perms
 
@@ -49,7 +52,8 @@ class WorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     serializer_class = WorkflowSerializer
     search_fields = ('name', 'created_by__username',)
     permission_classes = (ExtendedObjectPermissions,)
-    filter_backends = (ExtendedObjectPermissionsFilter,)
+    filter_backends = (SearchFilter, DjangoFilterBackend,
+                       OrderingFilter, ExtendedObjectPermissionsFilter,)
 
     def perform_create(self, serializer):
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
@@ -101,7 +105,8 @@ class ActiveWorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     queryset = ActiveWorkflow.objects.all()
     serializer_class = ActiveWorkflowSerializer
     permission_classes = (ExtendedObjectPermissions,)
-    filter_backends = (ExtendedObjectPermissionsFilter,)
+    filter_backends = (SearchFilter, DjangoFilterBackend,
+                       OrderingFilter, ExtendedObjectPermissionsFilter,)
 
     def get_serializer_class(self):
         """
@@ -709,7 +714,8 @@ class TaskViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     queryset = TaskTemplate.objects.all()
     serializer_class = TaskTemplateSerializer
     permission_classes = (ExtendedObjectPermissions,)
-    filter_backends = (ExtendedObjectPermissionsFilter,)
+    filter_backends = (SearchFilter, DjangoFilterBackend,
+                       OrderingFilter, ExtendedObjectPermissionsFilter,)
     search_fields = ('name', 'created_by__username', )
     filter_class = TaskFilterSet
 
@@ -739,7 +745,8 @@ class TaskFieldViewSet(viewsets.ModelViewSet):
     """
     ordering_fields = ('name',)
     permission_classes = (ExtendedObjectPermissions,)
-    filter_backends = (ExtendedObjectPermissionsFilter,)
+    filter_backends = (SearchFilter, DjangoFilterBackend,
+                       OrderingFilter, ExtendedObjectPermissionsFilter,)
 
     def get_serializer_class(self):
         try:
