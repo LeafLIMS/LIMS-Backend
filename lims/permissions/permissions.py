@@ -195,7 +195,7 @@ class ViewPermissionsMixin():
                 if current_permission == 'rw':
                     self.remove_group_permissions(instance, grp)
                 assign_perm('view_%s' % model_name, grp, instance)
-            return True
+        return True
 
     def clone_group_permissions(self, clone_from, clone_to):
         """
@@ -224,7 +224,7 @@ class ViewPermissionsMixin():
         instance = serializer.save()
         self.assign_permissions(instance, permissions)
 
-    @detail_route(methods=['POST'])
+    @detail_route(methods=['PATCH'])
     def set_permissions(self, request, pk=None):
         """
         Set permissions on the object provided.
@@ -240,6 +240,7 @@ class ViewPermissionsMixin():
         except:
             return Response({'message': 'Please provide permissions in correct format'}, status=400)
         if permissions:
+            print(permissions)
             if self.assign_permissions(obj, permissions):
                 return Response({'message': 'Permissions set for {}'.format(obj)})
             else:
