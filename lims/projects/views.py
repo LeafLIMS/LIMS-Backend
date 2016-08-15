@@ -36,10 +36,10 @@ class ProjectViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
 
 
 class ProductFilter(django_filters.FilterSet):
-    on_workflow = django_filters.MethodFilter()
+    on_workflow_as = django_filters.MethodFilter()
     id__in = ListFilter(name='id')
 
-    def filter_on_workflow(self, queryset, value):
+    def filter_on_workflow_as(self, queryset, value):
         if value == 'False':
             return queryset.filter(on_workflow_as__isnull=True)
         elif value == 'True':
