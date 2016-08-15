@@ -285,7 +285,7 @@ DEFAULT_STAFF_PERMISSIONS = (
     "Can change active workflow",
     "Can delete active workflow",
     "View activeworkflow",
-    "View workflowtask",
+    "View workflow task template",
     "View workflow",
     "Can add workflow product",
     "Can change workflow product",
