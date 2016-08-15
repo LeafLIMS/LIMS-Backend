@@ -43,8 +43,11 @@ class ObtainAuthToken(APIView):
                 else:
                     group = 'external'
 
+                groups = [g.name for g in user.groups.all()]
+
                 token, created = Token.objects.get_or_create(user=user)
-                return Response({'token': token.key, 'status': group, 'id': usr.id})
+                return Response({'token': token.key, 'status': group,
+                                 'id': usr.id, 'groups': groups})
             else:
                 return Response(
                     {'message': 'You do not have permissions to use this resource'}, status=403)
