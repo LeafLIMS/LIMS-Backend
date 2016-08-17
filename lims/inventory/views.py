@@ -7,6 +7,9 @@ from pint import UnitRegistry, UndefinedUnitError
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route
+from rest_framework.filters import (OrderingFilter,
+                                    SearchFilter,
+                                    DjangoFilterBackend)
 
 
 from lims.permissions.permissions import (IsInAdminGroupOrRO,
@@ -61,7 +64,8 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
     permission_classes = (ExtendedObjectPermissions, )
-    filter_backends = (ExtendedObjectPermissionsFilter,)
+    filter_backends = (SearchFilter, DjangoFilterBackend,
+                       OrderingFilter, ExtendedObjectPermissionsFilter,)
     filter_fields = ('in_inventory', 'item_type__name', 'identifier', 'name')
     search_fields = ('name', 'identifier', 'item_type__name', 'location__name',)
 
@@ -161,7 +165,8 @@ class SetViewSet(viewsets.ModelViewSet):
     queryset = Set.objects.all()
     serializer_class = SetSerializer
     permission_classes = (ExtendedObjectPermissions, )
-    filter_backends = (ExtendedObjectPermissionsFilter,)
+    filter_backends = (SearchFilter, DjangoFilterBackend,
+                       OrderingFilter, ExtendedObjectPermissionsFilter,)
 
     @detail_route()
     def items(self, request, pk=None):
