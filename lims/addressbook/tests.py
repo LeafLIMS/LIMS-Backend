@@ -1,21 +1,13 @@
-from django.test import TestCase
-from django.contrib.auth.models import User
-from rest_framework.test import APIClient
+from lims.shared.loggedintestcase import LoggedInTestCase
 from rest_framework import status
 from .models import Address
 
 
-class AddressTestCase(TestCase):
+class AddressTestCase(LoggedInTestCase):
     def setUp(self):
+        super(AddressTestCase, self).setUp()
         # These objects are recreated afresh for every test method below.
         # Data updated or created in a test method will not persist to another test method.
-        self._client = APIClient()
-
-        self._joeBloggs = User.objects.create_user(username='Joe Bloggs',
-                                                   email='joe@tgac.com', password='top_secret')
-        self._janeDoe = User.objects.create_user(username='Jane Doe',
-                                                 email='jane@tgac.com', password='widget')
-
         self._joeBloggsAddress = \
             Address.objects.create(institution_name="Beetroot Institute",
                                    address_1="12 Muddy Field",
@@ -32,25 +24,6 @@ class AddressTestCase(TestCase):
                                    postcode="IP1 1AA",
                                    country="UK",
                                    user=self._janeDoe)
-
-    # Utility function to switch user
-    def _asJoeBloggs(self):
-        self._client.logout()
-        self._client.login(username="Joe Bloggs", password="top_secret")
-
-    # Utility function to switch user
-    def _asJaneDoe(self):
-        self._client.logout()
-        self._client.login(username="Jane Doe", password="widget")
-
-    # Utility function to switch user
-    def _asAnonymous(self):
-        self._client.logout()
-
-    # Utility function to switch user
-    def _asInvalid(self):
-        self._client.logout()
-        self._client.login(username="Non Existent", password="made_up")
 
     # Preset addresses from the constructor should return the values they were given
     def test_001_db_preset_addresses_correct(self):
@@ -75,7 +48,7 @@ class AddressTestCase(TestCase):
 
     # Anonymous users or users with invalid credentials
     # cannot see the address list or individual addresses
-    def test_002a_rest_no_anonymous_or_invalid_access(self):
+    def test_002_rest_no_anonymous_or_invalid_access(self):
         self._asAnonymous()
         response = self._client.get('/addresses/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
