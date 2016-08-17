@@ -112,6 +112,7 @@ class AddressTestCase(LoggedInTestCase):
 
         # The DB now has 3 addresses in and that the new address is among them
         self.assertEqual(Address.objects.count(), 3)
+        self.assertIs(Address.objects.filter(institution_name="Leek Institute").exists(), True)
         address = Address.objects.get(institution_name="Leek Institute")
         self.assertEqual(address.institution_name, "Leek Institute")
         self.assertEqual(address.address_1, "45 Mole Hill")
@@ -145,7 +146,7 @@ class AddressTestCase(LoggedInTestCase):
                        "country": "UK",
                        "user": self._joeBloggs.id}
         response = self._client.post("/addresses/", new_address, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIs(Address.objects.filter(institution_name="Jam Ltd.").exists(), False)
 
     # Edit our own address and see the result reflected in the DB
@@ -156,6 +157,7 @@ class AddressTestCase(LoggedInTestCase):
                                       updated_address, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+        self.assertIs(Address.objects.filter(institution_name="Onion Institute Revised").exists(), True)
         address = Address.objects.get(institution_name="Onion Institute Revised")
         self.assertEqual(address.institution_name, "Onion Institute Revised")
         self.assertEqual(address.address_1, "110a Deep Dark Wood")

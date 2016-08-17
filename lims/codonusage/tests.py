@@ -23,11 +23,14 @@ class CodonUsageTestCase(LoggedInTestCase):
     # Preset codons from the constructor should return the values they were given
     def test_001_db_preset_codontables_correct(self):
         # Check organisms (species)
+        self.assertIs(Organism.objects.filter(name="Homo sapiens").exists(), True)
         organism1 = Organism.objects.get(name="Homo sapiens")
         self.assertEqual(organism1.common_name, "Human")
+        self.assertIs(Organism.objects.filter(name="Bos taurus").exists(), True)
         organism2 = Organism.objects.get(name="Bos taurus")
         self.assertEqual(organism2.common_name, "Cow")
         # Check codon table for human
+        self.assertIs(CodonUsageTable.objects.filter(species=organism1).exists(), True)
         codontable1 = CodonUsageTable.objects.get(species=organism1).codons.all()
         self.assertEqual(len(codontable1), 2)
         codon1_1 = codontable1[0]
@@ -37,6 +40,7 @@ class CodonUsageTestCase(LoggedInTestCase):
         self.assertEqual(codon1_2.name, "GCT")
         self.assertEqual(codon1_2.value, 0.02)
         # Check codon table for cow
+        self.assertIs(CodonUsageTable.objects.filter(species=organism2).exists(), True)
         codontable2 = CodonUsageTable.objects.get(species=organism2).codons.all()
         self.assertEqual(len(codontable2), 2)
         codon2_1 = codontable2[0]
@@ -94,7 +98,7 @@ class CodonUsageTestCase(LoggedInTestCase):
         self.assertEqual(codon2["value"], self._cow_codon2.value)
 
     # Users cannot add an extra table of their own - service is read-only
-    def test_006_rest_create_address(self):
+    def test_006_rest_create_codontable(self):
         # Create a new address of our own
         self._asJaneDoe()
         new_codontable = {"species": self._mouse.id,
