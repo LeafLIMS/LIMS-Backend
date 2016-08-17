@@ -27,6 +27,7 @@ class AddressTestCase(LoggedInTestCase):
 
     # Preset addresses from the constructor should return the values they were given
     def test_001_db_preset_addresses_correct(self):
+        self.assertIs(Address.objects.filter(institution_name="Beetroot Institute").exists(), True)
         address1 = Address.objects.get(institution_name="Beetroot Institute")
         self.assertEqual(address1.institution_name, "Beetroot Institute")
         self.assertEqual(address1.address_1, "12 Muddy Field")
@@ -36,6 +37,7 @@ class AddressTestCase(LoggedInTestCase):
         self.assertEqual(address1.country, "UK")
         self.assertEqual(address1.user, self._joeBloggs)
         self.assertEqual("%s" % address1, "Joe Bloggs: Beetroot Institute")
+        self.assertIs(Address.objects.filter(institution_name="Onion Institute").exists(), True)
         address2 = Address.objects.get(institution_name="Onion Institute")
         self.assertEqual(address2.institution_name, "Onion Institute")
         self.assertEqual(address2.address_1, "110a Deep Dark Wood")
