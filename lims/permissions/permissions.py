@@ -25,30 +25,32 @@ class IsThisUser(permissions.BasePermission):
         return obj == request.user or request.user.is_staff
 
 
-class IsInStaffGroupOrRO(permissions.BasePermission):
+class IsInGroupOrRO(permissions.BasePermission):
+    """
+    Limit write access to user in a specified group
+    """
+    group_name = 'user'
+
+    def has_permission(self, request, view):
+        if request.user and request.user.is_authenticated():
+            has_group = request.user.groups.filter(name=self.group_name).exists()
+            if request.method in permissions.SAFE_METHODS or has_group:
+                return True
+        return False
+
+
+class IsInStaffGroupOrRO(IsInGroupOrRO):
     """
     Limit write access to user in staff group
     """
-    def has_permission(self, request, view):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        else:
-            if request.user.groups.filter('staff').exists():
-                return True
-            return False
+    group_name = 'staff'
 
 
-class IsInAdminGroupOrRO(permissions.BasePermission):
+class IsInAdminGroupOrRO(IsInGroupOrRO):
     """
     Limit write access to user in admin group
     """
-    def has_permission(self, request, view):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        else:
-            if request.user.groups.filter(name='admin').exists():
-                return True
-            return False
+    group_name = 'admin'
 
 
 class ExtendedObjectPermissionsFilter(filters.DjangoObjectPermissionsFilter):
