@@ -25,6 +25,37 @@ class IsThisUser(permissions.BasePermission):
         return obj == request.user or request.user.is_staff
 
 
+class IsAddressOwner(permissions.BasePermission):
+    """
+    Is this address being edited by user or admin
+    """
+
+    def has_permission(self, request, view):
+        if request.user and request.user.is_authenticated():
+            return True
+        return False
+
+    def has_object_permission(self, request, view, obj):
+        if request.user and request.user.is_authenticated():
+            has_group = request.user.groups.filter(name='admin').exists()
+            if obj.user == request.user or has_group:
+                return True
+        return False
+
+
+class IsAddressOwnerFilter(filters.BaseFilterBackend):
+    """
+    Show only user address or all if admin
+    """
+
+    def filter_queryset(self, request, queryset, view):
+        has_group = request.user.groups.filter(name='admin').exists()
+        if has_group:
+            return queryset
+        else:
+            return queryset.filter(user=request.user)
+
+
 class IsInGroupOrRO(permissions.BasePermission):
     """
     Limit write access to user in a specified group

@@ -1,10 +1,10 @@
-
 from rest_framework import viewsets
+from rest_framework.serializers import ValidationError
 
 from .models import Address
 from .serializers import AddressSerializer
 
-from lims.users.filters import IsOwnerFilterBackend
+from lims.permissions.permissions import IsAddressOwner, IsAddressOwnerFilter
 
 
 class AddressViewSet(viewsets.ModelViewSet):
@@ -17,9 +17,16 @@ class AddressViewSet(viewsets.ModelViewSet):
     """
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
-    filter_backends = [IsOwnerFilterBackend]
+    permission_classes = (IsAddressOwner,)
+    filter_backends = (IsAddressOwnerFilter,)
 
     def perform_create(self, serializer):
-        if self.request.user.is_staff:
+        # Allow an admin user to set the user
+        # for instance is adding a new address
+        if self.request.user.groups.filter(name='admin').exists():
             serializer.save()
-        serializer.save(user=self.request.user)
+        else:
+            # No. You are not admin, you cannot add user.
+            if self.request.user != serializer.validated_data['user']:
+                raise ValidationError('You cannot add an address to another user')
+            serializer.save(user=self.request.user)
