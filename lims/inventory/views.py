@@ -197,12 +197,17 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
         return Response({'message': 'You must provide a transfer ID'}, status=400)
 
 
-class SetViewSet(viewsets.ModelViewSet):
+class SetViewSet(viewsets.ModelViewSet, ViewPermissionsMixin):
     queryset = Set.objects.all()
     serializer_class = SetSerializer
     permission_classes = (ExtendedObjectPermissions, )
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
+
+    def perform_create(self, serializer):
+        serializer, permissions = self.clean_serializer_of_permissions(serializer)
+        instance = serializer.save()
+        self.assign_permissions(instance, permissions)
 
     @detail_route()
     def items(self, request, pk=None):
