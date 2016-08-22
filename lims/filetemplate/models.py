@@ -16,6 +16,17 @@ class FileTemplate(models.Model):
     def field_name(self):
         return self.name.lower().replace(' ', '_')
 
+    def _get_field_key(self, field):
+        if field.map_to:
+            return field.map_to
+        return field.name
+
+    def _validate_headers(self, header_list):
+        for field in self.fields.all():
+            if field.required and field.name not in header_list:
+                return False
+        return True
+
     def read(self, input_file):
         csv_file = csv.DictReader(input_file)
         try:
@@ -29,19 +40,33 @@ class FileTemplate(models.Model):
                 for line in csv_file:
                     line = dict([(k, v) for k, v in line.items() if v.strip()])
                     if any(line):
+                        # Get the identifier fields from the file
                         identifier = frozenset(line[n.name] for n in identifier_fields)
                         # Get a list of identifiers and remove from line
                         ifn = [i.name for i in identifier_fields]
-                        line = dict([(k, v) for k, v in line.items() if k not in ifn])
-                        indexed[identifier] = line
+
+                        generated_line = {}
+                        for field in self.fields.all():
+                            # Don't add identifier fields
+                            if field.name not in ifn:
+                                field_value = line[field.name]
+                                # May map to different DB field
+                                field_key = self._get_field_key(field)
+                                if field.is_property:
+                                    if 'properties' not in generated_line:
+                                        generated_line['properties'] = []
+                                    prop = {
+                                            'name': field_key,
+                                            'value': field_value
+                                            }
+                                    generated_line['properties'].append(prop)
+                                else:
+                                    generated_line[field_key] = field_value
+
+                        print(generated_line)
+                        indexed[identifier] = generated_line
                 return indexed
         return False
-
-    def _validate_headers(self, header_list):
-        for field in self.fields.all():
-            if field.required and field.name not in header_list:
-                return False
-        return True
 
     def write(self, output_file, data):
         fieldnames = [item.name for item in self.fields.all()]
@@ -56,9 +81,16 @@ class FileTemplate(models.Model):
 
 
 class FileTemplateField(models.Model):
+    # Name of the field in the file
     name = models.CharField(max_length=50)
+    # Name of the field in the DB (if different to file header)
+    map_to = models.CharField(max_length=50, null=True, blank=True)
     required = models.BooleanField(default=False)
     is_identifier = models.BooleanField(default=False)
+    # Is to be used as/read from a property not a field
+    # Ignore on anything that does not support reading/writing
+    # properties on objects.
+    is_property = models.BooleanField(default=False)
 
     template = models.ForeignKey(FileTemplate, related_name='fields')
 
