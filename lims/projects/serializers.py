@@ -54,6 +54,8 @@ class ProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSer
         queryset=Organism.objects.all(),
         slug_field='name',
     )
+    design = serializers.CharField(allow_blank=True,
+                                   write_only=True)
 
     class Meta:
         model = Product

@@ -17,6 +17,7 @@ from lims.permissions.permissions import (IsInAdminGroupOrRO,
 from .models import (Product, ProductStatus, Project)
 from .serializers import (ProjectSerializer, ProductSerializer,
                           DetailedProductSerializer, ProductStatusSerializer)
+from .parsers import DesignFileParser
 
 
 class ProjectViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
@@ -72,6 +73,21 @@ class ProductViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     search_fields = ('product_identifier', 'name',)
     filter_class = ProductFilter
 
+    def _parse_design(self, instance):
+        """
+        Takes a design file and extracts the necessary info
+        out to add inventory items or other things.
+        """
+        if instance.design is not None:
+            items = []
+            parser = DesignFileParser(instance.design, instance)
+            if instance.design_format == 'csv':
+                items = parser.parse_csv()
+            elif instance.design_format == 'gb':
+                items = parser.parse_gb()
+            for i in items:
+                instance.linked_inventory.add(i)
+
     def get_serializer_class(self):
         # Use a more compact serializer when listing.
         # This makes things run more efficiantly.
@@ -88,6 +104,10 @@ class ProductViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             self.clone_group_permissions(instance.project, instance)
         else:
             raise ValidationError('You do not have permission to create this')
+        # Does it have a design?
+        # If so, parse the design to extract info to get parts from
+        # inventory.
+        self._parse_design(instance)
 
 
 class ProductStatusViewSet(viewsets.ModelViewSet):

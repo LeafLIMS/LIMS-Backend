@@ -1,55 +1,70 @@
+from io import StringIO
+import csv
+
+from django.db.models import Q
+
 from Bio import SeqIO
 
-from lims.projects.models import Design, Element, ElementLabel
-from lims.inventory.models import ItemType
-from lims.inventory.helpers import item_from_type
+from lims.inventory.models import Item
 
 
-def genbank_to_design_elements(design: Design, text_file: str, request):
-    record = SeqIO.read(text_file, 'genbank')
-    links = []
-    link_elements = {}
-    for feat in record.features:
-        if feat.type in ['primer_bind', 'CDS', "5'_UTR", 'Promoter', "3'_UTR", 'Terminator']:
-            elem = Element(design=design)
-            label = ''
-            identifier = ''
-            link_to = ''
-            name = ''
-            sequence = feat.extract(record.seq)
-            for key, value in feat.qualifiers.items():
-                if key == 'label':
-                    name = value[0]
-                if key == 'LIMS_LABEL':
-                    label = value[0]
-                if key == 'LIMS_CATALOGID':
-                    identifier = value[0]
-                if key == 'LIMS_LINKEDTO':
-                    link_to = value[0]
+class DesignFileParser:
 
-            elem.name = name
-            try:
-                elem.label = ElementLabel.objects.get(name=label)
-            except:
-                elem.label, created = ElementLabel.objects.get_or_create(
-                    name='Consumable',
-                    type_of=ItemType.objects.get(name='Consumable'))
+    GENBANK_FEATURE_TYPES = (
+        'primer_bind',
+        'cds',
+        '5\'_utr',
+        'promoter',
+        '3\'_utr',
+        'terminator',
+        'unknown',
+        'structual',  # Support EGF imports
+    )
 
-            if label and identifier:
-                elem.inventory_item = item_from_type(elem.label.type_of,
-                                                     identifier, name, request, str(sequence))
+    def __init__(self, data):
+        self.file_data = StringIO(initial_value=data)
 
-            if label:
-                elem.save()
-
-            if link_to:
-                links.append([link_to, elem])
-            else:
-                link_elements[identifier] = elem
-
-    for item in links:
+    def get_inventory_item(self, name):
+        """
+        Get an item matching the name/identifier from the inventory
+        """
         try:
-            item[1].linked_to = link_elements[item[0]]
-            item[1].save()
-        except:
-            pass
+            item = Item.objects.get(Q(name=name) | Q(identifier=name))
+            return item
+        except Item.DoesNotExist:
+            return False
+
+    def parse_gb(self):
+        record = SeqIO.read(self.file_data, 'genbank')
+        items = []
+        for feat in record.features:
+            # The file sometimes has lowercase and sometimes uppercase
+            # types so normalise to lowercase.
+            if feat.type.lower() in self.GENBANK_FEATURE_TYPES:
+                name = ''
+                # Look for the label key. Other keys can be set but
+                # most software simply sets the label key and nothing
+                # else.
+                for key, value in feat.qualifiers.items():
+                    if key == 'label':
+                        name = value[0]
+                if name:
+                    item = self.get_inventory_item(name)
+                    if item:
+                        items.append(item)
+        return items
+
+    def parse_csv(self):
+        reader = csv.DictReader(self.file_data)
+        items = []
+        for line in reader:
+            # Using the EGF style CSV file with the following
+            # headers:
+            # Name, Description, Role, Color, Sequence, @metadata
+            # Ignoring all but the name fields for now as we don't
+            # need the others.
+            if 'Name' in line and line['Name'] != '':
+                item = self.get_inventory_item(line['Name'])
+                if item:
+                    items.append(item)
+        return items
