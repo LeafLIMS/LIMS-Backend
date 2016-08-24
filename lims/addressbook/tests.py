@@ -4,10 +4,10 @@ from .models import Address
 
 
 class AddressTestCase(LoggedInTestCase):
+
     def setUp(self):
         super(AddressTestCase, self).setUp()
-        # These objects are recreated afresh for every test method below.
-        # Data updated or created in a test method will not persist to another test method.
+
         self._joeBloggsAddress = \
             Address.objects.create(institution_name="Beetroot Institute",
                                    address_1="12 Muddy Field",
@@ -25,8 +25,7 @@ class AddressTestCase(LoggedInTestCase):
                                    country="UK",
                                    user=self._janeDoe)
 
-    # Preset addresses from the constructor should return the values they were given
-    def test_001_db_preset_addresses_correct(self):
+    def test_presets(self):
         self.assertIs(Address.objects.filter(institution_name="Beetroot Institute").exists(), True)
         address1 = Address.objects.get(institution_name="Beetroot Institute")
         self.assertEqual(address1.institution_name, "Beetroot Institute")
@@ -36,7 +35,6 @@ class AddressTestCase(LoggedInTestCase):
         self.assertEqual(address1.postcode, "NR1 1AA")
         self.assertEqual(address1.country, "UK")
         self.assertEqual(address1.user, self._joeBloggs)
-        self.assertEqual("%s" % address1, "Joe Bloggs: Beetroot Institute")
         self.assertIs(Address.objects.filter(institution_name="Onion Institute").exists(), True)
         address2 = Address.objects.get(institution_name="Onion Institute")
         self.assertEqual(address2.institution_name, "Onion Institute")
@@ -46,24 +44,23 @@ class AddressTestCase(LoggedInTestCase):
         self.assertEqual(address2.postcode, "IP1 1AA")
         self.assertEqual(address2.country, "UK")
         self.assertEqual(address2.user, self._janeDoe)
-        self.assertEqual("%s" % address2, "Jane Doe: Onion Institute")
 
-    # Anonymous users or users with invalid credentials
-    # cannot see the address list or individual addresses
-    def test_002_rest_no_anonymous_or_invalid_access(self):
+    def test_access_anonymous(self):
         self._asAnonymous()
         response = self._client.get('/addresses/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         response = self._client.get('/addresses/%d/' % self._joeBloggsAddress.id)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_access_invalid(self):
         self._asInvalid()
         response = self._client.get('/addresses/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         response = self._client.get('/addresses/%d/' % self._joeBloggsAddress.id)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    # Users only see their own address(es) in the address list
-    def test_003_rest_all_addresses_content(self):
+    def test_user_list(self):
+        # Others not permitted
         self._asJoeBloggs()
         response = self._client.get('/addresses/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -71,36 +68,37 @@ class AddressTestCase(LoggedInTestCase):
         self.assertEqual(len(addresses["results"]), 1)
         address1 = addresses["results"][0]
         self.assertEqual(address1["institution_name"], "Beetroot Institute")
-        self.assertEqual(address1["address_1"], "12 Muddy Field")
-        self.assertEqual(address1["address_2"], "Long Lane")
-        self.assertEqual(address1["city"], "Norwich")
-        self.assertEqual(address1["postcode"], "NR1 1AA")
-        self.assertEqual(address1["country"], "UK")
 
-    # Users can see their own address when requested by address ID
-    def test_004_rest_single_address_content(self):
+    def test_user_view_own(self):
         self._asJoeBloggs()
         response = self._client.get('/addresses/%d/' % self._joeBloggsAddress.id)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         address1 = response.data
         self.assertEqual(address1["institution_name"], "Beetroot Institute")
-        self.assertEqual(address1["address_1"], "12 Muddy Field")
-        self.assertEqual(address1["address_2"], "Long Lane")
-        self.assertEqual(address1["city"], "Norwich")
-        self.assertEqual(address1["postcode"], "NR1 1AA")
-        self.assertEqual(address1["country"], "UK")
 
-    # Users cannot see addresses from other users when requested by address ID
-    def test_005_rest_single_address_permissions(self):
+    def test_user_view_other(self):
+        # Others not permitted
         self._asJaneDoe()
         response = self._client.get('/addresses/%d/' % self._janeDoeAddress.id)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response = self._client.get('/addresses/%d/' % self._joeBloggsAddress.id)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    # Users can add an extra address of their own
-    def test_006_rest_create_address(self):
-        # Create a new address of our own
+    def test_admin_list(self):
+        self._asAdmin()
+        response = self._client.get('/addresses/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        addresses = response.data
+        self.assertEqual(len(addresses["results"]), 2)
+
+    def test_admin_view_any(self):
+        self._asAdmin()
+        response = self._client.get('/addresses/%d/' % self._joeBloggsAddress.id)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        address1 = response.data
+        self.assertEqual(address1["institution_name"], "Beetroot Institute")
+
+    def test_user_create_own(self):
         self._asJaneDoe()
         new_address = {"institution_name": "Leek Institute",
                        "address_1": "45 Mole Hill",
@@ -112,7 +110,6 @@ class AddressTestCase(LoggedInTestCase):
         response = self._client.post("/addresses/", new_address, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        # The DB now has 3 addresses in and that the new address is among them
         self.assertEqual(Address.objects.count(), 3)
         self.assertIs(Address.objects.filter(institution_name="Leek Institute").exists(), True)
         address = Address.objects.get(institution_name="Leek Institute")
@@ -123,9 +120,8 @@ class AddressTestCase(LoggedInTestCase):
         self.assertEqual(address.postcode, "CF1 1AA")
         self.assertEqual(address.country, "Wales")
         self.assertEqual(address.user, self._janeDoe)
-        self.assertEqual("%s" % address, "Jane Doe: Leek Institute")
 
-        # Other user still sees just their address but we see both our old and new ones
+        # Other user still sees just theirs but we see both our old and new ones
         self._asJoeBloggs()
         response = self._client.get('/addresses/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -137,8 +133,8 @@ class AddressTestCase(LoggedInTestCase):
         addresses = response.data
         self.assertEqual(len(addresses["results"]), 2)
 
-    # Should not be able to create an address for another user
-    def test_007_rest_create_address_permissions(self):
+    def test_user_create_other(self):
+        # Others not permitted
         self._asJaneDoe()
         new_address = {"institution_name": "Jam Ltd.",
                        "address_1": "Sticky House",
@@ -148,11 +144,45 @@ class AddressTestCase(LoggedInTestCase):
                        "country": "UK",
                        "user": self._joeBloggs.id}
         response = self._client.post("/addresses/", new_address, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIs(Address.objects.filter(institution_name="Jam Ltd.").exists(), False)
 
-    # Edit our own address and see the result reflected in the DB
-    def test_008_rest_update_address(self):
+    def test_admin_create_any(self):
+        self._asAdmin()
+        new_address = {"institution_name": "Leek Institute",
+                       "address_1": "45 Mole Hill",
+                       "address_2": "High St",
+                       "city": "Cardiff",
+                       "postcode": "CF1 1AA",
+                       "country": "Wales",
+                       "user": self._janeDoe.id}
+        response = self._client.post("/addresses/", new_address, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(Address.objects.count(), 3)
+        self.assertIs(Address.objects.filter(institution_name="Leek Institute").exists(), True)
+        address = Address.objects.get(institution_name="Leek Institute")
+        self.assertEqual(address.institution_name, "Leek Institute")
+        self.assertEqual(address.address_1, "45 Mole Hill")
+        self.assertEqual(address.address_2, "High St")
+        self.assertEqual(address.city, "Cardiff")
+        self.assertEqual(address.postcode, "CF1 1AA")
+        self.assertEqual(address.country, "Wales")
+        self.assertEqual(address.user, self._janeDoe)
+
+        # Other user still sees just theirs but we see both our old and new ones
+        self._asJoeBloggs()
+        response = self._client.get('/addresses/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        addresses = response.data
+        self.assertEqual(len(addresses["results"]), 1)
+        self._asJaneDoe()
+        response = self._client.get('/addresses/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        addresses = response.data
+        self.assertEqual(len(addresses["results"]), 2)
+
+    def test_user_edit_own(self):
         self._asJaneDoe()
         updated_address = {"institution_name": "Onion Institute Revised"}
         response = self._client.patch("/addresses/%d/" % self._janeDoeAddress.id,
@@ -168,10 +198,9 @@ class AddressTestCase(LoggedInTestCase):
         self.assertEqual(address.postcode, "IP1 1AA")
         self.assertEqual(address.country, "UK")
         self.assertEqual(address.user, self._janeDoe)
-        self.assertEqual("%s" % address, "Jane Doe: Onion Institute Revised")
 
-    # Should not be able to update the address of another user
-    def test_009_rest_update_address_permissions(self):
+    def test_user_edit_other(self):
+        # Others not permitted
         self._asJoeBloggs()
         updated_address = {"institution_name": "Toast Co."}
         response = self._client.put("/addresses/%d/" % self._janeDoeAddress.id,
@@ -180,16 +209,38 @@ class AddressTestCase(LoggedInTestCase):
         self.assertIs(Address.objects.filter(institution_name="Onion Institute").exists(), True)
         self.assertIs(Address.objects.filter(institution_name="Toast Co.").exists(), False)
 
-    # Delete own address
-    def test_010_rest_delete_address(self):
+    def test_admin_edit_any(self):
+        self._asAdmin()
+        updated_address = {"institution_name": "Onion Institute Revised"}
+        response = self._client.patch("/addresses/%d/" % self._janeDoeAddress.id,
+                                      updated_address, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertIs(Address.objects.filter(institution_name="Onion Institute Revised").exists(), True)
+        address = Address.objects.get(institution_name="Onion Institute Revised")
+        self.assertEqual(address.institution_name, "Onion Institute Revised")
+        self.assertEqual(address.address_1, "110a Deep Dark Wood")
+        self.assertEqual(address.address_2, "Bridge Street")
+        self.assertEqual(address.city, "Ipswich")
+        self.assertEqual(address.postcode, "IP1 1AA")
+        self.assertEqual(address.country, "UK")
+        self.assertEqual(address.user, self._janeDoe)
+
+    def test_user_delete_own(self):
         self._asJoeBloggs()
         response = self._client.delete("/addresses/%d/" % self._joeBloggsAddress.id)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertIs(Address.objects.filter(institution_name="Beetroot Institute").exists(), False)
 
-    # Cannot delete someone else's address
-    def test_011_rest_delete_address_permissions(self):
+    def test_user_delete_other(self):
+        # Others not permitted
         self._asJaneDoe()
         response = self._client.delete("/addresses/%d/" % self._joeBloggsAddress.id)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIs(Address.objects.filter(institution_name="Beetroot Institute").exists(), True)
+
+    def test_admin_delete_any(self):
+        self._asAdmin()
+        response = self._client.delete("/addresses/%d/" % self._joeBloggsAddress.id)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertIs(Address.objects.filter(institution_name="Beetroot Institute").exists(), False)

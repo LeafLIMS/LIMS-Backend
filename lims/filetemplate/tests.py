@@ -5,10 +5,10 @@ from .models import FileTemplate, FileTemplateField
 
 
 class FileTemplateTestCase(LoggedInTestCase):
+
     def setUp(self):
         super(FileTemplateTestCase, self).setUp()
-        # These objects are recreated afresh for every test method below.
-        # Data updated or created in a test method will not persist to another test method.
+
         self._input_template1 = \
             FileTemplate.objects.create(name="InputTemplate1",
                                         file_for="input")
@@ -69,8 +69,7 @@ class FileTemplateTestCase(LoggedInTestCase):
                                              is_identifier=False,
                                              template=self._output_template)
 
-    # Preset templates from the constructor should return the values they were given
-    def test_001_db_preset_templates_correct(self):
+    def test_presets(self):
         self.assertIs(FileTemplate.objects.filter(name="InputTemplate1").exists(), True)
         templ1 = FileTemplate.objects.get(name="InputTemplate1")
         self.assertEqual(templ1.name, "InputTemplate1")
@@ -132,22 +131,21 @@ class FileTemplateTestCase(LoggedInTestCase):
         self.assertIs(templ3_field3.required, True)
         self.assertIs(templ3_field3.is_identifier, False)
 
-    # Anonymous users or users with invalid credentials
-    # cannot see the template list or individual templates
-    def test_002_rest_no_anonymous_or_invalid_access(self):
+    def test_access_anonymous(self):
         self._asAnonymous()
         response = self._client.get('/filetemplates/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         response = self._client.get('/filetemplates/%d/' % self._input_template1.id)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_access_invalid(self):
         self._asInvalid()
         response = self._client.get('/filetemplates/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         response = self._client.get('/filetemplates/%d/' % self._input_template1.id)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    # Users logged in can see all the templates in the list
-    def test_003_rest_all_templates_content(self):
+    def test_user_list(self):
         self._asJoeBloggs()
         response = self._client.get('/filetemplates/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -171,8 +169,7 @@ class FileTemplateTestCase(LoggedInTestCase):
         self.assertIs(templ1_field3["required"], True)
         self.assertIs(templ1_field3["is_identifier"], False)
 
-    # Users can see a single template when requested by template ID
-    def test_004_rest_single_template_content(self):
+    def test_user_view(self):
         self._asJoeBloggs()
         response = self._client.get('/filetemplates/%d/' % self._input_template1.id)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -194,9 +191,8 @@ class FileTemplateTestCase(LoggedInTestCase):
         self.assertIs(templ1_field3["required"], True)
         self.assertIs(templ1_field3["is_identifier"], False)
 
-    # Users can add an extra template but only if they are admins
-    def test_005_rest_create_template(self):
-        # Create a new address of our own
+    def test_user_create(self):
+        self._asJaneDoe()
         new_template = {"name": "Test Template",
                         "file_for": "input",
                         "fields": [
@@ -214,15 +210,31 @@ class FileTemplateTestCase(LoggedInTestCase):
                              }
                         ]
                         }
-        self._asJaneDoe()
         response = self._client.post("/filetemplates/", new_template, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_admin_create(self):
         self._asAdmin()
+        new_template = {"name": "Test Template",
+                        "file_for": "input",
+                        "fields": [
+                            {"name": "IDTestField",
+                             "required": True,
+                             "is_identifier": True
+                             },
+                            {"name": "TestField1",
+                             "required": False,
+                             "is_identifier": False
+                             },
+                            {"name": "TestField2",
+                             "required": True,
+                             "is_identifier": False
+                             }
+                        ]
+                        }
         response = self._client.post("/filetemplates/", new_template, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        # The DB now has 3 addresses in and that the new address is among them
         self.assertEqual(FileTemplate.objects.count(), 4)
         self.assertIs(FileTemplate.objects.filter(name="Test Template").exists(), True)
         templ1 = FileTemplate.objects.get(name="Test Template")
@@ -243,8 +255,8 @@ class FileTemplateTestCase(LoggedInTestCase):
         self.assertIs(templ1_field3.required, True)
         self.assertIs(templ1_field3.is_identifier, False)
 
-    # Edit a template and see the result reflected in the DB, but only if admin
-    def test_006_rest_update_template(self):
+    def test_user_edit(self):
+        self._asJaneDoe()
         updated_template = {"name": "Test Template",
                             "file_for": "input",
                             "fields": [
@@ -262,13 +274,29 @@ class FileTemplateTestCase(LoggedInTestCase):
                                  }
                             ]
                             }
-
-        self._asJaneDoe()
         response = self._client.patch("/filetemplates/%d/" % self._input_template1.id,
                                       updated_template, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_admin_edit(self):
         self._asAdmin()
+        updated_template = {"name": "Test Template",
+                            "file_for": "input",
+                            "fields": [
+                                {"name": "IDTestField",
+                                 "required": True,
+                                 "is_identifier": True
+                                 },
+                                {"name": "TestField1",
+                                 "required": False,
+                                 "is_identifier": False
+                                 },
+                                {"name": "TestField2",
+                                 "required": True,
+                                 "is_identifier": False
+                                 }
+                            ]
+                            }
         response = self._client.patch("/filetemplates/%d/" % self._input_template1.id,
                                       updated_template, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -292,20 +320,19 @@ class FileTemplateTestCase(LoggedInTestCase):
         self.assertIs(templ1_field3.required, True)
         self.assertIs(templ1_field3.is_identifier, False)
 
-    # Delete a template but only if admin
-    def test_007_rest_delete_template(self):
+    def test_user_delete(self):
         self._asJoeBloggs()
         response = self._client.delete("/filetemplates/%d/" % self._input_template1.id)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_admin_delete(self):
         self._asAdmin()
         response = self._client.delete("/filetemplates/%d/" % self._input_template1.id)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         self.assertIs(FileTemplate.objects.filter(name="InputTemplate1").exists(), False)
 
-    # Read a file and check indexed lines are correct
-    def test_008_read_file(self):
+    def test_read_file(self):
         # Read a 3-line file with all the correct fields ID1Field1 (req+ident), 1Field1, 1Field2 (req)
         file = io.StringIO("ID1Field1,1Field1,1Field2\nA,B,C\nD,E,F")
         result = self._input_template1.read(file)
@@ -342,8 +369,7 @@ class FileTemplateTestCase(LoggedInTestCase):
         file.close()
         self.assertIs(result, False)
 
-    # Write a file from a dict and check file is correct
-    def test_009_write_file(self):
+    def test_write_file(self):
         data1 = [{"ID1Field1": "a", "1Field1": "b", "1Field2": "c"}, {"ID1Field1": "d", "1Field1": "e", "1Field2": "f"}]
         data2 = [{"ID1Field1": "a", "1Field1": "b", "1Field2": "c", "Extra1": "x"},
                  {"ID1Field1": "d", "1Field1": "e", "1Field2": "f", "Extra2": "y"}]

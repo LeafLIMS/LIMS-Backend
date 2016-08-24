@@ -1,6 +1,6 @@
-
 from django.conf import settings
 from django.db.models import Q
+from django.contrib.auth.models import Group
 
 from simple_salesforce import Salesforce
 
@@ -20,7 +20,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPaginationSmall
 
     def get_queryset(self):
-        if self.request.user.is_superuser or 'admin' in self.request.user.groups.all():
+        if self.request.user.is_superuser or Group.objects.get(name="admin") in self.request.user.groups.all():
             return Order.objects.all()
         else:
             return Order.objects.filter(user=self.request.user)
@@ -32,31 +32,29 @@ class OrderViewSet(viewsets.ModelViewSet):
             serializer.save(user=serializer.validated_data['user'])
 
     def destroy(self, request, *args, **kwargs):
-        sf = Salesforce(instance_url=settings.SALESFORCE_URL,
-                        username=settings.SALESFORCE_USERNAME,
-                        password=settings.SALESFORCE_PASSWORD,
-                        security_token=settings.SALESFORCE_TOKEN)
         instance = self.get_object()
-        try:
-            sf.Opportunity.delete(instance.crm.project_identifier)
-        except:
-            pass
+        if not settings.TESTMODE:
+            sf = Salesforce(instance_url=settings.SALESFORCE_URL,
+                            username=settings.SALESFORCE_USERNAME,
+                            password=settings.SALESFORCE_PASSWORD,
+                            security_token=settings.SALESFORCE_TOKEN)
+            try:
+                sf.Opportunity.delete(instance.crm.project_identifier)
+            except:
+                pass
         self.perform_destroy(instance)
         return Response(status=204)
 
     @list_route()
     def autocomplete(self, request):
         st = request.query_params.get('q', '')
-        results = self.get_queryset().filter(Q(name__icontains=st))
+        results = self.get_queryset().filter(Q(name__icontains=st)).order_by('-date_placed')
         serializer = self.get_serializer(results, many=True)
         return Response(serializer.data)
 
     @list_route()
     def recent(self, request):
-        if request.user.is_staff:
-            recent = Order.objects.all().order_by('-date_placed')[:5]
-        else:
-            recent = Order.objects.filter(user=request.user).order_by('-date_placed')[:5]
+        recent = self.get_queryset().order_by('-date_placed')[:5]
         serializer = self.get_serializer(recent, many=True)
         return Response(serializer.data)
 

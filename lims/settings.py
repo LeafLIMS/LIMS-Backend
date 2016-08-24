@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+import sys
+
+TESTMODE = sys.argv[1:2] == ['test']
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
