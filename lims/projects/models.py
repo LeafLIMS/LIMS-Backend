@@ -76,6 +76,11 @@ class Product(models.Model):
     A representation of a product as it progresses through the system
     """
 
+    DESIGN_FORMATS = (
+        ('csv', 'CSV'),
+        ('gb', 'GenBank'),
+    )
+
     identifier = models.IntegerField(default=0)
     name = models.CharField(max_length=200)
     status = models.ForeignKey(ProductStatus)
@@ -88,14 +93,18 @@ class Product(models.Model):
     # A project prefixed (e.g. GM1-1) version of the identifier
     product_identifier = models.CharField(default='', max_length=20, db_index=True)
 
-    created_by = models.ForeignKey(User, limit_choices_to={'is_staff': True}, null=True)
+    created_by = models.ForeignKey(User, null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     last_modified_on = models.DateTimeField(auto_now=True)
 
     project = models.ForeignKey(Project)
 
     # One design per product as it should only be making (ultimately) one thing
-    design = models.FileField(blank=True, null=True)
+    design = models.TextField(blank=True, null=True)
+    design_format = models.CharField(choices=DESIGN_FORMATS,
+                                     blank=True,
+                                     null=True,
+                                     max_length=20)
 
     # Anything created or linked in the inventroy to this product
     linked_inventory = models.ManyToManyField(Item, blank=True,

@@ -13,12 +13,16 @@ class CodonUsageTestCase(LoggedInTestCase):
         self._mouse = Organism.objects.create(name="Mus musculus", common_name="Mouse")
 
         self._human_codontable = CodonUsageTable.objects.create(species=self._human)
-        self._human_codon1 = CodonUsage.objects.create(name="GAT", value=0.1, table=self._human_codontable)
-        self._human_codon2 = CodonUsage.objects.create(name="GCT", value=0.02, table=self._human_codontable)
+        self._human_codon1 = CodonUsage.objects.create(name="GAT", value=0.1,
+                                                       table=self._human_codontable)
+        self._human_codon2 = CodonUsage.objects.create(name="GCT", value=0.02,
+                                                       table=self._human_codontable)
 
         self._cow_codontable = CodonUsageTable.objects.create(species=self._cow)
-        self._cow_codon1 = CodonUsage.objects.create(name="CAG", value=0.03, table=self._cow_codontable)
-        self._cow_codon2 = CodonUsage.objects.create(name="CCA", value=0.45, table=self._cow_codontable)
+        self._cow_codon1 = CodonUsage.objects.create(name="CAG", value=0.03,
+                                                     table=self._cow_codontable)
+        self._cow_codon2 = CodonUsage.objects.create(name="CCA", value=0.45,
+                                                     table=self._cow_codontable)
 
     def test_presets(self):
         # Check organisms (species)
@@ -97,8 +101,8 @@ class CodonUsageTestCase(LoggedInTestCase):
     def test_user_create(self):
         self._asJaneDoe()
         new_codontable = {"species": self._mouse.id,
-                          "codons": { "name": "AGT",
-                                      "value": 1.34}
+                          "codons": {"name": "AGT",
+                                     "value": 1.34}
                           }
         response = self._client.post("/codonusage/", new_codontable, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

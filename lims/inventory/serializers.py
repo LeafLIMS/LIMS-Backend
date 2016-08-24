@@ -6,7 +6,7 @@ from .models import (Set, Item, ItemProperty, ItemTransfer,
                      AmountMeasure, Location)
 
 
-class SetSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
+class SetSerializer(serializers.ModelSerializer, SerializerPermissionsMixin):
     number_of_items = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -49,6 +49,7 @@ class ItemPropertySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ItemProperty
+        fields = ('id', 'name', 'value',)
 
 
 class ItemTransferSerializer(serializers.ModelSerializer):
@@ -97,8 +98,42 @@ class LinkedItemSerializer(serializers.ModelSerializer):
 
 class DetailedItemSerializer(ItemSerializer):
     transfers = ItemTransferSerializer(many=True, read_only=True)
-    properties = ItemPropertySerializer(many=True, read_only=True)
+    properties = ItemPropertySerializer(many=True)
     created_from = LinkedItemSerializer(many=True, read_only=True)
+
+    def create(self, validated_data):
+        property_fields = validated_data.pop('properties')
+        item = Item.objects.create(**validated_data)
+        for field in property_fields:
+            # Just in case lets make sure an ID isn't sent along
+            if 'id' in field:
+                field.pop('id')
+            ItemProperty.objects.create(item=item, **field)
+        return item
+
+    def update(self, instance, validated_data):
+        property_fields_data = validated_data.pop('properties')
+
+        property_fields = instance.properties
+
+        for (key, value) in validated_data.items():
+            setattr(instance, key, value)
+        instance.save()
+
+        property_ids = [item['name'] for item in property_fields_data]
+        for field in property_fields.all():
+            if field.name not in property_ids:
+                field.delete()
+
+        for f in property_fields_data:
+            try:
+                field = ItemProperty.objects.get(name=f['name'], item=instance)
+                field.value = f['value']
+            except ItemProperty.DoesNotExist:
+                field = ItemProperty(item=instance, **f)
+            field.save()
+
+        return instance
 
 
 class SimpleItemSerializer(serializers.ModelSerializer):

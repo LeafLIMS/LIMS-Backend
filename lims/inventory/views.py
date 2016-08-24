@@ -1,4 +1,5 @@
 from io import TextIOWrapper
+import json
 
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -15,10 +16,10 @@ from rest_framework.filters import (OrderingFilter,
 from lims.permissions.permissions import (IsInAdminGroupOrRO,
                                           ViewPermissionsMixin, ExtendedObjectPermissions,
                                           ExtendedObjectPermissionsFilter)
+from lims.filetemplate.models import FileTemplate
 from .models import Set, Item, ItemTransfer, ItemType, Location, AmountMeasure
 from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationSerializer,
                           ItemSerializer, DetailedItemSerializer, SetSerializer)
-from .helpers import csv_to_items
 
 
 class LeveledMixin:
@@ -70,9 +71,9 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
     search_fields = ('name', 'identifier', 'item_type__name', 'location__name',)
 
     def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return DetailedItemSerializer
-        return self.serializer_class
+        if self.action == 'list':
+            return self.serializer_class
+        return DetailedItemSerializer
 
     def perform_create(self, serializer):
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
@@ -81,11 +82,46 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
 
     @list_route(methods=['POST'])
     def importitems(self, request):
+        """
+        Import items from a CSV file
+
+        Expects:
+        file_template: The ID of the file template to use to parse the file
+        items_file: The CSV file to parse
+        permissions: Standard permissions format ({"name": "rw"}) to give to all items
+        """
+        file_template_id = request.data.get('filetemplate', None)
         uploaded_file = request.data.get('items_file', None)
+        permissions = request.data.get('permissions', '{}')
         response_data = {}
-        if uploaded_file:
-            f = TextIOWrapper(uploaded_file.file, enclimsg=request.enclimsg)
-            saved, rejected = csv_to_items(f, request)
+        if uploaded_file and file_template_id:
+            try:
+                filetemplate = FileTemplate.objects.get(id=file_template_id)
+            except FileTemplate.DoesNotExist:
+                return Response({'message': 'File template does not exist'}, status=404)
+            encoding = 'utf-8' if request.encoding is None else request.encoding
+            f = TextIOWrapper(uploaded_file.file, encoding=encoding)
+            items_to_import = filetemplate.read(f)
+            saved = []
+            rejected = []
+            if items_to_import:
+                for identifier, item_data in items_to_import.items():
+                    item_data['identifier'] = ' '.join(identifier)
+                    item_data['assign_groups'] = json.loads(permissions)
+                    if 'properties' not in item_data:
+                        item_data['properties'] = []
+                    item = DetailedItemSerializer(data=item_data)
+                    if item.is_valid():
+                        saved.append(item_data)
+                        item, parsed_permissions = self.clean_serializer_of_permissions(item)
+                        item.validated_data['added_by'] = request.user
+                        instance = item.save()
+                        self.assign_permissions(instance, parsed_permissions)
+                    else:
+                        item_data['errors'] = item.errors
+                        rejected.append(item_data)
+            else:
+                return Response({'message': 'File is format is incorrect'}, status=400)
             response_data = {
                 'saved': saved,
                 'rejected': rejected
@@ -161,12 +197,17 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
         return Response({'message': 'You must provide a transfer ID'}, status=400)
 
 
-class SetViewSet(viewsets.ModelViewSet):
+class SetViewSet(viewsets.ModelViewSet, ViewPermissionsMixin):
     queryset = Set.objects.all()
     serializer_class = SetSerializer
     permission_classes = (ExtendedObjectPermissions, )
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
+
+    def perform_create(self, serializer):
+        serializer, permissions = self.clean_serializer_of_permissions(serializer)
+        instance = serializer.save()
+        self.assign_permissions(instance, permissions)
 
     @detail_route()
     def items(self, request, pk=None):

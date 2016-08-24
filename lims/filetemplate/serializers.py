@@ -8,7 +8,10 @@ class FileTemplateFieldSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FileTemplateField
-        fields = ('id', 'name', 'required', 'is_identifier',)
+        fields = ('id', 'name', 'required', 'map_to', 'is_identifier', 'is_property',)
+        # This is required for it to show up in the nested
+        # FileTemplateSerializer. Should never be a problem
+        # as you can't access this through an API endpoint
         extra_kwargs = {"id": {"required": False, "read_only": False}}
 
 
@@ -23,6 +26,9 @@ class FileTemplateSerializer(serializers.ModelSerializer):
         file_fields = validated_data.pop('fields')
         file_template = FileTemplate.objects.create(**validated_data)
         for field in file_fields:
+            # Just in case lets make sure an ID isn't sent along
+            if 'id' in field:
+                field.pop('id')
             FileTemplateField.objects.create(template=file_template, **field)
         return file_template
 
@@ -40,7 +46,15 @@ class FileTemplateSerializer(serializers.ModelSerializer):
                 field.delete()
 
         for f in file_fields_data:
-            field = FileTemplateField(template=instance, **f)
+            try:
+                field = FileTemplateField.objects.get(pk=f['id'])
+                f.pop('id')
+                for (key, value) in f.items():
+                    setattr(field, key, value)
+            except (FileTemplateField.DoesNotExist, KeyError):
+                if 'id' in f:
+                    f.pop('id')
+                field = FileTemplateField(template=instance, **f)
             field.save()
 
         return instance
