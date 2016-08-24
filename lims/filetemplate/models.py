@@ -36,7 +36,6 @@ class FileTemplate(models.Model):
         else:
             indexed = {}
             if self._validate_headers(csv_file.fieldnames):
-                # TODO: Discard extra fields not in headers?
                 for line in csv_file:
                     line = dict([(k, v) for k, v in line.items() if v.strip()])
                     if any(line):
@@ -46,9 +45,10 @@ class FileTemplate(models.Model):
                         ifn = [i.name for i in identifier_fields]
 
                         generated_line = {}
+                        # TODO: Currently we discard extra fields in CSV that are not in filetemplate. Change this?
                         for field in self.fields.all():
                             # Don't add identifier fields
-                            if field.name not in ifn:
+                            if field.name not in ifn and field.name in line:
                                 field_value = line[field.name]
                                 # May map to different DB field
                                 field_key = self._get_field_key(field)
@@ -63,13 +63,12 @@ class FileTemplate(models.Model):
                                 else:
                                     generated_line[field_key] = field_value
 
-                        print(generated_line)
                         indexed[identifier] = generated_line
                 return indexed
         return False
 
-    def write(self, output_file, data):
-        fieldnames = [item.name for item in self.fields.all()]
+    def write(self, output_file, data, column_order='name'):
+        fieldnames = [item.name for item in self.fields.all().order_by(column_order)]
         csv_output = csv.DictWriter(output_file, fieldnames=fieldnames,
                                     extrasaction='ignore', lineterminator='\n')
         csv_output.writeheader()

@@ -64,18 +64,18 @@ class PriceBookTestCase(LoggedInTestCase):
         self._asAnonymous()
         response = self._client.get('/pricebooks/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        response = self._client.get('/pricebooks/%d/' % self._human_codontable.id)
+        response = self._client.get('/pricebooks/%d/' % self._pricebook1.id)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        response = self._client.get('/pricebooks/updateall/' % self._human_codontable.id)
+        response = self._client.get('/pricebooks/updateall/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_access_invalid(self):
         self._asInvalid()
         response = self._client.get('/pricebooks/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        response = self._client.get('/pricebooks/%d/' % self._human_codontable.id)
+        response = self._client.get('/pricebooks/%d/' % self._pricebook1.id)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        response = self._client.get('/pricebooks/updateall/' % self._human_codontable.id)
+        response = self._client.get('/pricebooks/updateall/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_user_list(self):
