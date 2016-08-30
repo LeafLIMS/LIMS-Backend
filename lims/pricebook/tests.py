@@ -4,15 +4,18 @@ from .models import Price, PriceBook
 
 
 class PriceBookTestCase(LoggedInTestCase):
-
     # TODO Re-enable DISABLED_ methods once SFDC works in testing mode (check for settings.TESTING)
+    # TODO Implement SFDC tests once SFDC works in testing mode (check for settings.TESTING)
 
     def setUp(self):
         super(PriceBookTestCase, self).setUp()
 
-        self._price_pencil = Price.objects.create(name="Pencil", code="P1", identifier="PEN1", price=0.99)
-        self._price_flask = Price.objects.create(name="Flask", code="F1", identifier="FLA1", price=4.47)
-        self._price_widget = Price.objects.create(name="Widget", code="W1", identifier="WID1", price=15.60)
+        self._price_pencil = Price.objects.create(name="Pencil", code="P1",
+                                                  identifier="PEN1", price=0.99)
+        self._price_flask = Price.objects.create(name="Flask", code="F1",
+                                                 identifier="FLA1", price=4.47)
+        self._price_widget = Price.objects.create(name="Widget", code="W1",
+                                                  identifier="WID1", price=15.60)
 
         self._pricebook1 = PriceBook.objects.create(name="PriceBook1",
                                                     description="Test 1",

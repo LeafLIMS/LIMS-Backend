@@ -4,7 +4,6 @@ from .models import Address
 
 
 class AddressTestCase(LoggedInTestCase):
-
     def setUp(self):
         super(AddressTestCase, self).setUp()
 
@@ -189,7 +188,8 @@ class AddressTestCase(LoggedInTestCase):
                                       updated_address, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertIs(Address.objects.filter(institution_name="Onion Institute Revised").exists(), True)
+        self.assertIs(Address.objects.filter(institution_name="Onion Institute Revised").exists(),
+                      True)
         address = Address.objects.get(institution_name="Onion Institute Revised")
         self.assertEqual(address.institution_name, "Onion Institute Revised")
         self.assertEqual(address.address_1, "110a Deep Dark Wood")
@@ -216,7 +216,8 @@ class AddressTestCase(LoggedInTestCase):
                                       updated_address, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertIs(Address.objects.filter(institution_name="Onion Institute Revised").exists(), True)
+        self.assertIs(Address.objects.filter(institution_name="Onion Institute Revised").exists(),
+                      True)
         address = Address.objects.get(institution_name="Onion Institute Revised")
         self.assertEqual(address.institution_name, "Onion Institute Revised")
         self.assertEqual(address.address_1, "110a Deep Dark Wood")
