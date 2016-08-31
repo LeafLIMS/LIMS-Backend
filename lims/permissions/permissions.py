@@ -225,11 +225,13 @@ class ViewPermissionsMixin():
                 # permission codename based on model name
                 for pt in self.PERM_TEMPLATE:
                     assign_perm(pt.format(model_name), grp, instance)
-            else:
+            elif perm == 'r':
                 # Only give read permissions
                 if current_permission == 'rw':
                     self.remove_group_permissions(instance, grp)
                 assign_perm('view_%s' % model_name, grp, instance)
+            else:
+                raise serializers.ValidationError({'message': 'Permission must by r or rw'}) 
         return True
 
     def clone_group_permissions(self, clone_from, clone_to):
