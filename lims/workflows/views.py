@@ -31,13 +31,21 @@ from lims.projects.models import Product
 from lims.filetemplate.models import FileTemplate
 from lims.inventory.models import Item, ItemTransfer, AmountMeasure, Location, ItemType
 from lims.inventory.serializers import ItemTransferPreviewSerializer
-from .models import (Workflow, ActiveWorkflow, WorkflowProduct, DataEntry,
-                     TaskTemplate, InputFieldTemplate)
-from .serializers import (WorkflowSerializer, SimpleTaskTemplateSerializer,
-                          TaskTemplateSerializer, ActiveWorkflowSerializer,
-                          DetailedActiveWorkflowSerializer, TaskValuesSerializer,
-                          InputFieldTemplateSerializer,
-                          RecalculateTaskTemplateSerializer)
+# Disable flake8 on this line as we need the templates to be imported but
+# they do not appear to be used (selected from globals)
+from .models import (Workflow, ActiveWorkflow, WorkflowProduct, DataEntry,  # noqa
+                     TaskTemplate, InputFieldTemplate, OutputFieldTemplate,  # noqa
+                     StepFieldTemplate, VariableFieldTemplate,  # noqa
+                     CalculationFieldTemplate)  # noqa
+from .serializers import (WorkflowSerializer, SimpleTaskTemplateSerializer,  # noqa
+                          TaskTemplateSerializer, ActiveWorkflowSerializer,  # noqa
+                          DetailedActiveWorkflowSerializer, TaskValuesSerializer,  # noqa
+                          InputFieldTemplateSerializer,  # noqa
+                          OutputFieldTemplateSerializer,  # noqa
+                          VariableFieldValueSerializer,  # noqa
+                          StepFieldTemplateSerializer,  # noqa
+                          CalculationFieldTemplateSerializer,  # noqa
+                          RecalculateTaskTemplateSerializer)  # noqa
 
 
 class WorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
