@@ -193,7 +193,9 @@ class ViewPermissionsMixin():
         current_permissions = get_perms(group, instance)
         if 'change_{}'.format(model_name) in current_permissions:
             return 'rw'
-        return 'r'
+        elif 'view_{}'.format(model_name) in current_permissions:
+            return 'r'
+        return None
 
     def remove_group_permissions(self, instance, group):
         """
