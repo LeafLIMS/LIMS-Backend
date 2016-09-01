@@ -30,6 +30,15 @@ class Workflow(models.Model):
             return ordered_tasks
         return []
 
+    def get_task_at_index(self, index):
+        if self.order:
+            order = [int(v) for v in self.order.split(',')]
+            try:
+                return TaskTemplate.objects.get(pk=order[index])
+            except TaskTemplate.DoesNotExist:
+                return None
+        return None
+
     def __str__(self):
         return self.name
 
@@ -48,6 +57,17 @@ class WorkflowProduct(models.Model):
 
     def product_project(self):
         return self.product.project.id
+
+    def has_task_inputs(self):
+        # Does this product have the necessary inputs
+        # required for the task it needs to complete
+        if self.activeworkflow.count() > 0:
+            aw = self.activeworkflow.all()[0]
+            task = aw.workflow.get_task_at_index(self.current_task)
+            matched = self.product.linked_inventory.filter(item_type=task.product_input)
+            if matched.count() > 0:
+                return True
+        return False
 
     def __str__(self):
         return '{} at task #{}'.format(self.product.product_identifier,
@@ -115,6 +135,7 @@ class TaskTemplate(models.Model):
     product_input_measure = models.ForeignKey(AmountMeasure)
 
     labware = models.ForeignKey(ItemType, related_name='labware')
+    multiple_products_on_labware = models.BooleanField(default=False)
 
     capable_equipment = models.ManyToManyField(Equipment, blank=True)
 

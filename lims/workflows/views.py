@@ -4,6 +4,7 @@ from io import TextIOWrapper
 import json
 from itertools import groupby
 import datetime
+import math
 
 from pint import UnitRegistry, UndefinedUnitError
 
@@ -29,7 +30,8 @@ from lims.permissions.permissions import (ViewPermissionsMixin,
 
 from lims.projects.models import Product
 from lims.filetemplate.models import FileTemplate
-from lims.inventory.models import Item, ItemTransfer, AmountMeasure, Location, ItemType
+from lims.inventory.models import (Item, ItemTransfer, AmountMeasure,
+                                   Location, ItemType, ItemProperty)
 from lims.inventory.serializers import ItemTransferPreviewSerializer
 # Disable flake8 on this line as we need the templates to be imported but
 # they do not appear to be used (selected from globals)
@@ -442,6 +444,52 @@ class ActiveWorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             preview_data = []
             valid_amounts = True
             amount_error_messages = []
+
+            # Calculate the labware needed.
+            # First get the item identifier from the serializer
+            try:
+                labware = Item.objects.get(identifier=task_serializer.data['labware_identifier'])
+            except Item.DoesNotExist:
+                return Response({'message': '{} does not exist in the inventory'.format(
+                    task_serializer.data['labware_identifier'])}, status=400)
+            a_product = active_workflow.product_statuses.all()[0]
+            task = active_workflow.workflow.get_task_at_index(a_product.current_task)
+            # A product can require its own labware item or
+            # be placed with others on labware
+            if task.multiple_products_on_labware:
+                # Look for a property on the labware item
+                # called wells.
+                # Best idea I can come up with for now
+                try:
+                    well_count = labware.properties.get(name='wells')
+                except ItemProperty.DoesNotExist:
+                    return Response({'message':
+                                     'Cannot get well count. Check "wells" property exists'},
+                                    status=400)
+                labware_count = math.ceil(products.count() / int(well_count.value))
+            else:
+                labware_count = products.count()
+
+            item_transfer = ItemTransfer(
+                item=labware,
+                amount_taken=labware_count,
+                amount_measure=AmountMeasure.objects.get(symbol='items')
+            )
+            if is_preview:
+                sit = ItemTransferPreviewSerializer(item_transfer)
+                preview_data.append(sit.data)
+            else:
+                if labware.amount_available < labware_count:
+                    return Response({'message': 'Not enough labware to continue'},
+                                    status=400)
+                else:
+                    item_transfer.run_identifier = uuid
+                    item_transfer.save()
+
+                    new_amount = labware.amount_available - labware_count
+                    labware.amount_available = new_amount
+                    labware.save()
+
             for item in input_items:
                 # Check enough of each item is avilable.
                 # First, translate to a known amount (if possible) or just be presented as

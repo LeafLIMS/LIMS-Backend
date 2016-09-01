@@ -30,6 +30,7 @@ class WorkflowProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.
     product_identifier = serializers.CharField(read_only=True)
     product_name = serializers.CharField(read_only=True)
     product_project = serializers.IntegerField(read_only=True)
+    has_task_inputs = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = WorkflowProduct
