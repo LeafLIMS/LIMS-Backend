@@ -7,6 +7,7 @@ from lims.projects.models import Product
 from lims.equipment.models import Equipment
 from lims.inventory.models import Item, ItemType, AmountMeasure
 from lims.filetemplate.models import FileTemplate
+from lims.datastore.models import DataFile
 
 
 class Workflow(models.Model):
@@ -112,6 +113,7 @@ class DataEntry(models.Model):
     created_by = models.ForeignKey(User)
     state = models.CharField(max_length=20, choices=STATE)
     data = JSONField()
+    data_files = models.ManyToManyField(DataFile, blank=True)
 
     workflow = models.ForeignKey(Workflow)
     task = models.ForeignKey('TaskTemplate')
