@@ -4,7 +4,6 @@ from .models import Order, Service
 
 
 class OrderTestCase(LoggedInTestCase):
-    # TODO Re-enable DISABLED_ methods once SFDC works in testing mode (check for settings.TESTING)
     # TODO Implement SFDC tests once SFDC works in testing mode (check for settings.TESTING)
 
     def setUp(self):
@@ -161,12 +160,14 @@ class OrderTestCase(LoggedInTestCase):
         self.assertIs(order1["invoice_sent"], False)
         self.assertIs(order1["has_paid"], False)
 
-    def DISABLED_test_user_create_own(self):
+    def test_user_create_own(self):
         self._asJaneDoe()
         new_order = {"name": "Order3",
                      "status": "YippyYah",
                      "data": {},
                      "status_bar_status": "Order Received",
+                     "user": self._janeDoe.id,
+                     "services": [self._service_sequencing.name],
                      "is_quote": False,
                      "quote_sent": False,
                      "po_receieved": True,
@@ -205,7 +206,7 @@ class OrderTestCase(LoggedInTestCase):
         orders = response.data
         self.assertEqual(len(orders["results"]), 2)
 
-    def DISABLED_test_user_create_other(self):
+    def test_user_create_other(self):
         self._asJaneDoe()
         new_order = {"name": "Order4",
                      "status": "YippyYah",
@@ -223,11 +224,13 @@ class OrderTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIs(Order.objects.filter(name="Order4").exists(), False)
 
-    def DISABLED_test_admin_create_any(self):
+    def test_admin_create_any(self):
         self._asAdmin()
         new_order = {"name": "Order3",
                      "status": "YippyYah",
                      "data": {},
+                     "user": self._joeBloggs.id,
+                     "services": [self._service_sequencing.name],
                      "status_bar_status": "Order Received",
                      "is_quote": False,
                      "quote_sent": False,
@@ -247,7 +250,7 @@ class OrderTestCase(LoggedInTestCase):
         self.assertEqual(order3.status, "YippyYah")
         self.assertEqual(order3.data, {})
         self.assertEqual(order3.status_bar_status, "Order Received")
-        self.assertEqual(order3.user, self._janeDoe)
+        self.assertEqual(order3.user, self._joeBloggs)
         self.assertIs(order3.is_quote, False)
         self.assertIs(order3.quote_sent, False)
         self.assertIs(order3.po_receieved, True)
@@ -260,12 +263,12 @@ class OrderTestCase(LoggedInTestCase):
         response = self._client.get('/orders/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         orders = response.data
-        self.assertEqual(len(orders["results"]), 1)
+        self.assertEqual(len(orders["results"]), 2)
         self._asJaneDoe()
         response = self._client.get('/orders/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         orders = response.data
-        self.assertEqual(len(orders["results"]), 2)
+        self.assertEqual(len(orders["results"]), 1)
 
     def test_user_edit_own(self):
         self._asJaneDoe()

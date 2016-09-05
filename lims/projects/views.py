@@ -80,7 +80,7 @@ class ProductViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         """
         if instance.design is not None:
             items = []
-            parser = DesignFileParser(instance.design, instance)
+            parser = DesignFileParser(data=instance.design)
             if instance.design_format == 'csv':
                 items = parser.parse_csv()
             elif instance.design_format == 'gb':

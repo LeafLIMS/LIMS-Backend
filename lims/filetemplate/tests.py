@@ -403,7 +403,9 @@ class FileTemplateTestCase(LoggedInTestCase):
                          {"1Field2": "H", "MappingTest": "I",
                           "properties": [{"name": "1Field4", "value": "J"}]})
         # Read a file with required fields missing
-        file = io.StringIO("ID1Field1,1Field1\nA,B\nD,E")
+        file = io.StringIO("""ID1Field1,1Field1
+A,B
+D,E""")
         result = self._input_template1.read(file)
         file.close()
         self.assertIs(result, False)
@@ -425,8 +427,14 @@ class FileTemplateTestCase(LoggedInTestCase):
                   "Extra2": "y"}]
         data3 = [{"ID1Field1": "a", "1Field2": "c", "1Field3": "d", "1Field4": "e"},
                  {"ID1Field1": "f", "1Field2": "h", "1Field3": "i", "1Field4": "j"}]
-        expectedContentA = "1Field1,1Field2,1Field3,1Field4,ID1Field1\nb,c,d,e,a\ng,h,i,j,f\n"
-        expectedContentB = "1Field1,1Field2,1Field3,1Field4,ID1Field1\n,c,d,e,a\n,h,i,j,f\n"
+        expectedContentA = """1Field1,1Field2,1Field3,1Field4,ID1Field1
+b,c,d,e,a
+g,h,i,j,f
+"""
+        expectedContentB = """1Field1,1Field2,1Field3,1Field4,ID1Field1
+,c,d,e,a
+,h,i,j,f
+"""
         # Write a file and check contents are correct
         file = io.StringIO()
         self._input_template1.write(file, data1, "name")

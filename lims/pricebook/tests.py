@@ -4,8 +4,7 @@ from .models import Price, PriceBook
 
 
 class PriceBookTestCase(LoggedInTestCase):
-    # TODO Re-enable DISABLED_ methods once SFDC works in testing mode (check for settings.TESTING)
-    # TODO Implement SFDC tests once SFDC works in testing mode (check for settings.TESTING)
+    # TODO Re-enable DISABLED methods once SFDC works in testing mode (check for settings.TESTING)
 
     def setUp(self):
         super(PriceBookTestCase, self).setUp()
