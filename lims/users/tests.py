@@ -383,9 +383,6 @@ class GroupTestCase(LoggedInTestCase):
         self.assertIs(Group.objects.filter(name="joe_group").exists(), False)
 
 
-        # TODO Permission test
-
-
 class PermissionTestCase(LoggedInTestCase):
     def setUp(self):
         super(PermissionTestCase, self).setUp()
