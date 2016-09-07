@@ -166,6 +166,7 @@ class SerializerReadOnlyPermissionsMixin(SerializerPermissionsMixin):
 class ViewPermissionsMixin():
 
     PERM_TEMPLATE = (
+        'add_{}',
         'change_{}',
         'delete_{}',
         'view_{}',
