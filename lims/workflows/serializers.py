@@ -3,14 +3,14 @@ import re
 from rest_framework import serializers
 from pyparsing import ParseException
 
-from lims.permissions.permissions import (SerializerPermissionsMixin,
-                                          SerializerReadOnlyPermissionsMixin)
+from lims.permissions.permissions import (SerializerPermissionsMixin)
 
 from lims.equipment.models import Equipment
 from lims.filetemplate.models import FileTemplate
 from lims.inventory.models import Item, ItemType, AmountMeasure
-from .models import (Workflow, ActiveWorkflow, DataEntry,
-                     TaskTemplate, WorkflowProduct, InputFieldTemplate, VariableFieldTemplate,
+from .models import (Workflow, DataEntry,
+                     Run,
+                     TaskTemplate, InputFieldTemplate, VariableFieldTemplate,
                      OutputFieldTemplate, CalculationFieldTemplate, StepFieldTemplate,
                      StepFieldProperty)
 from .calculation import NumericStringParser
@@ -26,39 +26,24 @@ class WorkflowSerializer(SerializerPermissionsMixin, serializers.ModelSerializer
         model = Workflow
 
 
-class WorkflowProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSerializer):
-    product_identifier = serializers.CharField(read_only=True)
-    product_name = serializers.CharField(read_only=True)
-    product_project = serializers.IntegerField(read_only=True)
-    has_task_inputs = serializers.BooleanField(read_only=True)
-
-    class Meta:
-        model = WorkflowProduct
-
-
-class ActiveWorkflowSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSerializer):
+class RunSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
     """
-    Provides a basic serialisation of active workflow data
+    Provides basic serialisation of workflow run
     """
-    workflow_data = WorkflowSerializer(read_only=True, source='workflow')
     started_by = serializers.SlugRelatedField(
         slug_field='username',
         read_only=True
     )
 
     class Meta:
-        model = ActiveWorkflow
+        model = Run
 
 
-class DetailedActiveWorkflowSerializer(serializers.ModelSerializer):
-    """
-    Provides a more detailed serialisation of active workflows
-    """
-    product_statuses = WorkflowProductSerializer(read_only=True, many=True)
-    workflow_name = serializers.CharField(read_only=True)
+class DetailedRunSerializer(serializers.ModelSerializer):
+    # product_statuses = ProductSerializer(read_only=True, many=True)
 
     class Meta:
-        model = ActiveWorkflow
+        model = Run
 
 
 class DataEntrySerializer(serializers.ModelSerializer):

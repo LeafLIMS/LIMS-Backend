@@ -18,7 +18,7 @@ from lims.inventory.views import (InventoryViewSet,
                                   SetViewSet, MeasureViewSet, ItemTypeViewSet, LocationViewSet)
 from lims.codonusage.views import CodonUsageTableViewSet
 from lims.projects.views import (ProjectViewSet, ProductViewSet, ProductStatusViewSet)
-from lims.workflows.views import (WorkflowViewSet, ActiveWorkflowViewSet,
+from lims.workflows.views import (WorkflowViewSet, RunViewSet,
                                   TaskViewSet, TaskFieldViewSet)
 
 from lims.filetemplate.views import FileTemplateViewSet
@@ -52,7 +52,7 @@ router.register(r'projects', ProjectViewSet, base_name='projects')
 router.register(r'products', ProductViewSet, base_name='products')
 router.register(r'productstatuses', ProductStatusViewSet, base_name='productstatuses')
 router.register(r'workflows', WorkflowViewSet, base_name='workflows')
-router.register(r'activeworkflows', ActiveWorkflowViewSet, base_name='activeworkflows')
+router.register(r'runs', RunViewSet, base_name='runs')
 router.register(r'tasks', TaskViewSet, base_name='tasks')
 router.register(r'taskfields', TaskFieldViewSet, base_name='taskfields')
 router.register(r'filetemplates', FileTemplateViewSet, base_name='filetemplates')

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 from mptt.models import MPTTModel, TreeForeignKey
+from pint import UnitRegistry, UndefinedUnitError
 
 
 class ItemType(MPTTModel):
@@ -179,6 +180,38 @@ class ItemTransfer(models.Model):
 
     class Meta:
         ordering = ['-date_created']
+
+    def _as_measured_value(self, amount, measure, ureg):
+        """
+        Convert if possible to a value with units
+        """
+        try:
+            value = float(amount) * ureg(measure)
+        except UndefinedUnitError:
+            value = float(amount)
+        return value
+
+    def do_transfer(self):
+        """
+        Alter the item to reflect new amount
+        """
+        ureg = UnitRegistry()
+        existing = self._as_measured_value(self.item.amount_available,
+                                           self.item.amount_measure,
+                                           ureg)
+        to_take = self._as_measured_value(self.amount_taken,
+                                          self.amount_measure,
+                                          ureg)
+        if self.is_addition:
+            new_amount = existing + to_take
+        else:
+            if existing < to_take:
+                new_amount = existing - to_take
+            else:
+                return False
+        self.item.amount_available = new_amount.magnitude
+        self.item.save()
+        return True
 
     def __str__(self):
         return '{} {}/{}'.format(self.item.name, self.barcode, self.coordinates)

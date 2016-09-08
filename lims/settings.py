@@ -62,6 +62,8 @@ INSTALLED_APPS = (
     'lims.dashboard',
     'lims.equipment',
     'lims.filetemplate',
+    'lims.datastore',
+    'lims.drivers',
 )
 
 MIDDLEWARE_CLASSES = (

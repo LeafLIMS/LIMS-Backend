@@ -5,7 +5,7 @@ from jsonfield import JSONField
 
 from lims.projects.models import Product
 from lims.equipment.models import Equipment
-from lims.inventory.models import Item, ItemType, AmountMeasure
+from lims.inventory.models import Item, ItemType, ItemTransfer, AmountMeasure
 from lims.filetemplate.models import FileTemplate
 from lims.datastore.models import DataFile
 
@@ -44,55 +44,110 @@ class Workflow(models.Model):
         return self.name
 
 
-class WorkflowProduct(models.Model):
-    current_task = models.IntegerField(default=0)
-    task_in_progress = models.BooleanField(default=False)
-    product = models.OneToOneField(Product, related_name='on_workflow_as', unique=True)
-    run_identifier = models.CharField(max_length=64, db_index=True)
-
-    def product_identifier(self):
-        return self.product.product_identifier
-
-    def product_name(self):
-        return self.product.name
-
-    def product_project(self):
-        return self.product.project.id
-
-    def has_task_inputs(self):
-        # Does this product have the necessary inputs
-        # required for the task it needs to complete
-        if self.activeworkflow.count() > 0:
-            aw = self.activeworkflow.all()[0]
-            task = aw.workflow.get_task_at_index(self.current_task)
-            matched = self.product.linked_inventory.filter(item_type=task.product_input)
-            if matched.count() > 0:
-                return True
-        return False
+class RunLabware(models.Model):
+    """
+    Specifies labware associated with a run
+    """
+    identifier = models.CharField(max_length=100, db_index=True)
+    labware = models.ForeignKey(Item)
+    is_active = models.BooleanField(default=False)
+    # Need some way of mapping a something to a location
+    # so we can have plate maps etc.
+    # Ignore this for now!
 
     def __str__(self):
-        return '{} at task #{}'.format(self.product.product_identifier,
-                                       self.current_task)
+        return '{}: {}'.format(self.identifier, self.item.name)
 
 
-class ActiveWorkflow(models.Model):
-    workflow = models.ForeignKey(Workflow)
-    product_statuses = models.ManyToManyField(WorkflowProduct, blank=True,
-                                              related_name='activeworkflow')
+class Run(models.Model):
+    """
+    Takes a series of tasks (e.g. from a workflow) and runs products through them
+
+    At end of run is marked inactive for tracking of historical data.
+    """
+    name = models.CharField(max_length=100, blank=True, null=True)
+
+    tasks = models.CommaSeparatedIntegerField(max_length=400, blank=True)
+    # Cannot be at different stages on a run, start a new one if there
+    # are issues (e.g. failures) as these need plates changing etc.
+    current_task = models.IntegerField(default=0)
+    task_in_progress = models.BooleanField(default=False)
+    # Created/updated at the start of every task.
+    task_run_identifier = models.UUIDField(null=True, blank=True)
+
+    products = models.ManyToManyField(Product, blank=True,
+                                      related_name='run')
+    labware = models.ManyToManyField(RunLabware, blank=True,
+                                     related_name='run_labware')
+    transfers = models.ManyToManyField(ItemTransfer, blank=True,
+                                       related_name='run_transfers')
+
+    # If run has not completed all tasks, allows for run archiving
+    is_active = models.BooleanField(default=True)
+    # If the run has started (e.g. for preventing adding more products)
+    has_started = models.BooleanField(default=False)
+
     date_started = models.DateTimeField(auto_now_add=True)
+    date_finished = models.DateTimeField(blank=True, null=True)
     started_by = models.ForeignKey(User)
+
+    def get_task_list(self):
+        """
+        Get list of task IDs
+        """
+        return [int(v) for v in self.tasks.split(',')]
+
+    def get_tasks(self):
+        """
+        Get an ordered list of tasks for this run
+        """
+        if self.tasks:
+            task_list = [int(v) for v in self.tasks.split(',')]
+            tasks = list(TaskTemplate.objects.filter(pk__in=task_list))
+            ordered_tasks = []
+            for t in task_list:
+                ordered_tasks.append(next((obj for obj in tasks if obj.id == t), None))
+            return ordered_tasks
+        return []
+
+    def get_task_at_index(self, index):
+        """
+        Get a single task at the provided index
+        """
+        if self.tasks:
+            task_list = [int(v) for v in self.tasks.split(',')]
+            try:
+                return TaskTemplate.objects.get(pk=task_list[index])
+            except TaskTemplate.DoesNotExist:
+                return None
+        return None
+
+    def has_valid_inputs(self):
+        task = self.get_task_at_index(self.current_task)
+        valid = {}
+        if task:
+            for p in self.products.all():
+                if p.linked_inventory.filter(item_type=task.product_input).count() > 0:
+                    valid[p.id] = True
+                else:
+                    valid[p.id] = False
+            return valid
+        return False
 
     class Meta:
         ordering = ['-date_started']
         permissions = (
-            ('view_activeworkflow', 'View activeworkflow',),
+            ('view_run', 'View run',),
         )
 
-    def workflow_name(self):
-        return self.workflow.name
-
     def __str__(self):
-        return 'Active: {} products on {}'.format(self.product_statuses.count(), self.workflow)
+        if self.is_active:
+            return '{}, started by: {} on {}'.format(self.identifier,
+                                                     self.started_by.username,
+                                                     self.date_started)
+        return '{}, started by: {} finished on {}'.format(self.identifier,
+                                                          self.started_by.username,
+                                                          self.date_finished)
 
 
 class DataEntry(models.Model):
@@ -105,7 +160,9 @@ class DataEntry(models.Model):
         ('repeat failed', 'Repeat Failed'),
     )
 
-    run_identifier = models.CharField(max_length=64, db_index=True)
+    run = models.ForeignKey(Run, null=True, related_name='data_entries')
+    # Unique identifier for the task/run combo
+    task_run_identifier = models.UUIDField(db_index=True)
 
     product = models.ForeignKey(Product, related_name='data')
     item = models.ForeignKey(Item, null=True, related_name='data_entries')
@@ -115,7 +172,6 @@ class DataEntry(models.Model):
     data = JSONField()
     data_files = models.ManyToManyField(DataFile, blank=True)
 
-    workflow = models.ForeignKey(Workflow)
     task = models.ForeignKey('TaskTemplate')
 
     def __str__(self):
@@ -137,6 +193,7 @@ class TaskTemplate(models.Model):
     product_input_measure = models.ForeignKey(AmountMeasure)
 
     labware = models.ForeignKey(ItemType, related_name='labware')
+    labware_amount = models.IntegerField(default=1)
     multiple_products_on_labware = models.BooleanField(default=False)
 
     capable_equipment = models.ManyToManyField(Equipment, blank=True)
