@@ -1045,7 +1045,7 @@ Item_1,test,test,test,test,test
 Item_2,test,test,test,test,test
 item_3,test,test,test,test,test"""}
         response = self._client.post("/products/", new_product, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED) # TEST ERR 400
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertEqual(Product.objects.count(), 3)
         self.assertIs(Product.objects.filter(name="Product3").exists(), True)
@@ -1154,7 +1154,7 @@ Item_1,test,test,test,test,test
 Item_2,test,test,test,test,test
 item_3,test,test,test,test,test"""}
         response = self._client.post("/products/", new_product, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED) # TEST ERR 400
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertEqual(Product.objects.count(), 3)
         self.assertIs(Product.objects.filter(name="Product3").exists(), True)
@@ -1175,7 +1175,7 @@ Item_1,test,test,test,test,test
 Item_2,test,test,test,test,test
 item_3,test,test,test,test,test"""}
         response = self._client.post("/products/", new_product, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED) # TODO ERR 400
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertEqual(Product.objects.count(), 3)
         self.assertIs(Product.objects.filter(name="Product3").exists(), True)
@@ -1184,7 +1184,7 @@ item_3,test,test,test,test,test"""}
         self.assertEqual(product.status, ProductStatus.objects.get(name="Added"))
         self.assertEqual(product.product_type, self._itemtype)
         self.assertEqual(product.optimised_for, self._human)
-        self.assertEqual(product.created_by, self._adminUser)
+        self.assertEqual(product.created_by, self._janeDoe)
         self.assertEqual(product.project, self._janeDoeProject)
         self.assertEqual(product.design_format, "csv")
         self.assertEqual(product.product_identifier,
@@ -1207,7 +1207,7 @@ item_3,test,test,test,test,test"""}
         updated_product = {"optimised_for": self._mouse.name}
         response = self._client.patch("/products/%d/" % self._janeDoeProduct.id,
                                       updated_product, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK) # TEST ERR 400
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         product = Product.objects.get(name="Product2")
         self.assertEqual(product.optimised_for, self._mouse)
 
@@ -1237,7 +1237,7 @@ item_3,test,test,test,test,test"""}
         updated_product = {"optimised_for": self._mouse.name}
         response = self._client.patch("/products/%d/" % self._joeBloggsProduct.id,
                                       updated_product, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK) # TEST ERR 400
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         product = Product.objects.get(name="Product1")
         self.assertEqual(product.optimised_for, self._mouse)
 
@@ -1246,7 +1246,7 @@ item_3,test,test,test,test,test"""}
         updated_product = {"optimised_for": self._mouse.name}
         response = self._client.patch("/products/%d/" % self._joeBloggsProduct.id,
                                       updated_product, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK) # TODO ERR 400
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         product = Product.objects.get(name="Product1")
         self.assertEqual(product.optimised_for, self._mouse)
 
@@ -1367,7 +1367,7 @@ item_3,test,test,test,test,test"""}
         permissions = {"joe_group": "flibble"}
         response = self._client.patch("/products/%d/set_permissions/" % self._joeBloggsProduct.id,
                                       permissions, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST) # TODO ERR 400
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         # Check the permission wasn't changed accidentally in the process
         self.assertEqual(ViewPermissionsMixin().current_permissions(instance=self._joeBloggsProduct,
                                                                     group=Group.objects.get(
