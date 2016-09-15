@@ -17,7 +17,7 @@ gunicorn==19.4.1
 Markdown==2.6.2
 oauthlib==1.0.0
 ordereddict==1.1
-Pint==0.6
+Pint==0.7.2
 psycopg2==2.6.1
 pyparsing==2.0.6
 pytz==2015.6

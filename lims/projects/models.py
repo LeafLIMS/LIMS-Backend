@@ -115,18 +115,6 @@ class Product(models.Model):
             ('view_product', 'View product',),
         )
 
-    def on_workflow_name(self):
-        if hasattr(self, 'on_workflow_as'):
-            wf = self.on_workflow_as.activeworkflow.all()
-            return wf[0].workflow.name
-        return None
-
-    def on_workflow(self):
-        if hasattr(self, 'on_workflow_as'):
-            wf = self.on_workflow_as.activeworkflow.all()
-            return wf[0].id
-        return None
-
     def create_product_identifier(self):
         """
         Create a prefixed version of the identifier based on the project

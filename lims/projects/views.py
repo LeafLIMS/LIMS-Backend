@@ -41,7 +41,7 @@ class ProjectViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
 
 
 class ProductFilter(django_filters.FilterSet):
-    on_workflow_as = django_filters.MethodFilter()
+    # on_workflow_as = django_filters.MethodFilter()
     id__in = ListFilter(name='id')
 
     def filter_on_workflow_as(self, queryset, value):
@@ -57,7 +57,7 @@ class ProductFilter(django_filters.FilterSet):
             'id': ['exact', 'in'],
             'project': ['exact'],
             'status': ['exact'],
-            'on_workflow_as': ['exact'],
+            # 'on_workflow_as': ['exact'],
         }
 
 

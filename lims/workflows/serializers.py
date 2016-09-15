@@ -7,8 +7,9 @@ from lims.permissions.permissions import (SerializerPermissionsMixin)
 
 from lims.equipment.models import Equipment
 from lims.filetemplate.models import FileTemplate
-from lims.inventory.models import Item, ItemType, AmountMeasure
-from .models import (Workflow, DataEntry,
+from lims.inventory.models import ItemType, AmountMeasure
+from lims.projects.serializers import DetailedProductSerializer
+from .models import (Workflow,
                      Run,
                      TaskTemplate, InputFieldTemplate, VariableFieldTemplate,
                      OutputFieldTemplate, CalculationFieldTemplate, StepFieldTemplate,
@@ -24,44 +25,6 @@ class WorkflowSerializer(SerializerPermissionsMixin, serializers.ModelSerializer
 
     class Meta:
         model = Workflow
-
-
-class RunSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
-    """
-    Provides basic serialisation of workflow run
-    """
-    started_by = serializers.SlugRelatedField(
-        slug_field='username',
-        read_only=True
-    )
-
-    class Meta:
-        model = Run
-
-
-class DetailedRunSerializer(serializers.ModelSerializer):
-    # product_statuses = ProductSerializer(read_only=True, many=True)
-
-    class Meta:
-        model = Run
-
-
-class DataEntrySerializer(serializers.ModelSerializer):
-    workflow = serializers.SlugRelatedField(
-        queryset=Workflow.objects.all(),
-        slug_field='name'
-    )
-    task = serializers.SlugRelatedField(
-        queryset=TaskTemplate.objects.all(),
-        slug_field='name'
-    )
-    item = serializers.SlugRelatedField(
-        queryset=Item.objects.all(),
-        slug_field='name'
-    )
-
-    class Meta:
-        model = DataEntry
 
 
 class InputFieldTemplateSerializer(serializers.ModelSerializer):
@@ -358,8 +321,32 @@ class TaskValuesSerializer(serializers.Serializer):
     product_input_amount = serializers.FloatField()
     product_input_measure = serializers.CharField()
     labware_identifier = serializers.CharField()
+    labware_amount = serializers.IntegerField()
     input_fields = InputFieldValueSerializer(many=True)
     variable_fields = VariableFieldValueSerializer(many=True)
     calculation_fields = CalculationFieldValueSerializer(many=True)
     output_fields = OutputFieldValueSerializer(many=True)
     step_fields = StepFieldValueSerializer(many=True)
+
+
+class RunSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
+    """
+    Provides basic serialisation of workflow run
+    """
+    started_by = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True
+    )
+
+    class Meta:
+        model = Run
+
+
+class DetailedRunSerializer(serializers.ModelSerializer):
+    validate_inputs = serializers.DictField(source='has_valid_inputs')
+    products = DetailedProductSerializer(read_only=True, many=True)
+    tasks = SimpleTaskTemplateSerializer(read_only=True, many=True,
+                                         source='get_tasks')
+
+    class Meta:
+        model = Run

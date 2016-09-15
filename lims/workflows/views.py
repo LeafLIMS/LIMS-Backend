@@ -28,11 +28,12 @@ from lims.permissions.permissions import (ViewPermissionsMixin,
                                           ExtendedObjectPermissionsFilter)
 
 from lims.filetemplate.models import FileTemplate
-from lims.inventory.models import (Item, ItemTransfer, AmountMeasure)
+from lims.inventory.models import (Item, ItemTransfer, AmountMeasure, Location,
+                                   ItemType)
 from lims.inventory.serializers import ItemTransferPreviewSerializer
 # Disable flake8 on this line as we need the templates to be imported but
 # they do not appear to be used (selected from globals)
-from .models import (Workflow, DataEntry,  # noqa
+from .models import (Workflow,  # noqa
                      Run, RunLabware,  # noqa
                      TaskTemplate, InputFieldTemplate, OutputFieldTemplate,  # noqa
                      StepFieldTemplate, VariableFieldTemplate,  # noqa
@@ -48,6 +49,8 @@ from .serializers import (WorkflowSerializer, SimpleTaskTemplateSerializer,  # n
                           StepFieldTemplateSerializer,  # noqa
                           CalculationFieldTemplateSerializer,  # noqa
                           RecalculateTaskTemplateSerializer)  # noqa
+from lims.datastore.models import DataEntry
+from lims.datastore.serializers import DataEntrySerializer
 
 
 class WorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
@@ -117,10 +120,9 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
+    filter_fields = ('is_active', 'task_in_progress', 'has_started',)
 
     def __init__(self, *args, **kwargs):
-        # Init a unit registry for later use
-        self.ureg = UnitRegistry()
         super().__init__(*args, **kwargs)
 
     def get_serializer_class(self):
@@ -135,7 +137,9 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         # TODO:
         # Check tasks permissions valid
         # Check product permissions valid
-        serializer.save(started_by=self.request.user)
+        serializer, permissions = self.clean_serializer_of_permissions(serializer)
+        instance = serializer.save(started_by=self.request.user)
+        self.assign_permissions(instance, permissions)
 
     def _get_product_input_items(self, input_type):
         """
@@ -144,7 +148,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         run = self.get_object()
         task_input_items = {}
         for p in run.products.all():
-            task_input_items[p] = list(p.linked_inventory.filter(input_type=input_type))
+            task_input_items[p] = list(p.linked_inventory.filter(item_type__name=input_type))
         return task_input_items
 
     def _generate_data_dict(self, input_items, task_data):
@@ -155,12 +159,12 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         """
         # Link (product,item) -> serialized_data
         data_items = {}
-        print(task_data.validated_data)
         for product, items in input_items.items():
             key = product.product_identifier
             data_items[key] = copy.deepcopy(task_data.validated_data)
             # Now add the input items to the dict
             # Get data from task to put basic together
+            data_items[key]['product_inputs'] = {}
             for itm in items:
                 itm_data = {
                     'amount': task_data.validated_data['product_input_amount'],
@@ -194,10 +198,12 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         """
         Convert if possible to a value with units
         """
+        if type(amount) is not float:
+            amount = float(amount)
         try:
-            value = float(amount) * self.ureg(measure)
+            value = amount * self.ureg(measure)
         except UndefinedUnitError:
-            value = float(amount)
+            value = amount
         return value
 
     def _get_from_inventory(self, identifier):
@@ -247,7 +253,8 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             for field in item['input_fields']:
                 self._update_item_amounts(field, key, data_item_amounts, sum_item_amounts)
 
-            for field in item['product_inputs']:
+            for identifier, field in item['product_inputs'].items():
+                field['inventory_identifier'] = identifier
                 self._update_item_amounts(field, key, data_item_amounts, sum_item_amounts)
         return (data_item_amounts, sum_item_amounts)
 
@@ -258,15 +265,14 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         errors = []
         valid_amounts = True
         for item, required in sum_item_amounts.items():
-            available = self._as_measured_value(item.amount_available, item.amount_measure)
+            available = self._as_measured_value(item.amount_available, item.amount_measure.symbol)
             if available < required:
                 missing = (available - required) * -1
-                message = 'Inventory item {} ({}) is short of amount by {.2f}'.format(
+                message = 'Inventory item {0} ({1}) is short of amount by {2:.2f}'.format(
                           item.identifier, item.name, missing)
                 errors.append(message)
-        if not valid_amounts:
-            raise ValidationError({'message': '\n'.join(errors)})
-        return True
+                valid_amounts = False
+        return (valid_amounts, errors)
 
     def _create_item_transfers(self, sum_item_amounts):
         """
@@ -274,11 +280,15 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         """
         transfers = []
         for item, amount in sum_item_amounts.items():
-            amount_symbol = '{:~}'.format(amount).split(' ')[1]
-            measure = AmountMeasure.objects.get(symbol=amount_symbol)
+            try:
+                amount_symbol = '{:~}'.format(amount).split(' ')[1]
+                measure = AmountMeasure.objects.get(symbol=amount_symbol)
+                amount = amount.magnitude
+            except:
+                measure = AmountMeasure.objects.get(symbol='items')
             transfers.append(ItemTransfer(
                 item=item,
-                amount_taken=amount.magnitude,
+                amount_taken=amount,
                 amount_measure=measure))
         return transfers
 
@@ -311,10 +321,13 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         # is_repeat = request.query_params.get('is_repeat', False)
 
         if serialized_task.is_valid(raise_exception=True):
+            # Init a unit registry for later use
+            self.ureg = UnitRegistry()
+
             run = self.get_object()
             task = run.get_task_at_index(run.current_task)
             # Get items from products
-            product_type = serialized_task.validated_data['product_type']
+            product_type = serialized_task.validated_data['product_input']
             product_input_items = self._get_product_input_items(product_type)
 
             # Process task data against input_items
@@ -324,18 +337,23 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             data_items = self._update_data_items_from_file(file_data,
                                                            data_items)
             product_item_amounts, sum_item_amounts = self._get_item_amounts(data_items,
-                                                                            task_data)
-            self._check_input_amounts(sum_item_amounts)
+                                                                            serialized_task)
+            valid_amounts, errors = self._check_input_amounts(sum_item_amounts)
 
             transfers = self._create_item_transfers(sum_item_amounts)
 
             if is_check:
-                check_output = []
+                check_output = {
+                    'errors': errors,
+                    'requirements': []
+                }
                 for t in transfers:
                     st = ItemTransferPreviewSerializer(t)
-                    check_output.append(st.data)
+                    check_output['requirements'].append(st.data)
                 return Response(check_output)
             else:
+                if not valid_amounts:
+                    raise ValidationError({'message': '\n'.join(errors)})
                 task_run_identifier = uuid.uuid4()
                 # driver_output = self._do_driver_actions(data_items)
                 # Generate DataItem for inputs
@@ -346,7 +364,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                         product=product,
                         created_by=self.request.user,
                         state='active',
-                        data=data_items[product],
+                        data=data_items[product.product_identifier],
                         task=task)
                     entry.save()
 
@@ -354,6 +372,8 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 # Link labeware barcode -> transfer
                 for t in transfers:
                     # TODO: make sure mark complete!
+                    t.run_identifier = task_run_identifier
+                    t.save()
                     t.do_transfer()
                     run.transfers.add(t)
 
@@ -365,6 +385,20 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 # Maybe return a 303 see other and redirect to monitor page?
                 return Response({'message': 'Task started successfully'})
 
+    @detail_route(methods=["POST"])
+    def recalculate(self, request, pk=None):
+        """
+        Given task data recalculate and return task.
+        """
+        obj = self.get_object()
+        task_data = request.data
+        if task_data:
+            serializer = RecalculateTaskTemplateSerializer(data=task_data)
+            if serializer.is_valid(raise_exception=True):
+                return Response(serializer.data)
+        serializer = TaskTemplateSerializer(obj)
+        return Response(serializer.data)
+
     @detail_route()
     def monitor_task(self, request, pk=None):
         """
@@ -372,12 +406,16 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         """
         run = self.get_object()
 
-        if run.task_in_progress:
+        if run.task_in_progress and run.is_active:
+            transfers = run.transfers.filter(run_identifier=run.task_run_identifier)
+            serialized_transfers = ItemTransferPreviewSerializer(transfers, many=True)
             # Get current data for each product
             data_entries = DataEntry.objects.filter(task_run_identifier=run.task_run_identifier)
-            output_data = []
-            for d in data_entries:
-                output_data.append(d.data)
+            serialized_data_entries = DataEntrySerializer(data_entries, many=True)
+            output_data = {
+                'transfers': serialized_transfers.data,
+                'data': serialized_data_entries.data,
+            }
             # List all required amounts?
             # What stage is the task at? Talk to driver/equipment
             return Response(output_data)
@@ -396,50 +434,84 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
 
         run = self.get_object()
 
-        if product_failures:
-            # If failures create new run based on current
-            # and move failed products to it
-            failure_ids = product_failures.split(',')
-            failed_products = run.products.filter(id__in=failure_ids)
-            new_name = '{} (failed)'.format(run.name)
-            new_run = Run(
-                    name=new_name,
-                    tasks=run.tasks,
-                    current_task=run.current_task,
-                    has_started=True,
-                    started_by=request.user)
-            new_run.save()
-            new_run.products.add(*failed_products)
+        if run.task_in_progress and run.is_active:
+            if product_failures:
+                # If failures create new run based on current
+                # and move failed products to it
+                failure_ids = product_failures.split(',')
+                failed_products = run.products.filter(id__in=failure_ids)
+                new_name = '{} (failed)'.format(run.name)
+                new_run = Run(
+                        name=new_name,
+                        tasks=run.tasks,
+                        current_task=run.current_task,
+                        has_started=True,
+                        started_by=request.user)
+                new_run.save()
+                new_run.products.add(*failed_products)
 
-            # Update data entries state to failed
-            failed_entries = DataEntry.objects.filter(task_run_identifier=run.task_run_identifier,
-                                                      products__in=failed_products)
-            failed_entries.update(state='failed')
+                # Update data entries state to failed
+                # This variable exists for line length purposes :P
+                rtri = run.task_run_identifier
+                failed_entries = DataEntry.objects.filter(task_run_identifier=rtri,
+                                                          product__in=failed_products)
+                failed_entries.update(state='failed')
 
-            # Remove the failed products from the current run
-            run.products.remove(*failed_products)
+                # Remove the failed products from the current run
+                run.products.remove(*failed_products)
 
-        # find and mark dataentry complete!
-        entries = DataEntry.objects.filter(task_run_identifier=run.task_run_identifier,
-                                           products__in=run.products.all())
-        entries.update(state='succeeded')
+            # find and mark dataentry complete!
+            entries = DataEntry.objects.filter(task_run_identifier=run.task_run_identifier,
+                                               product__in=run.products.all())
+            entries.update(state='succeeded')
 
-        # mark labware inactive
-        active_labware = run.labeware.filter(is_active=True)
-        active_labware.update(is_active=False)
+            # mark labware inactive
+            active_labware = run.labware.filter(is_active=True)
+            active_labware.update(is_active=False)
 
-        run.task_in_progress = False
+            # TODO: Create ouputs from the task
+            for e in entries:
+                print(e)
+                for index, output in enumerate(e.data['output_fields']):
+                    output_name = '{} {}/{}'.format(e.product.product_identifier,
+                                                    e.product.name,
+                                                    output['label'])
+                    measure = AmountMeasure.objects.get(symbol=output['measure'])
+                    identifier = '{}/{}'.format(run.task_run_identifier,
+                                                index)
+                    location = Location.objects.get(name='Lab')
+                    item_type = ItemType.objects.get(name=output['lookup_type'])
+                    new_item = Item(
+                        name=output_name,
+                        identifier=identifier,
+                        item_type=item_type,
+                        location=location,
+                        amount_available=output['amount'],
+                        amount_measure=measure,
+                        added_by=request.user,
+                        )
+                    new_item.save()
 
-        # advance task by one OR end if no more tasks
-        if run.current_task == len(run.get_task_list()) - 1:
-            run.is_active = False
-            run.date_finished = timezone.now()
-        else:
-            run.current_task += 1
+                    product_input_ids = [p for p in e.data['product_inputs']]
+                    product_items = Item.objects.filter(identifier__in=product_input_ids)
+                    new_item.created_from.add(*product_items)
 
-        run.save()
-        serializer = RunSerializer(run)
-        return Response(serializer)
+                    e.product.linked_inventory.add(new_item)
+
+            run.task_in_progress = False
+
+            # advance task by one OR end if no more tasks
+            if run.current_task == len(run.get_task_list()) - 1:
+                run.is_active = False
+                run.date_finished = timezone.now()
+            else:
+                run.current_task += 1
+
+            run.save()
+            serializer = RunSerializer(run)
+            return Response(serializer.data)
+        # Return a 204 as there is no task to monitor
+        return Response(status=204)
 
     @detail_route(methods=['POST'])
     def workflow_from_run(self, request, pk=None):

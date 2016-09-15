@@ -62,11 +62,26 @@ class ItemTransferSerializer(serializers.ModelSerializer):
         model = ItemTransfer
 
 
+class ItemPreviewSerializer(serializers.ModelSerializer):
+    """
+    Provided a limited set of fields for preview purposes
+    """
+    class Meta:
+        model = Item
+        depth = 1
+        fields = ('name', 'identifier', 'in_inventory', 'amount_available',
+                  'item_type', 'amount_measure', 'location',)
+
+
 class ItemTransferPreviewSerializer(serializers.ModelSerializer):
+    """
+    Provide a limited set of fields for previewing ItemTransfers
+    """
+    item = ItemPreviewSerializer()
 
     class Meta:
         model = ItemTransfer
-        depth = 2
+        depth = 1
 
 
 class ItemSerializer(serializers.ModelSerializer, SerializerPermissionsMixin):

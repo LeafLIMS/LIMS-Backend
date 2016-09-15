@@ -1,13 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-from jsonfield import JSONField
-
 from lims.projects.models import Product
 from lims.equipment.models import Equipment
 from lims.inventory.models import Item, ItemType, ItemTransfer, AmountMeasure
 from lims.filetemplate.models import FileTemplate
-from lims.datastore.models import DataFile
 
 
 class Workflow(models.Model):
@@ -76,7 +73,7 @@ class Run(models.Model):
     task_run_identifier = models.UUIDField(null=True, blank=True)
 
     products = models.ManyToManyField(Product, blank=True,
-                                      related_name='run')
+                                      related_name='runs')
     labware = models.ManyToManyField(RunLabware, blank=True,
                                      related_name='run_labware')
     transfers = models.ManyToManyField(ItemTransfer, blank=True,
@@ -132,7 +129,7 @@ class Run(models.Model):
                 else:
                     valid[p.id] = False
             return valid
-        return False
+        return valid
 
     class Meta:
         ordering = ['-date_started']
@@ -148,37 +145,6 @@ class Run(models.Model):
         return '{}, started by: {} finished on {}'.format(self.identifier,
                                                           self.started_by.username,
                                                           self.date_finished)
-
-
-class DataEntry(models.Model):
-
-    STATE = (
-        ('active', 'In Progress'),
-        ('succeeded', 'Succeded'),
-        ('failed', 'Failed'),
-        ('repeat succeeded', 'Repeat succeded'),
-        ('repeat failed', 'Repeat Failed'),
-    )
-
-    run = models.ForeignKey(Run, null=True, related_name='data_entries')
-    # Unique identifier for the task/run combo
-    task_run_identifier = models.UUIDField(db_index=True)
-
-    product = models.ForeignKey(Product, related_name='data')
-    item = models.ForeignKey(Item, null=True, related_name='data_entries')
-    date_created = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(User)
-    state = models.CharField(max_length=20, choices=STATE)
-    data = JSONField()
-    data_files = models.ManyToManyField(DataFile, blank=True)
-
-    task = models.ForeignKey('TaskTemplate')
-
-    def __str__(self):
-        return '{}: {}, {}'.format(self.date_created, self.workflow, self.task)
-
-    class Meta:
-        ordering = ['-date_created']
 
 
 class TaskTemplate(models.Model):

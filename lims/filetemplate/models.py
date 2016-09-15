@@ -45,7 +45,8 @@ class FileTemplate(models.Model):
                         ifn = [i.name for i in identifier_fields]
 
                         generated_line = {}
-                        # TODO: Currently we discard extra fields in CSV that are not in filetemplate. Change this?
+                        # TODO: Currently we discard extra fields in CSV that are not in
+                        # filetemplate. Change this?
                         for field in self.fields.all():
                             # Don't add identifier fields
                             if field.name not in ifn and field.name in line:

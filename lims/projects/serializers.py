@@ -4,7 +4,6 @@ from rest_framework import serializers
 
 from lims.inventory.models import ItemType
 from lims.inventory.serializers import LinkedItemSerializer
-from lims.workflows.serializers import DataEntrySerializer
 from lims.crm.serializers import CRMProjectSerializer
 from lims.permissions.permissions import (SerializerPermissionsMixin,
                                           SerializerReadOnlyPermissionsMixin)
@@ -33,9 +32,7 @@ class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer)
 class ProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSerializer):
     identifier = serializers.CharField(read_only=True)
     product_identifier = serializers.CharField(read_only=True)
-    on_workflow_as = serializers.PrimaryKeyRelatedField(read_only=True)
-    on_workflow = serializers.IntegerField(read_only=True)
-    on_workflow_name = serializers.CharField(read_only=True)
+    runs = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     created_by = serializers.SlugRelatedField(
         read_only=True,
         slug_field='username',
@@ -64,7 +61,6 @@ class ProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSer
 
 class DetailedProductSerializer(ProductSerializer):
     linked_inventory = LinkedItemSerializer(many=True, read_only=True)
-    data = DataEntrySerializer(many=True, read_only=True)
 
 
 class ProductStatusSerializer(serializers.ModelSerializer):

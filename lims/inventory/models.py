@@ -167,7 +167,7 @@ class ItemTransfer(models.Model):
     item = models.ForeignKey(Item, related_name='transfers')
     amount_taken = models.IntegerField(default=0)
     amount_measure = models.ForeignKey(AmountMeasure)
-    run_identifier = models.CharField(max_length=64, blank=True, null=True)
+    run_identifier = models.UUIDField(blank=True, null=True)
     barcode = models.CharField(max_length=20, blank=True, null=True)
     coordinates = models.CharField(max_length=2, blank=True, null=True)
 
@@ -185,10 +185,12 @@ class ItemTransfer(models.Model):
         """
         Convert if possible to a value with units
         """
+        if type(amount) is not float:
+            amount = float(amount)
         try:
-            value = float(amount) * ureg(measure)
+            value = amount * ureg(measure)
         except UndefinedUnitError:
-            value = float(amount)
+            value = amount
         return value
 
     def do_transfer(self):
@@ -197,10 +199,10 @@ class ItemTransfer(models.Model):
         """
         ureg = UnitRegistry()
         existing = self._as_measured_value(self.item.amount_available,
-                                           self.item.amount_measure,
+                                           self.item.amount_measure.symbol,
                                            ureg)
         to_take = self._as_measured_value(self.amount_taken,
-                                          self.amount_measure,
+                                          self.amount_measure.symbol,
                                           ureg)
         if self.is_addition:
             new_amount = existing + to_take
