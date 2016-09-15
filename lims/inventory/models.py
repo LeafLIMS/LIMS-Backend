@@ -116,7 +116,7 @@ class Item(models.Model):
     tags = models.ManyToManyField(Tag, blank=True)
 
     in_inventory = models.BooleanField(default=False)
-    amount_available = models.IntegerField(default=0)
+    amount_available = models.FloatField(default=0)
     amount_measure = models.ForeignKey(AmountMeasure)
     location = TreeForeignKey(Location, null=True, blank=True)
 
@@ -185,12 +185,10 @@ class ItemTransfer(models.Model):
         """
         Convert if possible to a value with units
         """
-        if type(amount) is not float:
-            amount = float(amount)
         try:
             value = amount * ureg(measure)
         except UndefinedUnitError:
-            value = amount
+            value = amount * ureg.count
         return value
 
     def do_transfer(self):
@@ -207,7 +205,7 @@ class ItemTransfer(models.Model):
         if self.is_addition:
             new_amount = existing + to_take
         else:
-            if existing < to_take:
+            if existing > to_take:
                 new_amount = existing - to_take
             else:
                 return False

@@ -203,7 +203,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         try:
             value = amount * self.ureg(measure)
         except UndefinedUnitError:
-            value = amount
+            value = amount * self.ureg.count
         return value
 
     def _get_from_inventory(self, identifier):
@@ -382,7 +382,6 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 run.has_started = True
                 run.task_run_identifier = task_run_identifier
                 run.save()
-                # Maybe return a 303 see other and redirect to monitor page?
                 return Response({'message': 'Task started successfully'})
 
     @detail_route(methods=["POST"])
@@ -471,7 +470,6 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
 
             # TODO: Create ouputs from the task
             for e in entries:
-                print(e)
                 for index, output in enumerate(e.data['output_fields']):
                     output_name = '{} {}/{}'.format(e.product.product_identifier,
                                                     e.product.name,
