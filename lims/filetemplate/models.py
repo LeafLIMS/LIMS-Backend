@@ -7,11 +7,19 @@ from django.core.exceptions import ObjectDoesNotExist
 class FileTemplate(models.Model):
     FILE_FOR_CHOICES = (
         ('input', 'Input'),
+        ('equip', 'Equipment'),
         ('output', 'Output'),
     )
 
     name = models.CharField(max_length=200, db_index=True, unique=True)
     file_for = models.CharField(max_length=6, choices=FILE_FOR_CHOICES)
+
+    # Task specific options
+    # Output each input item (excluding labware) by line rather than product
+    use_inputs = models.BooleanField(default=False)
+    # Collate inputs, only provide total amounts from task
+    # By default each input is broken down per product
+    total_inputs_only = models.BooleanField(default=False)
 
     def field_name(self):
         return self.name.lower().replace(' ', '_')
@@ -93,6 +101,15 @@ class FileTemplateField(models.Model):
     is_property = models.BooleanField(default=False)
 
     template = models.ForeignKey(FileTemplate, related_name='fields')
+
+    def get_key(self):
+        if self.map_to:
+            return self.map_to
+        return self.name
+
+    def key_to_path(self):
+        key = self.get_key()
+        return key.split('.')
 
     def __str__(self):
         return self.name

@@ -69,7 +69,7 @@ class ItemPreviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         depth = 1
-        fields = ('name', 'identifier', 'in_inventory', 'amount_available',
+        fields = ('id', 'name', 'identifier', 'in_inventory', 'amount_available',
                   'item_type', 'amount_measure', 'location',)
 
 

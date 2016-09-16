@@ -21,6 +21,7 @@ from rest_framework.filters import (OrderingFilter,
                                     SearchFilter,
                                     DjangoFilterBackend)
 from rest_framework.reverse import reverse
+from rest_framework_csv.renderers import CSVRenderer
 
 from lims.shared.filters import ListFilter
 from lims.permissions.permissions import (ViewPermissionsMixin,
@@ -292,6 +293,17 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 amount_measure=measure))
         return transfers
 
+    def _serialize_item_amounts(self, dict_of_amounts):
+        output = []
+        for item, amount in dict_of_amounts.items():
+            output.append({
+                'name': item.name,
+                'identifier': item.identifier,
+                'amount': amount.magnitude,
+                'measure': '{:~}'.format(amount).split(' ')[1],
+                })
+        return output
+
     def _do_driver_actions(self, task_data):
         pass
 
@@ -358,6 +370,9 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 # driver_output = self._do_driver_actions(data_items)
                 # Generate DataItem for inputs
                 for product in run.products.all():
+                    prod_amounts = product_item_amounts[product.product_identifier]
+                    data_items[product.product_identifier]['product_input_amounts'] = \
+                        self._serialize_item_amounts(prod_amounts)
                     entry = DataEntry(
                         run=run,
                         task_run_identifier=task_run_identifier,
@@ -406,19 +421,54 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         run = self.get_object()
 
         if run.task_in_progress and run.is_active:
+            task = run.get_task_at_index(run.current_task)
             transfers = run.transfers.filter(run_identifier=run.task_run_identifier)
             serialized_transfers = ItemTransferPreviewSerializer(transfers, many=True)
             # Get current data for each product
             data_entries = DataEntry.objects.filter(task_run_identifier=run.task_run_identifier)
             serialized_data_entries = DataEntrySerializer(data_entries, many=True)
+            # Get driver files
+            # It will a file template for now
+            # But ultimetly a driver will step in and do some processing
+            # Will need UI/task stuff for that
+            equipment_files = []
+            for ft in task.equipment_files.all():
+                equipment_files.append({
+                    'name': ft.name,
+                    'id': ft.id,
+                    })
             output_data = {
                 'transfers': serialized_transfers.data,
                 'data': serialized_data_entries.data,
+                'equipment_files': equipment_files,
             }
-            # List all required amounts?
             # What stage is the task at? Talk to driver/equipment
             return Response(output_data)
         # Return a 204 as there is no task to monitor
+        return Response(status=204)
+
+    @detail_route(methods=['GET'], renderer_classes=(CSVRenderer,))
+    def get_file(self, request, pk=None):
+        file_id = request.query_params.get('id', None)
+
+        run = self.get_object()
+        task = run.get_task_at_index(run.current_task)
+
+        try:
+            file_template = task.equipment_files.get(id=file_id)
+        except FileTemplate.ObjectDoesNotExist:
+            raise ValidationError({'message': 'Template does not exist'})
+
+        if run.task_in_progress and run.is_active:
+            transfers = run.transfers.filter(run_identifier=run.task_run_identifier)
+            serialized_transfers = ItemTransferPreviewSerializer(transfers, many=True)
+            data_entries = DataEntry.objects.filter(task_run_identifier=run.task_run_identifier)
+            serialized_data_entries = DataEntrySerializer(data_entries, many=True)
+            output_data = task.data_to_output_file(file_template,
+                                                   serialized_data_entries.data,
+                                                   serialized_transfers.data)
+            return Response(output_data)
+        # Return a 204 as there is no task to get files for
         return Response(status=204)
 
     @detail_route(methods=['POST'])

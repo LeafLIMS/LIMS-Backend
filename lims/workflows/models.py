@@ -168,6 +168,8 @@ class TaskTemplate(models.Model):
         FileTemplate, blank=True, related_name='input_file_templates')
     output_files = models.ManyToManyField(
         FileTemplate, blank=True, related_name='output_file_templates')
+    equipment_files = models.ManyToManyField(
+        FileTemplate, blank=True, related_name='equipment_file_templates')
 
     created_by = models.ForeignKey(User)
     date_created = models.DateTimeField(auto_now_add=True)
@@ -179,6 +181,70 @@ class TaskTemplate(models.Model):
 
     def store_labware_as(self):
         return 'labware_identifier'
+
+    def _flatten_to_values(self, the_dict):
+        flat = {}
+        for label, value in the_dict.items():
+            if type(value) in [str, int, float]:
+                flat[label] = value
+        return flat
+
+    def data_to_output_file(self, file_template,
+                            task_data_dict, transfer_data_dict):
+        """
+        Convert validated task data to output file data.
+        """
+        # Take in dict of data
+        # Map fields to field in dict
+        # Raise validation error if not possible???
+        fields = file_template.fields.all()
+
+        # Flatten out fields into a single level with
+        # the rest of the task data.
+        flat_products = {}
+        for product in task_data_dict:
+            # Get non-nested values
+            product_data = self._flatten_to_values(product)
+            product_data.update(self._flatten_to_values(product['data']))
+
+            for fieldset in ['input_fields', 'output_fields', 'step_fields',
+                             'variable_fields', 'calculation_fields']:
+                for field in product['data'][fieldset]:
+                    product_data[field['label']] = field
+            flat_products[product['product_name']] = product_data
+
+        lines = []
+        if file_template.use_inputs:
+            # Associate the data with each individual input for the task
+            # If there are 4 products with 5 inputs each the result will
+            # be 4*5 lines (20).
+            for product in task_data_dict:
+                for task_input in product['data']['product_input_amounts']:
+                    p = flat_products[product['product_name']].copy()
+                    p['task_input'] = task_input
+                    lines.append(p)
+        elif file_template.total_inputs_only:
+            for transfer in transfer_data_dict:
+                for task_input in product['data']['product_input_amounts']:
+                    p = flat_products[product['product_name']].copy()
+                    p['task_input'] = task_input
+                    lines.append(p)
+        else:
+            # List by products so 4 products = 4 lines
+            for product in flat_products.values():
+                lines.append(product)
+
+        output = []
+        for l in lines:
+            line_dict = {}
+            for f in fields:
+                key_path = f.key_to_path()
+                field_value = l
+                for key in key_path:
+                    field_value = field_value.get(key, None)
+                line_dict[f.name] = field_value
+            output.append(line_dict)
+        return output
 
     def __str__(self):
         return self.name
