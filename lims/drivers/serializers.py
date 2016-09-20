@@ -1,16 +1,22 @@
 from rest_framework import serializers
 
 from .models import CopyFileDriver, CopyFilePath
+from lims.equipment.models import Equipment
 
 
 class CopyFilePathSerializer(serializers.ModelSerializer):
     class Meta:
         model = CopyFilePath
+        fields = ('copy_from', 'copy_to',)
         extra_kwargs = {"id": {"required": False, "read_only": False}}
 
 
 class CopyFileDriverSerializer(serializers.ModelSerializer):
     locations = CopyFilePathSerializer(many=True)
+    equipment = serializers.SlugRelatedField(
+        queryset=Equipment.objects.all(),
+        slug_field='name'
+    )
 
     class Meta:
         model = CopyFileDriver
