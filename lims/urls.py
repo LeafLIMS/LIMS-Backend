@@ -24,6 +24,7 @@ from lims.workflows.views import (WorkflowViewSet, RunViewSet,
 from lims.filetemplate.views import FileTemplateViewSet
 
 from lims.equipment.views import EquipmentViewSet, EquipmentReservationViewSet
+from lims.drivers.views import CopyFileDriverViewSet
 
 from lims.crm.views import CRMUserView, CRMProjectView, CRMLinkView
 
@@ -56,6 +57,7 @@ router.register(r'runs', RunViewSet, base_name='runs')
 router.register(r'tasks', TaskViewSet, base_name='tasks')
 router.register(r'taskfields', TaskFieldViewSet, base_name='taskfields')
 router.register(r'filetemplates', FileTemplateViewSet, base_name='filetemplates')
+router.register(r'copyfiles', CopyFileDriverViewSet, base_name='copyfiles')
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),

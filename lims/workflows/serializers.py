@@ -322,6 +322,7 @@ class TaskValuesSerializer(serializers.Serializer):
     product_input_measure = serializers.CharField()
     labware_identifier = serializers.CharField()
     labware_amount = serializers.IntegerField()
+    equipment_choice = serializers.CharField()
     input_fields = InputFieldValueSerializer(many=True)
     variable_fields = VariableFieldValueSerializer(many=True)
     calculation_fields = CalculationFieldValueSerializer(many=True)

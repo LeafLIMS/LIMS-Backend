@@ -16,7 +16,6 @@ class DataFile(models.Model):
     file_name = models.CharField(max_length=200)
     location = models.CharField(max_length=200)
 
-    run_identifier = models.CharField(max_length=64)
     date_created = models.DateTimeField(auto_now_add=True)
     equipment = models.ForeignKey(Equipment)
 

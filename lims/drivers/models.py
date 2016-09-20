@@ -1,9 +1,12 @@
 import os
 import shutil
+import re
+import datetime
 
 from django.db import models
 
 from lims.equipment.models import Equipment
+from lims.datastore.models import DataFile
 
 
 class Driver(models.Model):
@@ -52,7 +55,7 @@ class CopyFileDriver(models.Model):
     of just to create the relevant DataFile objects.
     """
     name = models.CharField(max_length=100)
-    equipment = models.ForeignKey(Equipment)
+    equipment = models.ForeignKey(Equipment, related_name='files_to_copy')
 
     copy_from_prefix = models.CharField(max_length=200, blank=True, null=True)
     copy_to_prefix = models.CharField(max_length=200, blank=True, null=True)
@@ -81,6 +84,12 @@ class CopyFilePath(models.Model):
     copy_from = models.CharField(max_length=200)
     copy_to = models.CharField(max_length=200, blank=True, null=True)
 
+    INTERPOLATABLE_PATHS = (
+        'project_identifier',
+        'product_identifier',
+        'run_identifier',
+    )
+
     def __str__(self):
         return '{} -> {}'.format(self.copy_from, self.copy_to)
 
@@ -88,9 +97,28 @@ class CopyFilePath(models.Model):
         """
         Take a dict of interpolated values to generate path
         """
+        # Find paths in dict
+        # Match others and try to turn into date
+        # If error return false?
+        for pth in self.INTERPOLATABLE_PATHS:
+            # Look for path in string path
+            pattern = '{{{}}}'.format(pth)
+            matches = re.findall(pattern, path)
+            # If it has matches replace with interploate_dict value
+            if len(matches) > 0:
+                path = re.sub(pattern, interpolate_dict.get(pth, ''), path)
+        # Lets try matching some dates now
+        unmatched = re.findall('{.*}', path)
+        for match in unmatched:
+            # Try to convert to a date or at least strip
+            # off the curly braces.
+            potential_date = match.lstrip('{').rstrip('}')
+            now = datetime.datetime.now()
+            to_date = now.strftime(potential_date)
+            path = re.sub(match, to_date, path)
         if prefix:
             path = os.path.join(prefix, path)
-        return path.format(**interpolate_dict)
+        return path
 
     def copy_from_path(self, interpolate_dict):
         prefix = None
@@ -105,9 +133,19 @@ class CopyFilePath(models.Model):
         return self._interpolate_path(self.copy_to, interpolate_dict, prefix)
 
     def copy(self, interpolate_dict):
+        # Don't forget you need to create a datastore item
+        # to ensure the file isn't lost
         from_location = self.copy_from_path(interpolate_dict)
         to_location = self.copy_to_path(interpolate_dict)
         try:
-            return shutil.copy2(from_location, to_location)
+            file_loc = shutil.copy2(from_location, to_location)
         except IOError as e:
             return False
+        else:
+            file_name = to_location.rsplit('/', 1)[1]
+            ds = DataFile(
+                file_name=file_name,
+                location=file_loc,
+                equipment=self.driver.equipment)
+            ds.save()
+            return ds

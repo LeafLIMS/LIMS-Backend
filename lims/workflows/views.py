@@ -386,10 +386,10 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 # TODO: RunLabware creation
                 # Link labeware barcode -> transfer
                 for t in transfers:
-                    # TODO: make sure mark complete!
                     t.run_identifier = task_run_identifier
                     t.save()
                     t.do_transfer()
+                    t.transfer_complete = True
                     run.transfers.add(t)
 
                 # Update run with new details
@@ -471,6 +471,26 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         # Return a 204 as there is no task to get files for
         return Response(status=204)
 
+    def _copy_files(self, data_entries):
+        task = self.get_object().get_task_at_index(self.get_object().current_task)
+        # If no choice default to the first entry in the equipment
+        # for use on
+        equipment_choice = data_entries[0].data.get('equipment_choice', None)
+        try:
+            equipment = task.capable_equipment.get(name=equipment_choice)
+        except:
+            # Well we can't do anything so just return
+            return
+        for file_to_copy in equipment.files_to_copy.all():
+            interpolate_dict = {
+                'run_identifier': data_entries[0].task_run_identifier,
+            }
+            for loc in file_to_copy.locations.all():
+                file_store = loc.copy(interpolate_dict)
+                if file_store:
+                    for d in data_entries:
+                        d.data_files.add(file_store)
+
     @detail_route(methods=['POST'])
     def finish_task(self, request, pk=None):
         """
@@ -518,7 +538,10 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             active_labware = run.labware.filter(is_active=True)
             active_labware.update(is_active=False)
 
-            # TODO: Create ouputs from the task
+            # Handle filepath copy stuff
+            self._copy_files(entries)
+
+            # Create ouputs from the task
             for e in entries:
                 for index, output in enumerate(e.data['output_fields']):
                     output_name = '{} {}/{}'.format(e.product.product_identifier,
