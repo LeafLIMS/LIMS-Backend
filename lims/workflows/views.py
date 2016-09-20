@@ -481,7 +481,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         except:
             # Well we can't do anything so just return
             return
-        for file_to_copy in equipment.files_to_copy.all():
+        for file_to_copy in equipment.files_to_copy.filter(is_enabled=True):
             interpolate_dict = {
                 'run_identifier': data_entries[0].task_run_identifier,
             }
