@@ -9,21 +9,27 @@ class DataFileSerializer(serializers.ModelSerializer):
 
 
 class DataEntrySerializer(serializers.ModelSerializer):
-    """
-    workflow = serializers.SlugRelatedField(
-        queryset=Workflow.objects.all(),
+    run = serializers.SlugRelatedField(
+        read_only=True,
         slug_field='name'
+    )
+    created_by = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username'
     )
     task = serializers.SlugRelatedField(
-        queryset=TaskTemplate.objects.all(),
+        read_only=True,
         slug_field='name'
     )
-    item = serializers.SlugRelatedField(
-        queryset=Item.objects.all(),
-        slug_field='name'
-    )
-    """
     product_name = serializers.CharField()
 
     class Meta:
+        model = DataEntry
+
+
+class CompactDataEntrySerializer(DataEntrySerializer):
+
+    class Meta:
+        fields = ('id', 'task_run_identifier', 'date_created', 'state',
+                  'run', 'created_by', 'task',)
         model = DataEntry
