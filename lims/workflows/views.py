@@ -1,9 +1,8 @@
 from operator import itemgetter
 from uuid import uuid4
-from io import TextIOWrapper
-import json
 from itertools import groupby
 import datetime
+import io
 
 from pint import UnitRegistry, UndefinedUnitError
 
@@ -220,8 +219,8 @@ class ActiveWorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                     return Response({
                         'message': 'Active workflow with the id {} does not exist'
                         .format(existing_workflow_id)}, status=404)
-                current_workflow.products.remove(ws)
-                aw.products.add(ws)
+                current_workflow.product_statuses.remove(ws)
+                aw.product_statuses.add(ws)
             else:
                 try:
                     nw = Workflow.objects.get(pk=new_workflow_id)
@@ -234,7 +233,7 @@ class ActiveWorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                     started_by=request.user)
                 naw.save()
                 naw.product_statuses.add(ws)
-                current_workflow.products.remove(ws)
+                current_workflow.product_statuses.remove(ws)
 
             if current_workflow.product_statuses.count() == 0:
                 current_workflow.delete()
@@ -278,11 +277,14 @@ class ActiveWorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         - _products_ (**required**): A list of product ID's that are a part of the task
         - _input_files_: A list of file contents to be used as input for the task
         """
-        task_data = json.loads(self.request.data.get('task', None))
+        #task_data = json.loads(self.request.data.get('task', None))
+        task_data = self.request.data.get('task', None)
         task_serializer = TaskValuesSerializer(data=task_data)
 
-        product_data = json.loads(self.request.data.get('products', []))
-        file_data = self.request.data.getlist('input_files', [])
+        #product_data = json.loads(self.request.data.get('products', []))
+        product_data = self.request.data.get('products', [])
+        #file_data = self.request.data.getlist('input_files', [])
+        file_data = self.request.data.get('input_files', [])
 
         is_preview = request.query_params.get('is_preview', False)
 
@@ -298,11 +300,15 @@ class ActiveWorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         input_file_data = {}
         for f in file_data:
             try:
-                ft = FileTemplate.objects.get(name=f.name)
+                # ft = FileTemplate.objects.get(name=f.name)
+                ft = FileTemplate.objects.get(name=f["name"])
             except:
                 pass
             else:
-                parsed_file = ft.read(TextIOWrapper(f.file, encoding=f.charset))
+                # parsed_file = ft.read(TextIOWrapper(f.file, encoding=f.charset))
+                sf = io.StringIO(f["file"])
+                parsed_file = ft.read(sf)
+                sf.close()
                 if parsed_file:
                     for key, row in parsed_file.items():
                         if key not in input_file_data:
@@ -311,7 +317,7 @@ class ActiveWorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 else:
                     return Response(
                         {'message':
-                         'Input file "{}" has incorrect headers/format'.format(f.name)},
+                         'Input file "{}" has incorrect headers/format'.format(f["name"])},
                         status=400)
 
         products = Product.objects.filter(id__in=[p['product'] for p in product_data])
@@ -480,6 +486,10 @@ class ActiveWorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                         item_transfer.save()
 
                         # Alter amounts in DB to corrospond to the amount taken
+                        try:
+                            available = item.amount_available * ureg(item.amount_measure.symbol)
+                        except UndefinedUnitError:
+                            available = item.amount_available
                         new_amount = available - required_amounts[item.identifier]
                         item.amount_available = new_amount.magnitude
                         item.save()
@@ -681,12 +691,13 @@ class ActiveWorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
 
         if len(product_ids) > 0:
             products = activeworkflow.product_statuses.filter(product__id__in=product_ids)
-            self._update_products(products[0].current_task, products,
-                                  activeworkflow, request, retry=True)
 
             # Update item transfers to indicate now complete
             item_transfers = ItemTransfer.objects.filter(run_identifier=products[0].run_identifier)
             item_transfers.update(transfer_complete=True)
+
+            self._update_products(products[0].current_task, products,
+                                  activeworkflow, request, retry=True)
 
             return Response({'message': 'Task ready for retry'})
         return Response({'message': 'You must provide product IDs'}, status=400)
