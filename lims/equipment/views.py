@@ -1,6 +1,7 @@
 
 from rest_framework import viewsets
 from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
 
 import django_filters
 
@@ -36,14 +37,21 @@ class EquipmentReservationViewSet(viewsets.ModelViewSet):
     filter_class = EquipmentReservationFilter
 
     def perform_create(self, serializer):
+        if self.request.user.groups.filter(name='staff').exists():
+            serializer.validated_data['is_confirmed'] = True
+            serializer.validated_data['confirmed_by'] = self.request.user
         serializer.save(reserved_by=self.request.user)
 
     def perform_update(self, serializer):
-        if serializer.reserved_by == self.request.user or self.request.user.is_staff:
+        if (serializer.instance.reserved_by == self.request.user or
+                self.request.user.groups.filter(name='staff').exists()):
             serializer.save()
+        else:
+            raise PermissionDenied()
 
     def destroy(self, request, pk=None):
-        if request.user == self.get_object().reserved_by or request.user.is_staff:
+        if (request.user == self.get_object().reserved_by or
+                request.user.groups.filter(name='staff').exists()):
             return super(EquipmentReservationViewSet, self).destroy(request, self.get_object().id)
         else:
             return Response({'message': 'You must have permission to delete'}, status=403)

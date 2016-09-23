@@ -271,6 +271,8 @@ class EquipmentReservationTestCase(LoggedInTestCase):
         res = response.data
         self.assertEqual(len(res["results"]), 3)
 
+    """
+    Never an issue: ALWAYS created as the user.
     def test_user_create_other(self):
         self._asJoeBloggs()
         new_res = {"start": timezone.make_aware(datetime.datetime(2050, 6, 14)),
@@ -284,12 +286,13 @@ class EquipmentReservationTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIs(EquipmentReservation.objects.filter(
             reserved_for="Something or other I might want to do").exists(), False)
+    """
 
     def test_admin_create(self):
         self._asAdmin()
         new_res = {"start": timezone.make_aware(datetime.datetime(2050, 6, 14)),
                    "end": timezone.make_aware(datetime.datetime(2050, 6, 16)),
-                   "reserved_for": "Something or other I might want to do",
+                   "reserved_for": "Joe Bloggs",
                    "reserved_by": self._joeBloggs.username,
                    "equipment_reserved": self._equipmentSequencer.name,
                    "is_confirmed": False,
@@ -297,14 +300,14 @@ class EquipmentReservationTestCase(LoggedInTestCase):
         response = self._client.post("/equipmentreservation/", new_res, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIs(EquipmentReservation.objects.filter(
-            reserved_for="Something or other I might want to do").exists(), True)
+            reserved_for="Joe Bloggs").exists(), True)
         res1 = EquipmentReservation.objects.get(
-            reserved_for="Something or other I might want to do")
+            reserved_for="Joe Bloggs")
         self.assertEqual(res1.start, timezone.make_aware(datetime.datetime(2050, 6, 14)))
         self.assertEqual(res1.end, timezone.make_aware(datetime.datetime(2050, 6, 16)))
-        self.assertEqual(res1.reserved_by, self._joeBloggs)
+        self.assertEqual(res1.reserved_by, self._adminUser)
         self.assertEqual(res1.equipment_reserved, self._equipmentSequencer)
-        self.assertEqual(res1.is_confirmed, False)
+        self.assertEqual(res1.is_confirmed, True)
         self.assertEqual(res1.checked_in, False)
         # New one shows up in list of all reservations, even for other users
         self._asJoeBloggs()
@@ -319,15 +322,16 @@ class EquipmentReservationTestCase(LoggedInTestCase):
         response = self._client.patch("/equipmentreservation/%d/" % self._joeReservation.id,
                                       updated_res, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self._joeReservation.reserved_for, "You want more detail so here it is")
+        updatedJoe = EquipmentReservation.objects.get(pk=self._joeReservation.id)
+        self.assertEqual(updatedJoe.reserved_for, "You want more detail so here it is")
 
     def test_user_edit_any(self):
         self._asJaneDoe()
         updated_res = {"reserved_for": "You want more detail so here it is"}
-        response = self._client.patch("/equipmentreservation/%d/" % self._janeReservation.id,
+        response = self._client.patch("/equipmentreservation/%d/" % self._joeReservation.id,
                                       updated_res, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self._joeReservation.reserved_for, "Very important sequencing stuff")
+        self.assertEqual(self._joeReservation.reserved_for, "An experiment I'm doing")
 
     def test_admin_edit_any(self):
         self._asAdmin()
@@ -335,7 +339,8 @@ class EquipmentReservationTestCase(LoggedInTestCase):
         response = self._client.patch("/equipmentreservation/%d/" % self._joeReservation.id,
                                       updated_res, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self._joeReservation.reserved_for, "You want more detail so here it is")
+        updatedJoe = EquipmentReservation.objects.get(pk=self._joeReservation.id)
+        self.assertEqual(updatedJoe.reserved_for, "You want more detail so here it is")
 
     def test_user_delete_own(self):
         self._asJaneDoe()

@@ -27,8 +27,9 @@ class EquipmentReservationSerializer(serializers.ModelSerializer):
         exclude = ('reservation',)
 
     def validate(self, data):
-        if data['start'] > data['end']:
-            raise serializers.ValidationError('Start date must be after end date')
+        if 'start' in data and 'end' in data:
+            if data['start'] > data['end']:
+                raise serializers.ValidationError('Start date must be after end date')
         if not self.instance:
             date_range = DateTimeTZRange(data['start'], data['end'])
             overlaps = EquipmentReservation.objects.filter(
