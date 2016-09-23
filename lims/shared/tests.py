@@ -102,4 +102,3 @@ class SharedTestCase(LoggedInTestCase):
         response = self._client.delete("/organisms/%d/" % self._mouse.id)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertIs(Organism.objects.filter(name="Mus musculus").exists(), False)
-

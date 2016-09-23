@@ -231,7 +231,7 @@ class ViewPermissionsMixin():
                     self.remove_group_permissions(instance, grp)
                 assign_perm('view_%s' % model_name, grp, instance)
             else:
-                raise serializers.ValidationError({'message': 'Permission must by r or rw'}) 
+                raise serializers.ValidationError({'message': 'Permission must by r or rw'})
         return True
 
     def clone_group_permissions(self, clone_from, clone_to):

@@ -1,4 +1,3 @@
-import datetime
 from lims.shared.loggedintestcase import LoggedInTestCase
 from rest_framework import status
 from .models import Order, Service
@@ -427,4 +426,5 @@ class OrderTestCase(LoggedInTestCase):
         statuses = response.data
         self.assertEqual(len(statuses), 5)
         self.assertEqual(statuses,
-                         ["Submitted", "Quote Sent", "Order Received", "Project in Progress", "Project Shipped"])
+                         ["Submitted", "Quote Sent", "Order Received", "Project in Progress",
+                          "Project Shipped"])

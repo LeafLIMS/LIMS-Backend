@@ -112,8 +112,8 @@ class CodonUsageTestCase(LoggedInTestCase):
     def test_admin_create(self):
         self._asAdmin()
         new_codontable = {"species": self._mouse.id,
-                          "codons": { "name": "AGT",
-                                      "value": 1.34}
+                          "codons": {"name": "AGT",
+                                     "value": 1.34}
                           }
         response = self._client.post("/codonusage/", new_codontable, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
