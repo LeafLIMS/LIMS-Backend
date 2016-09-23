@@ -18,6 +18,8 @@ class LoggedInTestCase(TestCase):
         self._adminUser = User.objects.create_user(username='Super Man',
                                                    email='superman@tgac.com', password='woggle')
         self._adminUser.groups.add(Group.objects.get(name="admin"))
+        # Admin users are also staff for the purposes of permissions.
+        self._adminUser.groups.add(Group.objects.get(name="staff"))
         self._staffUser = User.objects.create_user(username='Lab Tech',
                                                    email='labtech@tgac.com', password='wiggle')
         self._staffUser.groups.add(Group.objects.get(name="staff"))
