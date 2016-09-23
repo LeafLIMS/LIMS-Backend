@@ -4,7 +4,6 @@ from .models import Address
 
 
 class AddressTestCase(LoggedInTestCase):
-
     def setUp(self):
         super(AddressTestCase, self).setUp()
 

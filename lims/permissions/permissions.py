@@ -166,6 +166,7 @@ class SerializerReadOnlyPermissionsMixin(SerializerPermissionsMixin):
 class ViewPermissionsMixin():
 
     PERM_TEMPLATE = (
+        'add_{}',
         'change_{}',
         'delete_{}',
         'view_{}',
@@ -277,7 +278,6 @@ class ViewPermissionsMixin():
         except:
             return Response({'message': 'Please provide permissions in correct format'}, status=400)
         if permissions:
-            print(permissions)
             if self.assign_permissions(obj, permissions):
                 return Response({'message': 'Permissions set for {}'.format(obj)})
             else:

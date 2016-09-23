@@ -362,8 +362,8 @@ class FileTemplateTestCase(LoggedInTestCase):
         self.assertIs(FileTemplate.objects.filter(name="InputTemplate1").exists(), False)
 
     def test_read_file(self):
-        # Read a 3-line file with all the correct fields ID1Field1 (req+ident),
-        # 1Field1, 1Field2 (req)
+        # Read a 3-line file with all the correct fields:
+        #  ID1Field1 (req+ident), 1Field1, 1Field2 (req)
         file = io.StringIO("ID1Field1,1Field1,1Field2,1Field3,1Field4\nA,B,C,D,E\nF,G,H,I,J")
         result = self._input_template1.read(file)
         file.close()
@@ -376,7 +376,8 @@ class FileTemplateTestCase(LoggedInTestCase):
                          {"1Field1": "G", "1Field2": "H", "MappingTest": "I",
                           "properties": [{"name": "1Field4", "value": "J"}]})
         # Read a file with extra fields (expect them to be discarded)
-        file = io.StringIO("ID1Field1,1Field1,1Field2,1Field3,1Field4,ExtraField\nA,B,C,D,E,X\nF,G,H,I,J,Y")  # noqa
+        file = io.StringIO(
+            "ID1Field1,1Field1,1Field2,1Field3,1Field4,ExtraField\nA,B,C,D,E,X\nF,G,H,I,J,Y")
         result = self._input_template1.read(file)
         file.close()
         self.assertIsNot(result, False)
@@ -396,11 +397,15 @@ class FileTemplateTestCase(LoggedInTestCase):
         self.assertIsNot(result, False)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[frozenset("A")],
-                         {"1Field2": "C", "MappingTest": "D", "properties": [{"name": "1Field4", "value": "E"}]})  # noqa
+                         {"1Field2": "C", "MappingTest": "D",
+                          "properties": [{"name": "1Field4", "value": "E"}]})
         self.assertEqual(result[frozenset("F")],
-                         {"1Field2": "H", "MappingTest": "I", "properties": [{"name": "1Field4", "value": "J"}]})  # noqa
+                         {"1Field2": "H", "MappingTest": "I",
+                          "properties": [{"name": "1Field4", "value": "J"}]})
         # Read a file with required fields missing
-        file = io.StringIO("ID1Field1,1Field1\nA,B\nD,E")
+        file = io.StringIO("""ID1Field1,1Field1
+A,B
+D,E""")
         result = self._input_template1.read(file)
         file.close()
         self.assertIs(result, False)
@@ -422,8 +427,14 @@ class FileTemplateTestCase(LoggedInTestCase):
                   "Extra2": "y"}]
         data3 = [{"ID1Field1": "a", "1Field2": "c", "1Field3": "d", "1Field4": "e"},
                  {"ID1Field1": "f", "1Field2": "h", "1Field3": "i", "1Field4": "j"}]
-        expectedContentA = "1Field1,1Field2,1Field3,1Field4,ID1Field1\nb,c,d,e,a\ng,h,i,j,f\n"
-        expectedContentB = "1Field1,1Field2,1Field3,1Field4,ID1Field1\n,c,d,e,a\n,h,i,j,f\n"
+        expectedContentA = """1Field1,1Field2,1Field3,1Field4,ID1Field1
+b,c,d,e,a
+g,h,i,j,f
+"""
+        expectedContentB = """1Field1,1Field2,1Field3,1Field4,ID1Field1
+,c,d,e,a
+,h,i,j,f
+"""
         # Write a file and check contents are correct
         file = io.StringIO()
         self._input_template1.write(file, data1, "name")

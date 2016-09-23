@@ -4,7 +4,6 @@ from .models import CodonUsage, CodonUsageTable, Organism
 
 
 class CodonUsageTestCase(LoggedInTestCase):
-
     def setUp(self):
         super(CodonUsageTestCase, self).setUp()
 
