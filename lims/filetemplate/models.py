@@ -65,9 +65,9 @@ class FileTemplate(models.Model):
                                     if 'properties' not in generated_line:
                                         generated_line['properties'] = []
                                     prop = {
-                                            'name': field_key,
-                                            'value': field_value
-                                            }
+                                        'name': field_key,
+                                        'value': field_value
+                                    }
                                     generated_line['properties'].append(prop)
                                 else:
                                     generated_line[field_key] = field_value

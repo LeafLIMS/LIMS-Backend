@@ -166,6 +166,7 @@ class SerializerReadOnlyPermissionsMixin(SerializerPermissionsMixin):
 class ViewPermissionsMixin():
 
     PERM_TEMPLATE = (
+        'add_{}',
         'change_{}',
         'delete_{}',
         'view_{}',
@@ -231,7 +232,7 @@ class ViewPermissionsMixin():
                     self.remove_group_permissions(instance, grp)
                 assign_perm('view_%s' % model_name, grp, instance)
             else:
-                raise serializers.ValidationError({'message': 'Permission must by r or rw'}) 
+                raise serializers.ValidationError({'message': 'Permission must by r or rw'})
         return True
 
     def clone_group_permissions(self, clone_from, clone_to):
@@ -277,7 +278,6 @@ class ViewPermissionsMixin():
         except:
             return Response({'message': 'Please provide permissions in correct format'}, status=400)
         if permissions:
-            print(permissions)
             if self.assign_permissions(obj, permissions):
                 return Response({'message': 'Permissions set for {}'.format(obj)})
             else:

@@ -1,5 +1,5 @@
-from io import TextIOWrapper
-import json
+import io
+import ast
 
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -99,17 +99,21 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
                 filetemplate = FileTemplate.objects.get(id=file_template_id)
             except FileTemplate.DoesNotExist:
                 return Response({'message': 'File template does not exist'}, status=404)
-            encoding = 'utf-8' if request.encoding is None else request.encoding
-            f = TextIOWrapper(uploaded_file.file, encoding=encoding)
+            # encoding = 'utf-8' if request.encoding is None else request.encoding
+            # f = io.TextIOWrapper(uploaded_file.file, encoding=encoding)
+            f = io.StringIO("".join(uploaded_file))
             items_to_import = filetemplate.read(f)
             saved = []
             rejected = []
             if items_to_import:
                 for identifier, item_data in items_to_import.items():
                     item_data['identifier'] = ' '.join(identifier)
-                    item_data['assign_groups'] = json.loads(permissions)
+                    # item_data['assign_groups'] = json.loads(permissions)
+                    item_data['assign_groups'] = permissions
                     if 'properties' not in item_data:
                         item_data['properties'] = []
+                    else:
+                        item_data['properties'] = ast.literal_eval(item_data['properties'])
                     item = DetailedItemSerializer(data=item_data)
                     if item.is_valid():
                         saved.append(item_data)
@@ -174,7 +178,7 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
                 is_addition = True
             else:
                 if available < required:
-                    missing = (available - required * -1)
+                    missing = ((available - required) * -1)
                     return Response(
                         {'message': 'Inventory item {} ({}) is short of amount by {}'.format(
                          item.identifier, item.name, missing)}, status=400)
@@ -193,7 +197,7 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
                 is_addition=is_addition
             )
             tfr.save()
-            return Response({'message': 'Transfer created'})
+            return Response({'message': 'Transfer {} created'.format(tfr.id)})
         return Response({'message': 'You must provide a transfer ID'}, status=400)
 
 
