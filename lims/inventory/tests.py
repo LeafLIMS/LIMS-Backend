@@ -1038,7 +1038,7 @@ class SetTestCase(LoggedInTestCase):
         self._asJoeBloggs()
         response = self._client.delete(
             "/inventorysets/%d/remove/?id=%s" % (self._set1.id, self._item3.id), format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_number_of_items(self):
         self.assertEqual(self._set1.number_of_items(), 2)

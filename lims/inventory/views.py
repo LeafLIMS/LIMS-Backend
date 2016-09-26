@@ -163,7 +163,7 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
                 return Response({'message': 'No item transfer exists with that ID'}, status=404)
             tfr.transfer_complete = True
             tfr.save()
-            return Response({'message': 'Transfer {} completed'.format(tfr_id)})
+            return Response({'message': 'Transfer {} complete'.format(tfr_id)})
         elif transfer_details:
             item = self.get_object()
 
