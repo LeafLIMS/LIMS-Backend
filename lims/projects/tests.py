@@ -1184,7 +1184,7 @@ item_3,test,test,test,test,test"""}
         self.assertEqual(product.status, ProductStatus.objects.get(name="Added"))
         self.assertEqual(product.product_type, self._itemtype)
         self.assertEqual(product.optimised_for, self._human)
-        self.assertEqual(product.created_by, self._janeDoe)
+        self.assertEqual(product.created_by, self._adminUser)
         self.assertEqual(product.project, self._janeDoeProject)
         self.assertEqual(product.design_format, "csv")
         self.assertEqual(product.product_identifier,
@@ -1200,7 +1200,7 @@ item_3,test,test,test,test,test"""}
         response = self._client.get('/products/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         products = response.data
-        self.assertEqual(len(products["results"]), 2)
+        self.assertEqual(len(products["results"]), 3)
 
     def test_user_edit_own(self):
         self._asJaneDoe()

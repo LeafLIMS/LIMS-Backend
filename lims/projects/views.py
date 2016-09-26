@@ -99,7 +99,8 @@ class ProductViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         # Ensure the user has the correct permissions on the Project
         # to add a product to it.
         project = serializer.validated_data['project']
-        if 'view_project' in get_group_perms(self.request.user, project):
+        if ('change_project' in get_group_perms(self.request.user, project)
+                or self.request.user.groups.filter(name='admin').exists()):
             instance = serializer.save(created_by=self.request.user)
             self.clone_group_permissions(instance.project, instance)
         else:
