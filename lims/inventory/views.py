@@ -12,7 +12,6 @@ from rest_framework.filters import (OrderingFilter,
                                     SearchFilter,
                                     DjangoFilterBackend)
 
-
 from lims.permissions.permissions import (IsInAdminGroupOrRO,
                                           ViewPermissionsMixin, ExtendedObjectPermissions,
                                           ExtendedObjectPermissionsFilter)
@@ -53,6 +52,14 @@ class ItemTypeViewSet(viewsets.ModelViewSet, LeveledMixin):
     permission_classes = (IsInAdminGroupOrRO,)
     search_fields = ('name',)
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.has_children():
+            return Response({'message': 'Cannot delete ItemType with children'},
+                            status=400)
+        self.perform_destroy(instance)
+        return Response(status=204)
+
 
 class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = Location.objects.all()
@@ -60,11 +67,19 @@ class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     permission_classes = (IsInAdminGroupOrRO,)
     search_fields = ('name',)
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.has_children():
+            return Response({'message': 'Cannot delete Location with children'},
+                            status=400)
+        self.perform_destroy(instance)
+        return Response(status=204)
+
 
 class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
-    permission_classes = (ExtendedObjectPermissions, )
+    permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
     filter_fields = ('in_inventory', 'item_type__name', 'identifier', 'name')
@@ -159,15 +174,18 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
 
             addition = transfer_details.get('is_addition', False)
 
+            # Both measures must be valid in order to perform transfer.
             try:
                 available = item.amount_available * ureg(item.amount_measure.symbol)
             except UndefinedUnitError:
-                available = item.amount_available
-
+                return Response(
+                    {'message': 'Invalid item measure: %s' % item.amount_measure.symbol},
+                    status=400)
             try:
                 required = raw_amount * ureg(raw_measure)
             except UndefinedUnitError:
-                required = raw_amount
+                return Response({'message': 'Invalid transfer measure: %s' % raw_measure},
+                                status=400)
 
             is_complete = False
             is_addition = False
@@ -181,7 +199,7 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
                     missing = ((available - required) * -1)
                     return Response(
                         {'message': 'Inventory item {} ({}) is short of amount by {}'.format(
-                         item.identifier, item.name, missing)}, status=400)
+                            item.identifier, item.name, missing)}, status=400)
                 new_amount = available - required
 
             item.amount_available = new_amount.magnitude
@@ -204,7 +222,7 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
 class SetViewSet(viewsets.ModelViewSet, ViewPermissionsMixin):
     queryset = Set.objects.all()
     serializer_class = SetSerializer
-    permission_classes = (ExtendedObjectPermissions, )
+    permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
 
@@ -229,9 +247,13 @@ class SetViewSet(viewsets.ModelViewSet, ViewPermissionsMixin):
         item_id = request.query_params.get('id', None)
         inventoryset = self.get_object()
         if item_id:
-            item = Item.objects.get(pk=item_id)
-            item.sets.add(inventoryset)
-            return Response(status=201)
+            items = Item.objects.filter(pk=item_id)
+            if items.count() > 0:
+                item = Item.objects.get(pk=item_id)
+                item.sets.add(inventoryset)
+                return Response(status=201)
+            return Response(
+                {'message': 'The id of the item to add to the inventory is invalid'}, status=400)
         return Response(
             {'message': 'The id of the item to add to the inventory is required'}, status=400)
 
@@ -240,8 +262,12 @@ class SetViewSet(viewsets.ModelViewSet, ViewPermissionsMixin):
         item_id = request.query_params.get('id', None)
         inventoryset = self.get_object()
         if item_id:
-            item = Item.objects.get(pk=item_id)
-            inventoryset.items.remove(item)
-            return Response(status=201)
+            items = Item.objects.filter(pk=item_id)
+            if items.count() > 0:
+                item = items.all()[0]
+                inventoryset.items.remove(item)
+                return Response(status=204)
+            return Response(
+                {'message': 'The id of the item to add to the inventory is invalid'}, status=400)
         return Response(
             {'message': 'The id of the item to add to the inventory is required'}, status=400)

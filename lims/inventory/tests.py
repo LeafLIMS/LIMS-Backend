@@ -1052,7 +1052,7 @@ class SetTestCase(LoggedInTestCase):
         self._asJoeBloggs()
         response = self._client.delete(
             "/inventorysets/%d/remove/?id=%s" % (self._set1.id, self._item3.id), format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_number_of_items(self):
         self.assertEqual(self._set1.number_of_items(), 2)
@@ -1341,7 +1341,6 @@ class ItemTestCase(LoggedInTestCase):
                     "amount_available": 5,
                     "amount_measure": self._measure.symbol,
                     "location": self._location.code,
-                    "added_by": self._janeDoe.id,
                     "properties": [{"name": "joe", "value": "bloggs"}],
                     "assign_groups": {"jane_group": "rw"}}
         response = self._client.post("/inventory/", new_item, format='json')
@@ -1350,7 +1349,7 @@ class ItemTestCase(LoggedInTestCase):
         self.assertEqual(Item.objects.count(), 5)
         self.assertIs(Item.objects.filter(name="Item5").exists(), True)
         i = Item.objects.get(identifier="I5")
-        self.assertEqual(i.added_by, self._janeDoe)
+        self.assertEqual(i.added_by, self._adminUser)
         self.assertIs(i.properties.filter(name="joe").exists(), True)
         self.assertEqual(i.properties.get(name="joe").value, "bloggs")
 
@@ -1698,7 +1697,7 @@ class ItemTestCase(LoggedInTestCase):
         i1 = Item.objects.get(name="Item1")
         self.assertEqual(i1.amount_available, 5.1)
         transfers = i1.transfers
-        self.assertEqual(len(transfers), 1)
+        self.assertEqual(transfers.count(), 1)
         transfer = transfers.all()[0]
         self.assertIs(transfer.is_addition, True)
         self.assertIs(transfer.transfer_complete, True)
@@ -1717,7 +1716,7 @@ class ItemTestCase(LoggedInTestCase):
         i1 = Item.objects.get(name="Item1")
         self.assertEqual(i1.amount_available, 5.1)
         transfers = i1.transfers
-        self.assertEqual(len(transfers), 1)
+        self.assertEqual(transfers.count(), 1)
         transfer = transfers.all()[0]
         self.assertIs(transfer.is_addition, True)
         self.assertIs(transfer.transfer_complete, True)
@@ -1735,7 +1734,7 @@ class ItemTestCase(LoggedInTestCase):
         i1 = Item.objects.get(name="Item1")
         self.assertEqual(i1.amount_available, 4.9)
         transfers = i1.transfers
-        self.assertEqual(len(transfers), 1)
+        self.assertEqual(transfers.count(), 1)
         transfer = transfers.all()[0]
         self.assertIs(transfer.is_addition, False)
         self.assertIs(transfer.transfer_complete, False)
@@ -1751,7 +1750,7 @@ class ItemTestCase(LoggedInTestCase):
         transfer = transfers.all()[0]
         self.assertIs(transfer.is_addition, False)
         self.assertIs(transfer.transfer_complete, True)
-        self.assertEqual(response.data["message"], 'Transfer {} completed'.format(transfer.id))
+        self.assertEqual(response.data["message"], 'Transfer {} complete'.format(transfer.id))
 
     def test_transfer_admin_remove_then_complete(self):
         self._asAdmin()
@@ -1765,7 +1764,7 @@ class ItemTestCase(LoggedInTestCase):
         i1 = Item.objects.get(name="Item1")
         self.assertEqual(i1.amount_available, 4.9)
         transfers = i1.transfers
-        self.assertEqual(len(transfers), 1)
+        self.assertEqual(transfers.count(), 1)
         transfer = transfers.all()[0]
         self.assertIs(transfer.is_addition, False)
         self.assertIs(transfer.transfer_complete, False)
@@ -1781,7 +1780,7 @@ class ItemTestCase(LoggedInTestCase):
         transfer = transfers.all()[0]
         self.assertIs(transfer.is_addition, False)
         self.assertIs(transfer.transfer_complete, True)
-        self.assertEqual(response.data["message"], 'Transfer {} completed'.format(transfer.id))
+        self.assertEqual(response.data["message"], 'Transfer {} complete'.format(transfer.id))
 
     def test_transfer_remove_notenough(self):
         self._asJoeBloggs()
@@ -1794,8 +1793,8 @@ class ItemTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         i1 = Item.objects.get(name="Item1")
         self.assertEqual(response.data["message"],
-                         'Inventory item {} ({}) is short of amount by {} liter'.format(
-                             i1.identifier, i1.name, 95))
+                         'Inventory item {} ({}) is short of amount by 95.0 liter'.format(
+                             i1.identifier, i1.name))
         self.assertEqual(i1.amount_available, 5)
         transfers = i1.transfers.all()
         self.assertEqual(len(transfers), 0)
@@ -1958,7 +1957,7 @@ class ItemTestCase(LoggedInTestCase):
         response = self._client.get('/inventory/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         items = response.data
-        self.assertEqual(len(items["results"]), 5)
+        self.assertEqual(len(items["results"]), 6)
 
     def test_importitems_invalid_template(self):
         self._asJoeBloggs()
