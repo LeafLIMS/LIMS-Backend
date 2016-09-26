@@ -12,6 +12,7 @@ class CopyFileDriverViewSet(viewsets.ModelViewSet):
 
     @detail_route(methods=['GET'])
     def test(self, request, pk=None):
+        # This is a test method in itself so has no unit test associated with it
         fd = self.get_object()
         int_dict = {
             'project_identifier': 'PI12345',
