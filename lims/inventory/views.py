@@ -3,11 +3,10 @@ import ast
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from pint import UnitRegistry, UndefinedUnitError
-
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route
+from rest_framework import serializers
 from rest_framework.filters import (OrderingFilter,
                                     SearchFilter,
                                     DjangoFilterBackend)
@@ -167,54 +166,44 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
             return Response({'message': 'Transfer {} complete'.format(tfr_id)})
         elif transfer_details:
             item = self.get_object()
-            ureg = UnitRegistry()
 
             raw_amount = transfer_details.get('amount', 0)
             raw_measure = transfer_details.get('measure', item.amount_measure.symbol)
 
             addition = transfer_details.get('is_addition', False)
 
-            # Both measures must be valid in order to perform transfer.
-            try:
-                available = item.amount_available * ureg(item.amount_measure.symbol)
-            except UndefinedUnitError:
-                return Response(
-                    {'message': 'Invalid item measure: %s' % item.amount_measure.symbol},
-                    status=400)
-            try:
-                required = raw_amount * ureg(raw_measure)
-            except UndefinedUnitError:
-                return Response({'message': 'Invalid transfer measure: %s' % raw_measure},
-                                status=400)
-
+            # Booleanise them
             is_complete = False
             is_addition = False
-
             if addition:
-                new_amount = available + required
-                is_complete = True
                 is_addition = True
-            else:
-                if available < required:
-                    missing = ((available - required) * -1)
-                    return Response(
-                        {'message': 'Inventory item {} ({}) is short of amount by {}'.format(
-                            item.identifier, item.name, missing)}, status=400)
-                new_amount = available - required
+                is_complete = True
 
-            item.amount_available = new_amount.magnitude
-            item.save()
+            try:
+                measure = AmountMeasure.objects.get(symbol=raw_measure)
+            except AmountMeasure.DoesNotExist:
+                raise serializers.ValidationError({'message':
+                                                   'Measure {} does not exist'.format(raw_measure)
+                                                   })
 
             tfr = ItemTransfer(
                 item=item,
-                amount_taken=required.magnitude,
-                amount_measure=AmountMeasure.objects.get(symbol=raw_measure),
+                amount_taken=raw_amount,
+                amount_measure=measure,
                 barcode=transfer_details.get('barcode', ''),
                 coordinates=transfer_details.get('coodinates', ''),
                 transfer_complete=is_complete,
                 is_addition=is_addition
             )
-            tfr.save()
+
+            transfer_status = tfr.check_transfer()
+            if transfer_status[0] is True:
+                tfr.save()
+                tfr.do_transfer()
+            else:
+                return Response(
+                    {'message': 'Inventory item {} ({}) is short of amount by {}'.format(
+                     item.identifier, item.name, transfer_status[1])}, status=400)
             return Response({'message': 'Transfer {} created'.format(tfr.id)})
         return Response({'message': 'You must provide a transfer ID'}, status=400)
 
@@ -247,13 +236,13 @@ class SetViewSet(viewsets.ModelViewSet, ViewPermissionsMixin):
         item_id = request.query_params.get('id', None)
         inventoryset = self.get_object()
         if item_id:
-            items = Item.objects.filter(pk=item_id)
-            if items.count() > 0:
+            try:
                 item = Item.objects.get(pk=item_id)
-                item.sets.add(inventoryset)
-                return Response(status=201)
-            return Response(
-                {'message': 'The id of the item to add to the inventory is invalid'}, status=400)
+            except Item.DoesNotExist:
+                raise serializers.ValidationError({'message':
+                                                   'Item {} does not exist'.format(item_id)})
+            item.sets.add(inventoryset)
+            return Response(status=201)
         return Response(
             {'message': 'The id of the item to add to the inventory is required'}, status=400)
 
@@ -262,12 +251,12 @@ class SetViewSet(viewsets.ModelViewSet, ViewPermissionsMixin):
         item_id = request.query_params.get('id', None)
         inventoryset = self.get_object()
         if item_id:
-            items = Item.objects.filter(pk=item_id)
-            if items.count() > 0:
-                item = items.all()[0]
-                inventoryset.items.remove(item)
-                return Response(status=204)
-            return Response(
-                {'message': 'The id of the item to add to the inventory is invalid'}, status=400)
+            try:
+                item = inventoryset.items.get(pk=item_id)
+            except Item.DoesNotExist:
+                raise serializers.ValidationError({'message':
+                                                   'Item {} does not exist'.format(item_id)})
+            inventoryset.items.remove(item)
+            return Response(status=204)
         return Response(
             {'message': 'The id of the item to add to the inventory is required'}, status=400)

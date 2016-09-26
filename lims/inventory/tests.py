@@ -138,13 +138,6 @@ class LocationTestCase(LoggedInTestCase):
         self.assertIs(m.has_children(), False)
         self.assertEqual(m.children.count(), 0)
 
-    def test_admin_delete_with_children(self):
-        # Shouldn't be possible to remove something mid-tree without removing children first
-        self._asAdmin()
-        response = self._client.delete("/locations/%d/" % self._middle.id)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIs(Location.objects.filter(name="Middle").exists(), True)
-
     def test_location_display_name(self):
         self.assertEqual(self._top.display_name(), '%s' % self._top.name)
         self.assertEqual(self._middle.display_name(), '-- %s' % self._middle.name)
@@ -281,13 +274,6 @@ class ItemTypeTestCase(LoggedInTestCase):
         m = ItemType.objects.get(name="Middle")
         self.assertIs(m.has_children(), False)
         self.assertEqual(m.children.count(), 0)
-
-    def test_admin_delete_with_children(self):
-        # Shouldn't be possible to remove something mid-tree without removing children first
-        self._asAdmin()
-        response = self._client.delete("/itemtypes/%d/" % self._middle.id)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIs(ItemType.objects.filter(name="Middle").exists(), True)
 
     def test_itemtype_display_name(self):
         self.assertEqual(self._top.display_name(), '%s' % self._top.name)
@@ -1052,7 +1038,7 @@ class SetTestCase(LoggedInTestCase):
         self._asJoeBloggs()
         response = self._client.delete(
             "/inventorysets/%d/remove/?id=%s" % (self._set1.id, self._item3.id), format='json')
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_number_of_items(self):
         self.assertEqual(self._set1.number_of_items(), 2)
@@ -1793,8 +1779,8 @@ class ItemTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         i1 = Item.objects.get(name="Item1")
         self.assertEqual(response.data["message"],
-                         'Inventory item {} ({}) is short of amount by 95.0 liter'.format(
-                             i1.identifier, i1.name))
+                         'Inventory item {} ({}) is short of amount by {} liter'.format(
+                             i1.identifier, i1.name, 95.0))
         self.assertEqual(i1.amount_available, 5)
         transfers = i1.transfers.all()
         self.assertEqual(len(transfers), 0)
@@ -1827,7 +1813,7 @@ class ItemTestCase(LoggedInTestCase):
             self._item1.id, new_transfer,
             format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["message"], 'Invalid transfer measure: blobby')
+        self.assertEqual(response.data["message"], 'Measure blobby does not exist')
 
     def test_importitems(self):
         self._asJoeBloggs()
