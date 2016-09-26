@@ -1038,7 +1038,7 @@ class SetTestCase(LoggedInTestCase):
         self._asJoeBloggs()
         response = self._client.delete(
             "/inventorysets/%d/remove/?id=%s" % (self._set1.id, self._item3.id), format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_number_of_items(self):
         self.assertEqual(self._set1.number_of_items(), 2)
@@ -1327,7 +1327,6 @@ class ItemTestCase(LoggedInTestCase):
                     "amount_available": 5,
                     "amount_measure": self._measure.symbol,
                     "location": self._location.code,
-                    "added_by": self._janeDoe.id,
                     "properties": [{"name": "joe", "value": "bloggs"}],
                     "assign_groups": {"jane_group": "rw"}}
         response = self._client.post("/inventory/", new_item, format='json')
@@ -1737,7 +1736,7 @@ class ItemTestCase(LoggedInTestCase):
         transfer = transfers.all()[0]
         self.assertIs(transfer.is_addition, False)
         self.assertIs(transfer.transfer_complete, True)
-        self.assertEqual(response.data["message"], 'Transfer {} completed'.format(transfer.id))
+        self.assertEqual(response.data["message"], 'Transfer {} complete'.format(transfer.id))
 
     def test_transfer_admin_remove_then_complete(self):
         self._asAdmin()
@@ -1767,7 +1766,7 @@ class ItemTestCase(LoggedInTestCase):
         transfer = transfers.all()[0]
         self.assertIs(transfer.is_addition, False)
         self.assertIs(transfer.transfer_complete, True)
-        self.assertEqual(response.data["message"], 'Transfer {} completed'.format(transfer.id))
+        self.assertEqual(response.data["message"], 'Transfer {} complete'.format(transfer.id))
 
     def test_transfer_remove_notenough(self):
         self._asJoeBloggs()

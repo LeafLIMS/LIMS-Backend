@@ -11,7 +11,6 @@ from rest_framework.filters import (OrderingFilter,
                                     SearchFilter,
                                     DjangoFilterBackend)
 
-
 from lims.permissions.permissions import (IsInAdminGroupOrRO,
                                           ViewPermissionsMixin, ExtendedObjectPermissions,
                                           ExtendedObjectPermissionsFilter)
@@ -52,6 +51,14 @@ class ItemTypeViewSet(viewsets.ModelViewSet, LeveledMixin):
     permission_classes = (IsInAdminGroupOrRO,)
     search_fields = ('name',)
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.has_children():
+            return Response({'message': 'Cannot delete ItemType with children'},
+                            status=400)
+        self.perform_destroy(instance)
+        return Response(status=204)
+
 
 class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = Location.objects.all()
@@ -59,11 +66,19 @@ class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     permission_classes = (IsInAdminGroupOrRO,)
     search_fields = ('name',)
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.has_children():
+            return Response({'message': 'Cannot delete Location with children'},
+                            status=400)
+        self.perform_destroy(instance)
+        return Response(status=204)
+
 
 class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
-    permission_classes = (ExtendedObjectPermissions, )
+    permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
     filter_fields = ('in_inventory', 'item_type__name', 'identifier', 'name')
@@ -196,7 +211,7 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
 class SetViewSet(viewsets.ModelViewSet, ViewPermissionsMixin):
     queryset = Set.objects.all()
     serializer_class = SetSerializer
-    permission_classes = (ExtendedObjectPermissions, )
+    permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
 

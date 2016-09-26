@@ -115,8 +115,9 @@ class CodonUsageTestCase(LoggedInTestCase):
                                      "value": 1.34}
                           }
         response = self._client.post("/codonusage/", new_codontable, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(CodonUsageTable.objects.count(), 3)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        # DB is read-only for codons
+        self.assertEqual(CodonUsageTable.objects.count(), 2)
 
     def test_user_edit(self):
         self._asJoeBloggs()
@@ -132,9 +133,10 @@ class CodonUsageTestCase(LoggedInTestCase):
         updated_codontable = {"species": self._mouse.id}
         response = self._client.patch("/codonusage/%d/" % self._human_codontable.id,
                                       updated_codontable, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIs(CodonUsageTable.objects.filter(species=self._human).exists(), False)
-        self.assertIs(CodonUsageTable.objects.filter(species=self._mouse).exists(), True)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        # DB is read-only for codons
+        self.assertIs(CodonUsageTable.objects.filter(species=self._human).exists(), True)
+        self.assertIs(CodonUsageTable.objects.filter(species=self._mouse).exists(), False)
 
     def test_user_delete(self):
         self._asJoeBloggs()
@@ -145,5 +147,6 @@ class CodonUsageTestCase(LoggedInTestCase):
     def test_admin_delete(self):
         self._asAdmin()
         response = self._client.delete("/codonusage/%d/" % self._cow_codontable.id)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertIs(CodonUsageTable.objects.filter(species=self._cow).exists(), False)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        # DB is read-only for codons
+        self.assertIs(CodonUsageTable.objects.filter(species=self._cow).exists(), True)
