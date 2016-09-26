@@ -1,5 +1,4 @@
-from django.contrib.auth.models import User, Group, Permission
-from django.db.models import Q
+from django.contrib.auth.models import User, Group
 
 from rest_framework import parsers, renderers
 from rest_framework.authtoken.models import Token
@@ -14,8 +13,8 @@ from rest_framework.decorators import list_route
 import django_filters
 
 from .serializers import (UserSerializer, StaffUserSerializer, SuperUserSerializer,
-                          GroupSerializer, PermissionSerializer)
-from lims.permissions.permissions import (IsInAdminGroupOrRO, IsThisUser)
+                          GroupSerializer)
+from lims.permissions.permissions import (IsInAdminGroupOrRO, IsInAdminGroupOrTheUser)
 
 
 class ObtainAuthToken(APIView):
@@ -76,11 +75,11 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = (IsThisUser, IsInAdminGroupOrRO,)
+    permission_classes = (IsInAdminGroupOrTheUser,)
     filter_class = UserFilter
 
     def get_queryset(self):
-        if self.request.user.is_staff:
+        if self.request.user.groups.filter(name='staff').exists():
             return User.objects.all()
         else:
             return User.objects.filter(username=self.request.user.username)
@@ -93,17 +92,8 @@ class UserViewSet(viewsets.ModelViewSet):
         return UserSerializer
 
     @list_route()
-    def autocomplete(self, request):
-        st = request.query_params.get('q', '')
-        results = self.get_queryset().filter(
-            Q(username__icontains=st) | Q(email__icontains=st) |
-            Q(first_name__icontains=st) | Q(last_name__icontains=st))
-        serializer = self.get_serializer(results, many=True)
-        return Response(serializer.data)
-
-    @list_route()
     def staff(self, request):
-        results = self.get_queryset().filter(is_staff=True)
+        results = self.get_queryset().filter(groups__name='staff')
         serializer = self.get_serializer(results, many=True)
         return Response(serializer.data)
 
@@ -115,10 +105,10 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            instance = serializer.save()
             user_group, created = Group.objects.get_or_create(name='user')
-            serializer.groups.add(user_group)
-            return Response(serializer.data)
+            instance.groups.add(user_group)
+            return Response(serializer.data, status=201)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -126,10 +116,4 @@ class UserViewSet(viewsets.ModelViewSet):
 class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = (IsInAdminGroupOrRO,)
-
-
-class PermissionViewSet(viewsets.ModelViewSet):
-    queryset = Permission.objects.all()
-    serializer_class = PermissionSerializer
     permission_classes = (IsInAdminGroupOrRO,)

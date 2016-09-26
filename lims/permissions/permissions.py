@@ -84,6 +84,27 @@ class IsInAdminGroupOrRO(IsInGroupOrRO):
     group_name = 'admin'
 
 
+class IsInAdminGroupOrTheUser(permissions.BasePermission):
+    """
+    Limit write access to user in admin group or user
+    """
+
+    def has_permission(self, request, view):
+        if request.user and request.user.is_authenticated():
+            # Only admin users can post
+            if request.method == 'POST' and not request.user.groups.filter(name='admin').exists():
+                return False
+            return True
+        return False
+
+    def has_object_permission(self, request, view, obj):
+        if request.user and request.user.is_authenticated():
+            has_group = request.user.groups.filter(name='admin').exists()
+            if obj.id == request.user.id or has_group:
+                return True
+        return False
+
+
 class ExtendedObjectPermissionsFilter(filters.DjangoObjectPermissionsFilter):
     """
     Allow admin group users full access to all items

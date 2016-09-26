@@ -1,5 +1,4 @@
 from django.contrib.auth.models import User, Group, Permission
-from django.contrib.contenttypes.models import ContentType
 from lims.addressbook.models import Address
 from lims.shared.loggedintestcase import LoggedInTestCase
 from rest_framework import status
@@ -163,7 +162,8 @@ class UserTestCase(LoggedInTestCase):
         updated_user = {"email": "onion@apple.com"}
         response = self._client.patch("/users/%d/" % self._janeDoe.id,
                                       updated_user, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        # Users cannot see other user so this is a 404
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         user1 = User.objects.get(username="Jane Doe")
         self.assertEqual(user1.email, "jane@tgac.com")
 
@@ -186,7 +186,7 @@ class UserTestCase(LoggedInTestCase):
         # Others not permitted
         self._asJaneDoe()
         response = self._client.delete("/users/%d/" % self._joeBloggs.id)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIs(User.objects.filter(username="Joe Bloggs").exists(), True)
 
     def test_admin_delete_any(self):
@@ -211,8 +211,7 @@ class UserTestCase(LoggedInTestCase):
         self.assertEqual(user1.email, "Silly@silly.com")
         self.assertEqual(user1.first_name, "Test")
         self.assertEqual(user1.last_name, "User")
-        self.assertEqual(user1.groups.count(), 1)
-        self.assertEqual(user1.groups.all()[0], Group.objects.get(name="user"))
+        self.assertIs(user1.groups.filter(name='user').exists(), True)
         self.assertEqual(user1.groups.count(), 2)
         self.assertEqual(set(user1.groups.all()),
                          set([Group.objects.get(name="user"), Group.objects.get(name="joe_group")]))
@@ -235,37 +234,8 @@ class UserTestCase(LoggedInTestCase):
         self._asAdmin()
         response = self._client.get("/users/staff/", format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], self._janeDoe.id)
-
-    def test_anonymous_invalid_autocomplete(self):
-        query1 = {"q": "oggs"}
-        self._asAnonymous()
-        response = self._client.get("/users/autocomplete/", query1, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self._asInvalid()
-        response = self._client.get("/users/autocomplete/", query1, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_user_autocomplete(self):
-        query1 = {"q": "oggs"}
-        self._asJoeBloggs()
-        response = self._client.get("/users/autocomplete/", query1, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], self._joeBloggs.id)
-        self._asJaneDoe()
-        response = self._client.get("/users/autocomplete/", query1, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)
-
-    def test_admin_autocomplete(self):
-        query1 = {"q": "oggs"}
-        self._asAdmin()
-        response = self._client.get("/users/autocomplete/", query1, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], self._joeBloggs.id)
+        # The admin user is staff as well
+        self.assertEqual(len(response.data), 2)
 
 
 class GroupTestCase(LoggedInTestCase):
@@ -381,113 +351,3 @@ class GroupTestCase(LoggedInTestCase):
         response = self._client.delete("/groups/%d/" % self._joeGroup.id)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertIs(Group.objects.filter(name="joe_group").exists(), False)
-
-
-class PermissionTestCase(LoggedInTestCase):
-    def setUp(self):
-        super(PermissionTestCase, self).setUp()
-        self._changeEquipPermission = Permission.objects.get(name="Can change equipment")
-
-    def test_presets(self):
-        self.assertIs(Permission.objects.filter(name="Can change equipment").exists(), True)
-        self.assertEqual(Permission.objects.get(name="Can change equipment").codename,
-                         "change_equipment")
-
-    def test_access_anonymous(self):
-        self._asAnonymous()
-        response = self._client.get('/permissions/')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        response = self._client.get('/permissions/%d/' % self._changeEquipPermission.id)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_access_invalid(self):
-        self._asInvalid()
-        response = self._client.get('/permissions/')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        response = self._client.get('/permissions/%d/' % self._changeEquipPermission.id)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_user_list(self):
-        self._asJoeBloggs()
-        response = self._client.get('/permissions/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        permissions = response.data
-        self.assertEqual(permissions["count"], Permission.objects.count())
-
-    def test_user_view_any(self):
-        self._asJoeBloggs()
-        response = self._client.get('/permissions/%d/' % self._changeEquipPermission.id)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        permission1 = response.data
-        self.assertEqual(permission1["name"], "Can change equipment")
-
-    def test_admin_list(self):
-        self._asAdmin()
-        response = self._client.get('/permissions/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        permissions = response.data
-        self.assertEqual(permissions["count"], Permission.objects.count())
-
-    def test_admin_view_any(self):
-        self._asAdmin()
-        response = self._client.get('/permissions/%d/' % self._changeEquipPermission.id)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        permission1 = response.data
-        self.assertEqual(permission1["name"], "Can change equipment")
-
-    def test_user_create(self):
-        self._asJaneDoe()
-        new_permission = {"name": "Test permission", "codename": "test_permission",
-                          "content_type": ContentType.objects.get(model="equipment").id}
-        response = self._client.post("/permissions/", new_permission, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIs(Permission.objects.filter(name="Test permission").exists(), False)
-
-    def test_admin_create(self):
-        self._asAdmin()
-        new_permission = {"name": "Test permission", "codename": "test_permission",
-                          "content_type": ContentType.objects.get(model="equipment").id}
-        response = self._client.post("/permissions/", new_permission, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIs(Permission.objects.filter(name="Test permission").exists(), True)
-        permission = Permission.objects.get(name="Test permission")
-        self.assertEqual(permission.codename, "test_permission")
-        self.assertEqual(permission.content_type, ContentType.objects.get(model="equipment"))
-
-        # Other user sees the new one too
-        self._asJoeBloggs()
-        response = self._client.get('/permissions/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        permissions = response.data
-        self.assertEqual(len(permissions["results"]), Permission.objects.count())
-
-    def test_user_edit_any(self):
-        self._asJaneDoe()
-        updated_permission = {"codename": "silly_test"}
-        response = self._client.patch("/permissions/%d/" % self._changeEquipPermission.id,
-                                      updated_permission, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        permission1 = Permission.objects.get(name="Can change equipment")
-        self.assertEqual(permission1.codename, "change_equipment")
-
-    def test_admin_edit_any(self):
-        self._asAdmin()
-        updated_permission = {"codename": "silly_test"}
-        response = self._client.patch("/permissions/%d/" % self._changeEquipPermission.id,
-                                      updated_permission, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        permission1 = Permission.objects.get(name="Can change equipment")
-        self.assertEqual(permission1.codename, "silly_test")
-
-    def test_user_delete_any(self):
-        self._asJoeBloggs()
-        response = self._client.delete("/permissions/%d/" % self._changeEquipPermission.id)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIs(Permission.objects.filter(name="Can change equipment").exists(), True)
-
-    def test_admin_delete_any(self):
-        # Others not permitted
-        self._asAdmin()
-        response = self._client.delete("/permissions/%d/" % self._changeEquipPermission.id)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertIs(Permission.objects.filter(name="Can change equipment").exists(), False)
