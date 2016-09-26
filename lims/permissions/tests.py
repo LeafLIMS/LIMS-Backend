@@ -61,7 +61,7 @@ class PermissionTestCase(LoggedInTestCase):
         new_permission = {"name": "Test permission", "codename": "test_permission",
                           "content_type": ContentType.objects.get(model="equipment").id}
         response = self._client.post("/permissions/", new_permission, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         self.assertIs(Permission.objects.filter(name="Test permission").exists(), False)
 
     def test_admin_create(self):
@@ -69,25 +69,15 @@ class PermissionTestCase(LoggedInTestCase):
         new_permission = {"name": "Test permission", "codename": "test_permission",
                           "content_type": ContentType.objects.get(model="equipment").id}
         response = self._client.post("/permissions/", new_permission, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIs(Permission.objects.filter(name="Test permission").exists(), True)
-        permission = Permission.objects.get(name="Test permission")
-        self.assertEqual(permission.codename, "test_permission")
-        self.assertEqual(permission.content_type, ContentType.objects.get(model="equipment"))
-
-        # Other user sees the new one too
-        self._asJoeBloggs()
-        response = self._client.get('/permissions/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        permissions = response.data
-        self.assertEqual(len(permissions["results"]), Permission.objects.count())
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertIs(Permission.objects.filter(name="Test permission").exists(), False)
 
     def test_user_edit_any(self):
         self._asJaneDoe()
         updated_permission = {"codename": "silly_test"}
         response = self._client.patch("/permissions/%d/" % self._changeEquipPermission.id,
                                       updated_permission, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         permission1 = Permission.objects.get(name="Can change equipment")
         self.assertEqual(permission1.codename, "change_equipment")
 
@@ -96,19 +86,17 @@ class PermissionTestCase(LoggedInTestCase):
         updated_permission = {"codename": "silly_test"}
         response = self._client.patch("/permissions/%d/" % self._changeEquipPermission.id,
                                       updated_permission, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        permission1 = Permission.objects.get(name="Can change equipment")
-        self.assertEqual(permission1.codename, "silly_test")
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_user_delete_any(self):
         self._asJoeBloggs()
         response = self._client.delete("/permissions/%d/" % self._changeEquipPermission.id)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         self.assertIs(Permission.objects.filter(name="Can change equipment").exists(), True)
 
     def test_admin_delete_any(self):
         # Others not permitted
         self._asAdmin()
         response = self._client.delete("/permissions/%d/" % self._changeEquipPermission.id)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertIs(Permission.objects.filter(name="Can change equipment").exists(), False)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertIs(Permission.objects.filter(name="Can change equipment").exists(), True)
