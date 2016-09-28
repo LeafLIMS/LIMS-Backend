@@ -41,14 +41,14 @@ class ProjectViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
 
 
 class ProductFilter(django_filters.FilterSet):
-    # on_workflow_as = django_filters.MethodFilter()
     id__in = ListFilter(name='id')
+    on_run = django_filters.MethodFilter()
 
-    def filter_on_workflow_as(self, queryset, value):
+    def filter_on_run(self, queryset, value):
         if value == 'False':
-            return queryset.filter(on_workflow_as__isnull=True)
+            return queryset.exclude(runs__is_active=True)
         elif value == 'True':
-            return queryset.filter(on_workflow_as__isnull=False)
+            return queryset.filter(runs__is_active=True)
         return queryset
 
     class Meta:
@@ -57,7 +57,7 @@ class ProductFilter(django_filters.FilterSet):
             'id': ['exact', 'in'],
             'project': ['exact'],
             'status': ['exact'],
-            # 'on_workflow_as': ['exact'],
+            'on_run': ['exact'],
         }
 
 
