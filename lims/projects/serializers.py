@@ -34,6 +34,7 @@ class ProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSer
     identifier = serializers.CharField(read_only=True)
     product_identifier = serializers.CharField(read_only=True)
     runs = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    on_run = serializers.BooleanField(read_only=True)
     created_by = serializers.SlugRelatedField(
         read_only=True,
         slug_field='username',

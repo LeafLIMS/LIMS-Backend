@@ -122,6 +122,11 @@ class Product(models.Model):
         """
         return '{}-{}'.format(self.project.project_identifier, self.identifier)
 
+    def on_run(self):
+        if self.runs.filter(is_active=True).count() > 0:
+            return True
+        return False
+
     def save(self, force_insert=False, force_update=False, **kwargs):
         if self.identifier == 0:
             try:
