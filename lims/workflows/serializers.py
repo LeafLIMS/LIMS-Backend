@@ -3,7 +3,7 @@ import re
 from rest_framework import serializers
 from pyparsing import ParseException
 
-from lims.permissions.permissions import (SerializerPermissionsMixin)
+from lims.permissions.permissions import SerializerPermissionsMixin
 
 from lims.equipment.models import Equipment
 from lims.filetemplate.models import FileTemplate
@@ -218,6 +218,11 @@ class TaskTemplateSerializer(SerializerPermissionsMixin, serializers.ModelSerial
         queryset=FileTemplate.objects.all(),
         slug_field='name'
     )
+    equipment_files = serializers.SlugRelatedField(
+        many=True,
+        queryset=FileTemplate.objects.all(),
+        slug_field='name'
+    )
     input_fields = InputFieldTemplateSerializer(read_only=True, many=True)
     variable_fields = VariableFieldTemplateSerializer(read_only=True, many=True)
     calculation_fields = CalculationFieldTemplateSerializer(read_only=True, many=True)
@@ -240,7 +245,7 @@ class TaskTemplateSerializer(SerializerPermissionsMixin, serializers.ModelSerial
         mtch = match.group(1)
         if mtch in self.flat:
             return str(self.flat[mtch])
-        return 0
+        return str(0)
 
     def _perform_calculation(self, calculation):
         """
@@ -302,6 +307,7 @@ class RecalculateTaskTemplateSerializer(TaskTemplateSerializer):
     output_fields = OutputFieldTemplateSerializer(many=True)
     step_fields = StepFieldTemplateSerializer(many=True)
     store_labware_as = serializers.CharField()
+    created_by = serializers.CharField()  # Prevents modification of read-only User objects
 
     def save(self):
         # NEVER allow this serializer to create a new object

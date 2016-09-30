@@ -139,10 +139,10 @@ class Run(models.Model):
 
     def __str__(self):
         if self.is_active:
-            return '{}, started by: {} on {}'.format(self.identifier,
+            return '{}, started by: {} on {}'.format(self.name,
                                                      self.started_by.username,
                                                      self.date_started)
-        return '{}, started by: {} finished on {}'.format(self.identifier,
+        return '{}, started by: {} finished on {}'.format(self.name,
                                                           self.started_by.username,
                                                           self.date_finished)
 
@@ -224,6 +224,8 @@ class TaskTemplate(models.Model):
                     p['task_input'] = task_input
                     lines.append(p)
         elif file_template.total_inputs_only:
+            # TODO This code looks broken - it is just cut-and-paste from above
+            # and the transfer variable is never used within the loop
             for transfer in transfer_data_dict:
                 for task_input in product['data']['product_input_amounts']:
                     p = flat_products[product['product_name']].copy()
@@ -241,6 +243,7 @@ class TaskTemplate(models.Model):
                 key_path = f.key_to_path()
                 field_value = l
                 for key in key_path:
+                    # TODO Handle things better when key does not exist
                     field_value = field_value.get(key, None)
                 line_dict[f.name] = field_value
             output.append(line_dict)
@@ -260,6 +263,11 @@ class CalculationFieldTemplate(models.Model):
 
     calculation = models.TextField()
     result = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        permissions = (
+            ('view_calculationfieldtemplate', 'View calculation field template',),
+        )
 
     def field_name(self):
         return self.label.lower().replace(' ', '_')
@@ -285,6 +293,11 @@ class InputFieldTemplate(models.Model):
     from_calculation = models.BooleanField(default=False)
     calculation_used = models.ForeignKey(CalculationFieldTemplate, null=True, blank=True)
 
+    class Meta:
+        permissions = (
+            ('view_inputfieldtemplate', 'View input field template',),
+        )
+
     def field_name(self):
         return self.label.lower().replace(' ', '_')
 
@@ -302,6 +315,11 @@ class VariableFieldTemplate(models.Model):
     amount = models.FloatField()
     measure = models.ForeignKey(AmountMeasure, blank=True, null=True)
     measure_not_required = models.BooleanField(default=False)
+
+    class Meta:
+        permissions = (
+            ('view_variablefieldtemplate', 'View variable field template',),
+        )
 
     def field_name(self):
         return self.label.lower().replace(' ', '_')
@@ -321,6 +339,11 @@ class OutputFieldTemplate(models.Model):
     from_calculation = models.BooleanField(default=False)
     calculation_used = models.ForeignKey(CalculationFieldTemplate, null=True, blank=True)
 
+    class Meta:
+        permissions = (
+            ('view_outputfieldtemplate', 'View output field template',),
+        )
+
     def field_name(self):
         return self.label.lower().replace(' ', '_')
 
@@ -332,6 +355,11 @@ class StepFieldTemplate(models.Model):
     template = models.ForeignKey(TaskTemplate, related_name='step_fields')
     label = models.CharField(max_length=50)
     description = models.CharField(max_length=200, null=True, blank=True)
+
+    class Meta:
+        permissions = (
+            ('view_stepfieldtemplate', 'View step field template',),
+        )
 
     def field_name(self):
         return self.label.lower().replace(' ', '_')
