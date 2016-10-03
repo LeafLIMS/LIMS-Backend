@@ -32,7 +32,7 @@ class ProjectViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
-    search_fields = ('project_identifier', 'name', 'primary_lab_contact__username')
+    search_fields = ('project_identifier', 'name', 'primary_lab_contact__username',)
 
     def perform_create(self, serializer):
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
