@@ -70,7 +70,7 @@ class ProductViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
-    search_fields = ('product_identifier', 'name',)
+    search_fields = ('product_identifier', 'name', 'product_type__name',)
     filter_class = ProductFilter
 
     def _parse_design(self, instance):
