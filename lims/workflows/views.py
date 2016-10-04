@@ -489,13 +489,14 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             return
         for file_to_copy in equipment.files_to_copy.filter(is_enabled=True):
             interpolate_dict = {
-                'run_identifier': data_entries[0].task_run_identifier,
+                'run_identifier': str(data_entries[0].task_run_identifier),
             }
             for loc in file_to_copy.locations.all():
                 file_store = loc.copy(interpolate_dict)
                 if file_store:
                     for d in data_entries:
                         d.data_files.add(file_store)
+                        d.save()
 
     @detail_route(methods=['POST'])
     def finish_task(self, request, pk=None):
@@ -578,6 +579,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                     new_item.created_from.add(*product_items)
 
                     e.product.linked_inventory.add(new_item)
+                    e.save()
 
             run.task_in_progress = False
 

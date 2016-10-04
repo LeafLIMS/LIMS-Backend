@@ -14,6 +14,10 @@ from lims.shared.models import Organism
 import json
 from lims.inventory.serializers import ItemTransferPreviewSerializer
 from lims.datastore.serializers import DataEntrySerializer
+from lims.drivers.models import CopyFileDriver, CopyFilePath
+import os
+import filecmp
+import tempfile
 
 
 class WorkflowTestCase(LoggedInTestCase):
@@ -1570,7 +1574,20 @@ class RunTestCase(LoggedInTestCase):
         self._equipmentSequencer = Equipment.objects.create(name="Sequencer",
                                                             location=self._location,
                                                             status="active", can_reserve=True)
-        # TODO Handle filepath copy stuff on Sequencer once we have equipment that can copy files
+        self._tempfileDir = tempfile.gettempdir()
+        self._copyFile = \
+            CopyFileDriver.objects.create(name="Copy1",
+                                          equipment=self._equipmentSequencer,
+                                          copy_from_prefix=self._tempfileDir,
+                                          copy_to_prefix=self._tempfileDir,
+                                          is_enabled=True)
+        self._tempfilePrefix = tempfile.gettempprefix()
+        self._copyFilePath = \
+            CopyFilePath.objects.create(
+                driver=self._copyFile,
+                copy_from="%s{run_identifier}A" % self._tempfilePrefix,
+                copy_to="%s{run_identifier}B" % self._tempfilePrefix)
+        self._copyFile.locations.add(self._copyFilePath)
 
         self._task1 = TaskTemplate.objects.create(name="TaskTempl1",
                                                   description="First",
@@ -2693,14 +2710,23 @@ class RunTestCase(LoggedInTestCase):
             "/runs/%d/start_task/" % self._run1.id, data=start_task)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["message"], "Task started successfully")
+        # Create temp file to copy from equipment
+        run = Run.objects.get(id=self._run1.id)
+        rtri = run.task_run_identifier
+        real_from_path = os.path.join(self._copyFile.copy_from_prefix,
+                                      "%s%sA" % (self._tempfilePrefix, str(rtri)))
+        real_to_path = os.path.join(self._copyFile.copy_from_prefix,
+                                    "%s%sB" % (self._tempfilePrefix, str(rtri)))
+        file = open(real_from_path, 'w')
+        file.write("Lots of interesting stuff")
+        file.close()
         # Finish task and mark one product as a failure (the other is a success)
         response = self._client.post(
             "/runs/%d/finish_task/" % self._run1.id,
             {"failures": self._joeBloggsProduct.id}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        run = Run.objects.get(id=self._run1.id)
-        rtri = run.task_run_identifier
         # Check new Run because of failure
+        run = Run.objects.get(id=self._run1.id)  # Yes, really, must reload here
         new_name = '{} (failed)'.format(run.name)
         self.assertIs(Run.objects.filter(name=new_name).exists(), True)
         new_run = Run.objects.get(name=new_name)
@@ -2724,7 +2750,6 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(run.products.count(), 1)
         self.assertEqual(run.products.all()[0], self._jimBeamProduct)
         self.assertIs(run.labware.filter(is_active=True).exists(), False)
-        # TODO Handle filepath copy stuff once we have equipment that can copy files
         # Check new Items from OutputFields
         e = success_entries[0]
         output_name = '{} {}/{}'.format(e.product.product_identifier,
@@ -2741,6 +2766,16 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(output.created_from.count(), 1)
         self.assertEqual(output.created_from.all()[0], self._item3)
         self.assertIn(output, e.product.linked_inventory.all())
+        # Check filepath copy from equipment
+        self.assertEqual(e.data_files.count(), 1)
+        df = e.data_files.all()[0]
+        self.assertEqual(df.file_name, os.path.basename(real_to_path))
+        self.assertEqual(df.location, real_to_path)
+        self.assertEqual(df.equipment, self._equipmentSequencer)
+        self.assertIs(filecmp.cmp(os.path.join(real_from_path), os.path.join(real_to_path)), True)
+        # Clean up
+        os.remove(real_from_path)
+        os.remove(real_to_path)
         # Check task in progress false
         self.assertIs(run.task_in_progress, False)
         # Check current task increment
