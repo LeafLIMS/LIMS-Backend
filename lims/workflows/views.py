@@ -190,8 +190,9 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                     for key, row in parsed_file.items():
                         data_items[key].update(row)
                 else:
-                    message = {'message':
-                                   'Input file "{}" has incorrect headers/format'.format(f.name)}
+                    message = {
+                        'message':
+                            'Input file "{}" has incorrect headers/format'.format(f.name)}
                     raise ValidationError(message)
         return data_items
 
@@ -549,7 +550,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             self._copy_files(entries)
 
             # Create ouputs from the task
-            runindex=0
+            runindex = 0
             for e in entries:
                 for index, output in enumerate(e.data['output_fields']):
                     output_name = '{} {}/{}'.format(e.product.product_identifier,
@@ -557,7 +558,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                                                     output['label'])
                     measure = AmountMeasure.objects.get(symbol=output['measure'])
                     identifier = '{}/{}/{}'.format(run.task_run_identifier,
-                                                runindex, index)
+                                                   runindex, index)
                     runindex += 1
                     location = Location.objects.get(name='Lab')
                     item_type = ItemType.objects.get(name=output['lookup_type'])
