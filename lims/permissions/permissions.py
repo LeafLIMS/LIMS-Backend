@@ -10,6 +10,8 @@ from rest_framework import filters
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route
 
+from .signals import permissions_removed, permissions_changed
+
 
 class IsSuperUser(permissions.BasePermission):
     """
@@ -254,6 +256,26 @@ class ViewPermissionsMixin():
                 assign_perm('view_%s' % model_name, grp, instance)
             else:
                 raise serializers.ValidationError({'message': 'Permission must by r or rw'})
+        permissions_changed.send(sender=instance.__class__,
+                                 id=instance.id,
+                                 permissions=permissions)
+        return True
+
+    def unassign_permissions(self, instance, groups):
+        """
+        Remove entire groups from accessing a given object
+        """
+        model_name = instance._meta.model_name
+        for g in groups:
+            try:
+                group = Group.objects.get(name=g)
+            except Group.DoesNotExist:
+                return False
+            for perm in self.PERM_TEMPLATE:
+                remove_perm(perm.format(model_name), group, instance)
+        permissions_removed.send(sender=instance.__class__,
+                                 id=instance.id,
+                                 groups=groups)
         return True
 
     def clone_group_permissions(self, clone_from, clone_to):
@@ -307,16 +329,13 @@ class ViewPermissionsMixin():
 
     @detail_route(methods=['DELETE'])
     def remove_permissions(self, request, pk=None):
+        """
+        Remove an entire groups permissions from an object
+        """
         obj = self.get_object()
         groups_to_remove = request.query_params.getlist('groups', None)
         if groups_to_remove:
-            model_name = obj._meta.model_name
-            for g in groups_to_remove:
-                try:
-                    group = Group.objects.get(name=g)
-                except Group.DoesNotExist:
-                    return Response({'message': 'Group does not exist'})
-                for perm in self.PERM_TEMPLATE:
-                    remove_perm(perm.format(model_name), group, obj)
-            return Response({'message': '{} groups removed'.format(len(groups_to_remove))})
+            if self.unassign_permissions(obj, groups_to_remove):
+                return Response({'message': '{} groups removed'.format(len(groups_to_remove))})
+            return Response({'message': 'Permission removal failure, check group'})
         return Response({'message': 'Please provide a list of groups'}, status=400)

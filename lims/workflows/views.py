@@ -7,6 +7,7 @@ from pint import UnitRegistry, UndefinedUnitError
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.utils import timezone
+from guardian.shortcuts import get_group_perms
 
 import django_filters
 
@@ -20,6 +21,7 @@ from rest_framework.filters import (OrderingFilter,
                                     SearchFilter,
                                     DjangoFilterBackend)
 from rest_framework.reverse import reverse
+from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework_csv.renderers import CSVRenderer
 
 from lims.shared.filters import ListFilter
@@ -663,7 +665,7 @@ class TaskViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             return Response(serializer.data)  # Raw data, not objects
 
 
-class TaskFieldViewSet(viewsets.ModelViewSet):
+class TaskFieldViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     """
     Provides a list of all task fields
     """
@@ -693,3 +695,16 @@ class TaskFieldViewSet(viewsets.ModelViewSet):
             object_class = globals()[object_name]
             return object_class.objects.all()
         return InputFieldTemplate.objects.all()
+
+    def perform_create(self, serializer):
+        task_template = serializer.validated_data['template']
+        if ('view_tasktemplate' in get_group_perms(self.request.user, task_template)
+                or self.request.user.groups.filter(name='admin').exists()):
+            if ('change_tasktemplate' in get_group_perms(self.request.user, task_template)
+                    or self.request.user.groups.filter(name='admin').exists()):
+                instance = serializer.save()
+                self.clone_group_permissions(instance.template, instance)
+            else:
+                raise PermissionDenied('You do not have permission to create this')
+        else:
+            raise NotFound()
