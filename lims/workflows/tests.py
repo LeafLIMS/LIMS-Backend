@@ -1326,6 +1326,7 @@ class TaskTestCase(LoggedInTestCase):
     def test_user_listall_taskfield_readwrite(self):
         self._setup_test_task_fields()
         self._asJaneDoe()
+        ViewPermissionsMixin().assign_permissions(self._stepField, {'jane_group': 'rw'})
         response = self._client.get('/taskfields/?type=%s' % "Step")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # TODO This test fails because Jane - who is r/w for TaskTemplate 'task3' - should
@@ -1449,6 +1450,7 @@ class TaskTestCase(LoggedInTestCase):
     def test_user_edit_taskfield_readwrite(self):
         self._setup_test_task_fields()
         self._asJaneDoe()
+        ViewPermissionsMixin().assign_permissions(self._stepField, {'jane_group': 'rw'})
         updated_taskfield = {"description": "Blah"}
         response = self._client.patch('/taskfields/%d/?type=%s' % (self._stepField.id, "Step"),
                                       updated_taskfield)
@@ -1491,6 +1493,7 @@ class TaskTestCase(LoggedInTestCase):
     def test_user_delete_taskfield_readwrite(self):
         self._setup_test_task_fields()
         self._asJaneDoe()
+        ViewPermissionsMixin().assign_permissions(self._stepField, {'jane_group': 'rw'})
         response = self._client.delete('/taskfields/%d/?type=%s' % (self._stepField.id, "Step"))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         # TODO This test fails because Jane has r/w permissions on TemplateTask 'task3' to which
