@@ -227,10 +227,7 @@ class TaskTemplate(models.Model):
             # TODO This code looks broken - it is just cut-and-paste from above
             # and the transfer variable is never used within the loop
             for transfer in transfer_data_dict:
-                for task_input in product['data']['product_input_amounts']:
-                    p = flat_products[product['product_name']].copy()
-                    p['task_input'] = task_input
-                    lines.append(p)
+                lines.append(transfer)
         else:
             # List by products so 4 products = 4 lines
             for product in flat_products.values():

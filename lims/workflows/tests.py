@@ -1556,6 +1556,10 @@ class RunTestCase(LoggedInTestCase):
                                         file_for="input",
                                         use_inputs=False,
                                         total_inputs_only=True)
+        for field in ["item.identifier", "item.name", "item.item_type.name",
+                      "amount_taken", "amount_measure.symbol"]:
+            FileTemplateField.objects.create(name=field, required=False, is_identifier=False,
+                                             template=self._equipTempl2)
         # TODO Need to fix TaskTemplate.data_to_output_file then implement appropriate fields here
         self._equipTempl3 = \
             FileTemplate.objects.create(name="EquipTemplate3",
@@ -2650,8 +2654,29 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get(
             "/runs/%d/get_file/?id=%d" % (self._run1.id, self._equipTempl2.id), format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 4)
         # TODO Need to fix TaskTemplate.data_to_output_file then implement an appropriate test here
-        self.assertIs(True, False)
+        data = {x["item.identifier"]: x for x in response.data}
+        self.assertEqual(data["i1"], {'item.name': 'Item_1',
+                                      'amount_measure.symbol': 'ml',
+                                      'amount_taken': 5,
+                                      'item.identifier': 'i1',
+                                      'item.item_type.name': 'ExampleStuff'})
+        self.assertEqual(data["i2"], {'item.name': 'Item_2',
+                                      'amount_measure.symbol': 'ml',
+                                      'amount_taken': 7,
+                                      'item.identifier': 'i2',
+                                      'item.item_type.name': 'ExampleStuff'})
+        self.assertEqual(data["iLW"], {'item.name': 'Item_LW',
+                                       'amount_measure.symbol': 'ml',
+                                       'amount_taken': 1,
+                                       'item.identifier': 'iLW',
+                                       'item.item_type.name': 'ExampleStuff'})
+        self.assertEqual(data["i3"], {'item.name': 'item_3',
+                                      'amount_measure.symbol': 'ml',
+                                      'amount_taken': 1,
+                                      'item.identifier': 'i3',
+                                      'item.item_type.name': 'ExampleStuff'})
 
     def test_get_file_default(self):
         # Start a task to get status on
