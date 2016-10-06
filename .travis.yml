@@ -11,7 +11,7 @@ env:
         SALESFORCE_USERNAME='none'
         SALESFORCE_PASSWORD='none'
         SALESFORCE_TOKEN='none'
-        PROJECT_IDENTIFIER_PREFIX='PROJ'
+        PROJECT_IDENTIFIER_PREFIX='P'
         PROJECT_IDENTIFIER_START=100
 before_script:
   - psql -U $DB_USER -c "create database $DB_NAME;"

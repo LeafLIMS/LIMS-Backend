@@ -24,9 +24,9 @@ class DataEntry(models.Model):
 
     STATE = (
         ('active', 'In Progress'),
-        ('succeeded', 'Succeded'),
+        ('succeeded', 'Succeeded'),
         ('failed', 'Failed'),
-        ('repeat succeeded', 'Repeat succeded'),
+        ('repeat succeeded', 'Repeat succeeded'),
         ('repeat failed', 'Repeat Failed'),
     )
 

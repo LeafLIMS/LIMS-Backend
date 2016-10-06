@@ -191,6 +191,19 @@ class ItemTransfer(models.Model):
             value = amount * ureg.count
         return value
 
+    def check_transfer(self):
+        ureg = UnitRegistry()
+        existing = self._as_measured_value(self.item.amount_available,
+                                           self.item.amount_measure.symbol,
+                                           ureg)
+        to_take = self._as_measured_value(self.amount_taken,
+                                          self.amount_measure.symbol,
+                                          ureg)
+        if existing < to_take:
+            missing = ((existing - to_take) * -1)
+            return (False, missing)
+        return (True, 0)
+
     def do_transfer(self):
         """
         Alter the item to reflect new amount

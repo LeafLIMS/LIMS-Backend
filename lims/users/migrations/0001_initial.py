@@ -16,7 +16,7 @@ def make_groups(apps, schema_editor):
     apps.models_module = True
     create_permissions(apps, verbosity=0)
     apps.models_module = None
-    
+
     Group = apps.get_model('auth', 'Group')
     Permission = apps.get_model('auth', 'Permission')
 

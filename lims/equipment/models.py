@@ -44,7 +44,11 @@ class EquipmentReservation(models.Model):
 
     reservation = DateTimeRangeField(null=True)
 
+    # The person for which the equipment is reserved for (they may not be
+    # in the system i.e. if they are a PhD student
     reserved_for = models.CharField(max_length=200, null=True, blank=True)
+    # The actual person who reserved the equipment (aka the person to ask
+    # who they are)
     reserved_by = models.ForeignKey(User, related_name='reserved_by')
     equipment_reserved = models.ForeignKey(Equipment, related_name='reservations')
 
@@ -60,7 +64,7 @@ class EquipmentReservation(models.Model):
 
     def save(self, *args, **kwargs):
         # Staff are automatically confirmed.
-        if self.reserved_by.is_staff:
+        if self.reserved_by.groups.filter(name='staff').exists():
             self.is_confirmed = True
             self.confirmed_by = self.reserved_by
         # Take the start and end dates to generate a timerange

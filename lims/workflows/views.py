@@ -4,10 +4,10 @@ import copy
 import uuid
 
 from pint import UnitRegistry, UndefinedUnitError
-
-
 from django.core.exceptions import ObjectDoesNotExist
+
 from django.utils import timezone
+from guardian.shortcuts import get_group_perms
 
 import django_filters
 
@@ -21,6 +21,7 @@ from rest_framework.filters import (OrderingFilter,
                                     SearchFilter,
                                     DjangoFilterBackend)
 from rest_framework.reverse import reverse
+from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework_csv.renderers import CSVRenderer
 
 from lims.shared.filters import ListFilter
@@ -46,6 +47,7 @@ from .serializers import (WorkflowSerializer, SimpleTaskTemplateSerializer,  # n
                           DetailedRunSerializer,  # noqa
                           InputFieldTemplateSerializer,  # noqa
                           OutputFieldTemplateSerializer,  # noqa
+                          VariableFieldTemplateSerializer,  # noqa
                           VariableFieldValueSerializer,  # noqa
                           StepFieldTemplateSerializer,  # noqa
                           CalculationFieldTemplateSerializer,  # noqa
@@ -190,8 +192,9 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                     for key, row in parsed_file.items():
                         data_items[key].update(row)
                 else:
-                    message = {'message':
-                               'Input file "{}" has incorrect headers/format'.format(f.name)}
+                    message = {
+                        'message':
+                            'Input file "{}" has incorrect headers/format'.format(f.name)}
                     raise ValidationError(message)
         return data_items
 
@@ -246,7 +249,11 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         # Get labware amounts
         labware_identifier = task_data.validated_data['labware_identifier']
         labware_item = self._get_from_inventory(labware_identifier)
-        sum_item_amounts[labware_item] = task_data.validated_data['labware_amount']
+        labware_required = task_data.validated_data['labware_amount']
+        labware_symbol = None
+        if labware_item.amount_measure is not None:
+            labware_symbol = labware_item.amount_measure.symbol
+        sum_item_amounts[labware_item] = self._as_measured_value(labware_required, labware_symbol)
 
         # Get task input field amounts
         for key, item in data_items.items():
@@ -270,7 +277,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             if available < required:
                 missing = (available - required) * -1
                 message = 'Inventory item {0} ({1}) is short of amount by {2:.2f}'.format(
-                          item.identifier, item.name, missing)
+                    item.identifier, item.name, missing)
                 errors.append(message)
                 valid_amounts = False
         return (valid_amounts, errors)
@@ -301,7 +308,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 'identifier': item.identifier,
                 'amount': amount.magnitude,
                 'measure': '{:~}'.format(amount).split(' ')[1],
-                })
+            })
         return output
 
     def _do_driver_actions(self, task_data):
@@ -387,9 +394,9 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 # Link labeware barcode -> transfer
                 for t in transfers:
                     t.run_identifier = task_run_identifier
-                    t.save()
                     t.do_transfer()
                     t.transfer_complete = True
+                    t.save()
                     run.transfers.add(t)
 
                 # Update run with new details
@@ -409,9 +416,10 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         if task_data:
             serializer = RecalculateTaskTemplateSerializer(data=task_data)
             if serializer.is_valid(raise_exception=True):
-                return Response(serializer.data)
+                return Response(serializer.data)  # Raw data, not objects
         serializer = TaskTemplateSerializer(obj)
-        return Response(serializer.data)
+        if serializer.is_valid(raise_exception=True):
+            return Response(serializer.data)  # Raw data, not objects
 
     @detail_route()
     def monitor_task(self, request, pk=None):
@@ -436,7 +444,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 equipment_files.append({
                     'name': ft.name,
                     'id': ft.id,
-                    })
+                })
             output_data = {
                 'transfers': serialized_transfers.data,
                 'data': serialized_data_entries.data,
@@ -456,7 +464,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
 
         try:
             file_template = task.equipment_files.get(id=file_id)
-        except FileTemplate.ObjectDoesNotExist:
+        except ObjectDoesNotExist:
             raise ValidationError({'message': 'Template does not exist'})
 
         if run.task_in_progress and run.is_active:
@@ -483,13 +491,14 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             return
         for file_to_copy in equipment.files_to_copy.filter(is_enabled=True):
             interpolate_dict = {
-                'run_identifier': data_entries[0].task_run_identifier,
+                'run_identifier': str(data_entries[0].task_run_identifier),
             }
             for loc in file_to_copy.locations.all():
                 file_store = loc.copy(interpolate_dict)
                 if file_store:
                     for d in data_entries:
                         d.data_files.add(file_store)
+                        d.save()
 
     @detail_route(methods=['POST'])
     def finish_task(self, request, pk=None):
@@ -504,18 +513,19 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         run = self.get_object()
 
         if run.task_in_progress and run.is_active:
+            failed_products = []
             if product_failures:
                 # If failures create new run based on current
                 # and move failed products to it
-                failure_ids = product_failures.split(',')
+                failure_ids = str(product_failures).split(',')
                 failed_products = run.products.filter(id__in=failure_ids)
                 new_name = '{} (failed)'.format(run.name)
                 new_run = Run(
-                        name=new_name,
-                        tasks=run.tasks,
-                        current_task=run.current_task,
-                        has_started=True,
-                        started_by=request.user)
+                    name=new_name,
+                    tasks=run.tasks,
+                    current_task=run.current_task,
+                    has_started=True,
+                    started_by=request.user)
                 new_run.save()
                 new_run.products.add(*failed_products)
 
@@ -530,8 +540,9 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 run.products.remove(*failed_products)
 
             # find and mark dataentry complete!
-            entries = DataEntry.objects.filter(task_run_identifier=run.task_run_identifier,
-                                               product__in=run.products.all())
+            entries = DataEntry.objects.filter(
+                task_run_identifier=run.task_run_identifier,
+                product__in=run.products.all()).exclude(product__in=failed_products)
             entries.update(state='succeeded')
 
             # mark labware inactive
@@ -542,14 +553,16 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             self._copy_files(entries)
 
             # Create ouputs from the task
+            runindex = 0
             for e in entries:
                 for index, output in enumerate(e.data['output_fields']):
                     output_name = '{} {}/{}'.format(e.product.product_identifier,
                                                     e.product.name,
                                                     output['label'])
                     measure = AmountMeasure.objects.get(symbol=output['measure'])
-                    identifier = '{}/{}'.format(run.task_run_identifier,
-                                                index)
+                    identifier = '{}/{}/{}'.format(run.task_run_identifier,
+                                                   runindex, index)
+                    runindex += 1
                     location = Location.objects.get(name='Lab')
                     item_type = ItemType.objects.get(name=output['lookup_type'])
                     new_item = Item(
@@ -560,7 +573,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                         amount_available=output['amount'],
                         amount_measure=measure,
                         added_by=request.user,
-                        )
+                    )
                     new_item.save()
 
                     product_input_ids = [p for p in e.data['product_inputs']]
@@ -568,6 +581,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                     new_item.created_from.add(*product_items)
 
                     e.product.linked_inventory.add(new_item)
+                    e.save()
 
             run.task_in_progress = False
 
@@ -593,11 +607,11 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         if new_name:
             run = self.get_object()
             new_workflow = Workflow(
-                    name=new_name,
-                    order=run.tasks,
-                    created_by=request.user)
+                name=new_name,
+                order=run.tasks,
+                created_by=request.user)
             new_workflow.save()
-            location = reverse('workflows', args=[new_workflow.id], request=request)
+            location = reverse('workflows-detail', args=[new_workflow.id])
             return Response(headers={'location': location}, status=303)
         else:
             return Response({'message': 'Please supply a name'}, status=400)
@@ -627,7 +641,7 @@ class TaskViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
-    search_fields = ('name', 'created_by__username', )
+    search_fields = ('name', 'created_by__username',)
     filter_class = TaskFilterSet
 
     def perform_create(self, serializer):
@@ -645,12 +659,13 @@ class TaskViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         if task_data:
             serializer = RecalculateTaskTemplateSerializer(data=task_data)
             if serializer.is_valid(raise_exception=True):
-                return Response(serializer.data)
+                return Response(serializer.data)  # Raw data, not objects
         serializer = TaskTemplateSerializer(obj)
-        return Response(serializer.data)
+        if serializer.is_valid(raise_exception=True):
+            return Response(serializer.data)  # Raw data, not objects
 
 
-class TaskFieldViewSet(viewsets.ModelViewSet):
+class TaskFieldViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     """
     Provides a list of all task fields
     """
@@ -680,3 +695,16 @@ class TaskFieldViewSet(viewsets.ModelViewSet):
             object_class = globals()[object_name]
             return object_class.objects.all()
         return InputFieldTemplate.objects.all()
+
+    def perform_create(self, serializer):
+        task_template = serializer.validated_data['template']
+        if ('view_tasktemplate' in get_group_perms(self.request.user, task_template)
+                or self.request.user.groups.filter(name='admin').exists()):
+            if ('change_tasktemplate' in get_group_perms(self.request.user, task_template)
+                    or self.request.user.groups.filter(name='admin').exists()):
+                instance = serializer.save()
+                self.clone_group_permissions(instance.template, instance)
+            else:
+                raise PermissionDenied('You do not have permission to create this')
+        else:
+            raise NotFound()

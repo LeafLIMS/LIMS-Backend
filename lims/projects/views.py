@@ -32,7 +32,9 @@ class ProjectViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
     permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
-    search_fields = ('project_identifier', 'name', 'primary_lab_contact__username',)
+    search_fields = ('project_identifier', 'name', 'primary_lab_contact__username',
+                     'crm_project__account__user__first_name',
+                     'crm_project__account__user__last_name',)
 
     def perform_create(self, serializer):
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
@@ -80,7 +82,7 @@ class ProductViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         """
         if instance.design is not None:
             items = []
-            parser = DesignFileParser(data=instance.design)
+            parser = DesignFileParser(instance.design)
             if instance.design_format == 'csv':
                 items = parser.parse_csv()
             elif instance.design_format == 'gb':
@@ -99,7 +101,8 @@ class ProductViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         # Ensure the user has the correct permissions on the Project
         # to add a product to it.
         project = serializer.validated_data['project']
-        if 'view_project' in get_group_perms(self.request.user, project):
+        if ('change_project' in get_group_perms(self.request.user, project)
+                or self.request.user.groups.filter(name='admin').exists()):
             instance = serializer.save(created_by=self.request.user)
             self.clone_group_permissions(instance.project, instance)
         else:

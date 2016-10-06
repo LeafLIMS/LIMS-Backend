@@ -20,8 +20,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPaginationSmall
 
     def get_queryset(self):
-        if self.request.user.is_superuser or Group.objects.get(
-                name="admin") in self.request.user.groups.all():
+        if (self.request.user.is_superuser or
+                Group.objects.get(name="admin") in self.request.user.groups.all()):
             return Order.objects.all()
         else:
             return Order.objects.filter(user=self.request.user)
