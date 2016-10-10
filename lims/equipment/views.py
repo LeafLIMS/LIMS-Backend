@@ -14,7 +14,7 @@ from .serializers import EquipmentSerializer, EquipmentReservationSerializer
 class EquipmentViewSet(viewsets.ModelViewSet):
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer
-    filter_fields = ('can_reserve',)
+    filter_fields = ('can_reserve', 'status',)
     search_fields = ('name',)
     permission_classes = (IsInAdminGroupOrRO,)
 
