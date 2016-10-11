@@ -305,6 +305,18 @@ DEFAULT_STAFF_PERMISSIONS = (
     "Can change run",
     "Can delete run",
     "View run",
+    "View CRM Project",
+    "View CRM Quote",
+    "View CRM Account",
+    "Can add crm account",
+    "Can change crm account",
+    "Can delete crm account",
+    "Can add crm project",
+    "Can change crm project",
+    "Can delete crm project",
+    "Can add crm quote",
+    "Can change crm quote",
+    "Can delete crm quote",
 )
 
 #

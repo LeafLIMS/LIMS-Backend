@@ -1,5 +1,4 @@
 import datetime
-import pprint
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -15,6 +14,7 @@ from lims.users.serializers import UserSerializer
 from lims.orders.models import Order
 from lims.pricebook.models import Price, PriceBook
 from lims.projects.models import Project
+from lims.permissions.permissions import ExtendedObjectPermissions
 from .models import CRMAccount, CRMProject, CRMQuote
 
 
@@ -23,6 +23,8 @@ class CRMUserView(APIView):
     Deals with the creation and upkeep of SalesForce account and
     contact information.
     """
+    permission_classes = (ExtendedObjectPermissions,)
+    queryset = CRMAccount.objects.none()
 
     def post(self, request, format=None):
         """
@@ -84,8 +86,12 @@ class CRMUserView(APIView):
 
 
 class CRMProjectView(APIView):
+    """
+    Fetch project information from CRM and create CRM objects
+    """
+    permission_classes = (ExtendedObjectPermissions,)
+    queryset = CRMProject.objects.none()
 
-    # THIS IS INSECURE! NEEDS ADMIN ONLY ACCESS!!!
     def get(self, request, format=None):
         """
         Lists all projects on Salesforce.
@@ -98,8 +104,8 @@ class CRMProjectView(APIView):
                         password=settings.SALESFORCE_PASSWORD,
                         security_token=settings.SALESFORCE_TOKEN)
 
-        projects_query = ("SELECT Id,Name,Description,CreatedDate FROM Opportunity "
-                          "WHERE Name LIKE '%{}%'").format(search)
+        projects_query = ("SELECT Id,Name,Description,Project_Status__c, CreatedDate "
+                          "FROM Opportunity WHERE Name LIKE '%{}%'").format(search)
         projects = sf.query(projects_query)
         return Response(projects['records'])
 
@@ -173,6 +179,11 @@ class CRMProjectView(APIView):
 
 
 class CRMLinkView(APIView):
+    """
+    Link CRM objects to another relevant object
+    """
+    permission_classes = (ExtendedObjectPermissions,)
+    queryset = CRMProject.objects.none()
 
     def post(self, request, format=None):
         """
@@ -192,12 +203,12 @@ class CRMLinkView(APIView):
                                 password=settings.SALESFORCE_PASSWORD,
                                 security_token=settings.SALESFORCE_TOKEN)
                 crm_project_query = ("SELECT o.Id,o.Name,o.Description,o.CreatedDate,a.id,"
-                                     "a.name,(SELECT Id,ContactId,c.name,c.email "
+                                     "o.Project_Status__c,a.name,"
+                                     "(SELECT Id,ContactId,c.name,c.email "
                                      "FROM OpportunityContactRoles cr, "
                                      "cr.Contact c) FROM Opportunity o, o.Account a "
                                      "WHERE o.Id = '{}'").format(crm_identifier)
-                crm_project_data = sf.query(crm_project_query)  # Opportunity.get(crm_identifier)
-                pprint.pprint(crm_project_data)
+                crm_project_data = sf.query(crm_project_query)
                 if crm_project_data['totalSize'] > 0:
                     record = crm_project_data['records'][0]
 
@@ -245,6 +256,7 @@ class CRMLinkView(APIView):
                         name=record['Name'],
                         description=record['Description'],
                         date_created=record['CreatedDate'],
+                        status=record['Project_Status__c'],
                         account=crm_account
                     )
                     crm_project.save()

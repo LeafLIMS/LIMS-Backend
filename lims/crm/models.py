@@ -13,6 +13,11 @@ class CRMAccount(models.Model):
 
     user = models.OneToOneField(User)
 
+    class Meta:
+        permissions = (
+            ('view_crmaccount', 'View CRM Account',),
+        )
+
     def contact_url(self):
         return settings.SALESFORCE_URL + '/' + self.contact_identifier
 
@@ -28,11 +33,17 @@ class CRMProject(models.Model):
     name = models.CharField(max_length=300)
     description = models.TextField(blank=True, null=True)
     date_created = models.DateTimeField()
+    status = models.CharField(blank=True, default='', max_length=100)
 
     account = models.ForeignKey(CRMAccount)
 
     # This should be on ORDER not CRM Project
     order = models.OneToOneField(Order, related_name='crm', null=True, blank=True)
+
+    class Meta:
+        permissions = (
+            ('view_crmproject', 'View CRM Project',),
+        )
 
     def project_url(self):
         return settings.SALESFORCE_URL + '/' + self.project_identifier
@@ -51,6 +62,11 @@ class CRMQuote(models.Model):
     total = models.FloatField()
 
     project = models.ForeignKey(CRMProject, related_name='quotes')
+
+    class Meta:
+        permissions = (
+            ('view_crmquote', 'View CRM Quote',),
+        )
 
     def quote_url(self):
         return settings.SALESFORCE_URL + '/' + self.quote_identifier
