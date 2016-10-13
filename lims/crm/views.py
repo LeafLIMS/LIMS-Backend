@@ -178,6 +178,48 @@ class CRMProjectView(APIView):
         return Response({'message': 'Project and quote created'})
 
 
+class CRMUpdateProjectView(APIView):
+    """
+    Update CRM projects with the latest information from the database.
+    """
+    permission_classes = (ExtendedObjectPermissions,)
+    queryset = CRMProject.objects.none()
+
+    def post(self, request, format=None):
+        crm_project_ids = request.data.get('crm_ids', None)
+
+        if crm_project_ids:
+            projects = CRMProject.objects.filter(id__in=crm_project_ids)
+
+            crm_identifiers = ["'" + p.project_identifier + "'" for p in projects.all()]
+
+            sf = Salesforce(instance_url=settings.SALESFORCE_URL,
+                            username=settings.SALESFORCE_USERNAME,
+                            password=settings.SALESFORCE_PASSWORD,
+                            security_token=settings.SALESFORCE_TOKEN)
+            crm_project_query = ("SELECT o.Id,o.Name,o.Description,o.CreatedDate,"
+                                 "o.Project_Status__c "
+                                 "FROM Opportunity o "
+                                 "WHERE o.Id IN ({})").format(", ".join(crm_identifiers))
+            crm_project_data = sf.query(crm_project_query)
+            if crm_project_data['totalSize'] > 0:
+                records = crm_project_data['records']
+                for record in records:
+                    proj = CRMProject.objects.get(project_identifier=record['Id'])
+                    try:
+                        proj = CRMProject.objects.get(project_identifier=record['Id'])
+                    except:
+                        pass
+                    else:
+                        proj.name = record['Name']
+                        proj.description = record['Description']
+                        proj.status = record['Project_Status__c']
+                        proj.save()
+                return Response({'message': 'Projects updated'})
+            return Response({'message': 'No projects found on CRM system'}, status=404)
+        return Response({'message': 'Please provide a list of CRM project IDs'}, status=400)
+
+
 class CRMLinkView(APIView):
     """
     Link CRM objects to another relevant object
