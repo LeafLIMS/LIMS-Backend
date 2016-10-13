@@ -3,6 +3,9 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 
+from jsonfield import JSONField
+
+
 from lims.shared.models import Organism
 from lims.inventory.models import ItemType, Item
 from lims.orders.models import Order
@@ -29,6 +32,7 @@ class Project(models.Model):
     date_started = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, related_name='created_by')
     archive = models.BooleanField(default=False)
+    links = JSONField(blank=True, null=True)
 
     project_identifier = models.CharField(default='', max_length=20)
 

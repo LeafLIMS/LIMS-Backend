@@ -24,6 +24,7 @@ class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer)
         slug_field='username',
     )
     crm_project = CRMProjectSerializer(read_only=True)
+    links = serializers.JSONField(required=False)
 
     class Meta:
         model = Project
