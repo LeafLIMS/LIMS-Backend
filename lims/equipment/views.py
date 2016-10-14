@@ -5,7 +5,7 @@ from rest_framework.exceptions import PermissionDenied
 
 import django_filters
 
-from lims.permissions.permissions import IsInAdminGroupOrRO
+from lims.permissions.permissions import IsInStaffGroupOrRO
 
 from .models import Equipment, EquipmentReservation
 from .serializers import EquipmentSerializer, EquipmentReservationSerializer
@@ -16,7 +16,7 @@ class EquipmentViewSet(viewsets.ModelViewSet):
     serializer_class = EquipmentSerializer
     filter_fields = ('can_reserve', 'status',)
     search_fields = ('name',)
-    permission_classes = (IsInAdminGroupOrRO,)
+    permission_classes = (IsInStaffGroupOrRO,)
 
 
 class EquipmentReservationFilter(django_filters.FilterSet):
