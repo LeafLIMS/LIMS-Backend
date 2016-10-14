@@ -109,7 +109,8 @@ class Item(models.Model):
     Represents an item in a inventory
     """
     name = models.CharField(max_length=200, db_index=True)
-    identifier = models.CharField(max_length=128, null=True, blank=True, db_index=True, unique=True)
+    identifier = models.CharField(max_length=200, null=True, blank=True, db_index=True)
+    barcode = models.CharField(max_length=128, null=True, blank=True, db_index=True, unique=True)
     description = models.TextField(blank=True, null=True)
     item_type = TreeForeignKey(ItemType)
 
