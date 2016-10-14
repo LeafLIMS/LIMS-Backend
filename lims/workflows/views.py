@@ -394,7 +394,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 # Link labeware barcode -> transfer
                 for t in transfers:
                     t.run_identifier = task_run_identifier
-                    t.do_transfer()
+                    t.do_transfer(self.ureg)
                     t.transfer_complete = True
                     t.save()
                     run.transfers.add(t)

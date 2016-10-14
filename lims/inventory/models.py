@@ -204,11 +204,12 @@ class ItemTransfer(models.Model):
             return (False, missing)
         return (True, 0)
 
-    def do_transfer(self):
+    def do_transfer(self, ureg=False):
         """
         Alter the item to reflect new amount
         """
-        ureg = UnitRegistry()
+        if not ureg:
+            ureg = UnitRegistry()
         existing = self._as_measured_value(self.item.amount_available,
                                            self.item.amount_measure.symbol,
                                            ureg)
