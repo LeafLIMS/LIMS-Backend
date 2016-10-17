@@ -3,6 +3,8 @@ import ast
 
 from django.core.exceptions import ObjectDoesNotExist
 
+from pint import UnitRegistry
+
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route
@@ -166,6 +168,7 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
             return Response({'message': 'Transfer {} complete'.format(tfr_id)})
         elif transfer_details:
             item = self.get_object()
+            ureg = UnitRegistry()
 
             raw_amount = transfer_details.get('amount', 0)
             raw_measure = transfer_details.get('measure', item.amount_measure.symbol)
@@ -177,6 +180,9 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
             is_addition = False
             if addition:
                 is_addition = True
+                is_complete = True
+
+            if transfer_details.get('transfer_complete', False):
                 is_complete = True
 
             try:
@@ -199,7 +205,7 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
             transfer_status = tfr.check_transfer()
             if transfer_status[0] is True:
                 tfr.save()
-                tfr.do_transfer()
+                tfr.do_transfer(ureg)
             else:
                 return Response(
                     {'message': 'Inventory item {} ({}) is short of amount by {}'.format(
