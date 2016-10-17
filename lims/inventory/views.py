@@ -217,6 +217,24 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
             return Response({'message': 'Transfer {} created'.format(tfr.id)})
         return Response({'message': 'You must provide a transfer ID'}, status=400)
 
+    @detail_route(methods=['POST'])
+    def cancel_transfer(self, request, pk=None):
+        """
+        Cancel an active transfer, adding the amount back
+        """
+        tfr_id = request.query_params.get('id', None)
+
+        if tfr_id:
+            try:
+                tfr = ItemTransfer.objects.get(pk=tfr_id, transfer_complete=False)
+            except ObjectDoesNotExist:
+                return Response({'message': 'No item transfer exists with that ID'}, status=404)
+            tfr.is_addition = True
+            tfr.do_transfer(ureg)
+            tfr.delete()
+            return Response({'message': 'Transfer cancelled'})
+        return Response({'message': 'You must provide a transfer ID'}, status=400)
+
 
 class SetViewSet(viewsets.ModelViewSet, ViewPermissionsMixin):
     queryset = Set.objects.all()
