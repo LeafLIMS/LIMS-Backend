@@ -407,6 +407,33 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                 return Response({'message': 'Task started successfully'})
 
     @detail_route(methods=["POST"])
+    def cancel_task(self, request, pk=None):
+        """
+        Cancel a running task that has accidentally been started
+        """
+        run = self.get_object()
+
+        if run.task_in_progress:
+            ureg = UnitRegistry()
+            # Get any transfers for this task
+            transfers_for_this_task = run.transfers.filter(run_identifier=run.task_run_identifier)
+            data_entries = DataEntry.objects.filter(task_run_identifier=run.task_run_identifier)
+            # Transfer all the things taken back into the inventory
+            for t in transfers_for_this_task:
+                t.is_addition = True
+                t.do_transfer(ureg)
+            # Once transfers made delete them
+            transfers_for_this_task.delete()
+            # Trash the data entries now as they're irrelevant
+            data_entries.delete()
+            # No longer active
+            run.task_in_progress = False
+            run.has_started = False
+            run.save()
+            return Response({'message': 'Task cancelled'})
+        return Response({'message': 'Task not in progress so cannot be cancelled'}, status=400)
+
+    @detail_route(methods=["POST"])
     def recalculate(self, request, pk=None):
         """
         Given task data recalculate and return task.
