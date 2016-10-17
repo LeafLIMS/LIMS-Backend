@@ -22,6 +22,11 @@ from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationS
                           ItemSerializer, DetailedItemSerializer, SetSerializer)
 
 
+# Define as module level due to issues with file locking
+# when calling a function requiring it multiple times
+ureg = UnitRegistry()
+
+
 class LeveledMixin:
     """
     Provide a display value for a heirarchy of elements
@@ -168,7 +173,6 @@ class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin
             return Response({'message': 'Transfer {} complete'.format(tfr_id)})
         elif transfer_details:
             item = self.get_object()
-            ureg = UnitRegistry()
 
             raw_amount = transfer_details.get('amount', 0)
             raw_measure = transfer_details.get('measure', item.amount_measure.symbol)
