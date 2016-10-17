@@ -200,7 +200,7 @@ class ItemTransfer(models.Model):
         to_take = self._as_measured_value(self.amount_taken,
                                           self.amount_measure.symbol,
                                           ureg)
-        if existing < to_take:
+        if not self.is_addition and existing < to_take:
             missing = ((existing - to_take) * -1)
             return (False, missing)
         return (True, 0)
