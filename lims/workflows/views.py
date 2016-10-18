@@ -54,6 +54,7 @@ from .serializers import (WorkflowSerializer, SimpleTaskTemplateSerializer,  # n
                           RecalculateTaskTemplateSerializer)  # noqa
 from lims.datastore.models import DataEntry
 from lims.datastore.serializers import DataEntrySerializer
+from lims.equipment.models import Equipment
 
 
 class WorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
@@ -345,6 +346,7 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
 
             run = self.get_object()
             task = run.get_task_at_index(run.current_task)
+
             # Get items from products
             product_type = serialized_task.validated_data['product_input']
             product_input_items = self._get_product_input_items(product_type)
@@ -361,8 +363,17 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
 
             transfers = self._create_item_transfers(sum_item_amounts)
 
+            # Check if you can actually use the equipment
+            equipment_name = serialized_task.validated_data['equipment_choice']
+            try:
+                equipment = Equipment.objects.get(name=equipment_name)
+            except Equipment.DoesNotExist:
+                raise serializers.ValidationError({'message':
+                                                  'Equipment does not exist!'})
+
             if is_check:
                 check_output = {
+                    'equipment_status': equipment.status,
                     'errors': errors,
                     'requirements': []
                 }
@@ -371,6 +382,10 @@ class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
                     check_output['requirements'].append(st.data)
                 return Response(check_output)
             else:
+                if equipment.status != 'idle':
+                    raise serializers.ValidationError({'message':
+                                                      'Equipment is currently in use'})
+
                 if not valid_amounts:
                     raise ValidationError({'message': '\n'.join(errors)})
                 task_run_identifier = uuid.uuid4()
