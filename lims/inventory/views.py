@@ -16,6 +16,7 @@ from rest_framework.filters import (OrderingFilter,
 from lims.permissions.permissions import (IsInAdminGroupOrRO,
                                           ViewPermissionsMixin, ExtendedObjectPermissions,
                                           ExtendedObjectPermissionsFilter)
+from lims.shared.mixins import StatsViewMixin
 from lims.filetemplate.models import FileTemplate
 from .models import Set, Item, ItemTransfer, ItemType, Location, AmountMeasure
 from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationSerializer,
@@ -82,7 +83,7 @@ class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
         return Response(status=204)
 
 
-class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, ViewPermissionsMixin):
+class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, StatsViewMixin, ViewPermissionsMixin):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
     permission_classes = (ExtendedObjectPermissions,)

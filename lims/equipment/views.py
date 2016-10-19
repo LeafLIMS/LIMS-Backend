@@ -7,11 +7,12 @@ import django_filters
 
 from lims.permissions.permissions import IsInStaffGroupOrRO
 
+from lims.shared.mixins import StatsViewMixin
 from .models import Equipment, EquipmentReservation
 from .serializers import EquipmentSerializer, EquipmentReservationSerializer
 
 
-class EquipmentViewSet(viewsets.ModelViewSet):
+class EquipmentViewSet(viewsets.ModelViewSet, StatsViewMixin):
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer
     filter_fields = ('can_reserve', 'status',)

@@ -29,6 +29,7 @@ from lims.permissions.permissions import (ViewPermissionsMixin,
                                           ExtendedObjectPermissions,
                                           ExtendedObjectPermissionsFilter)
 
+from lims.shared.mixins import StatsViewMixin
 from lims.filetemplate.models import FileTemplate
 from lims.inventory.models import (Item, ItemTransfer, AmountMeasure, Location,
                                    ItemType)
@@ -115,7 +116,7 @@ class WorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         return Response({'message': 'Please provide a task position'}, status=400)
 
 
-class RunViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
+class RunViewSet(ViewPermissionsMixin, StatsViewMixin, viewsets.ModelViewSet):
     """
     List all runs, active only be default
     """

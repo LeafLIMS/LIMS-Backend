@@ -1,7 +1,29 @@
-class SerializerMixin:
+from django.db.models import Count
+from django.core.exceptions import FieldError
 
-    def get_serializer_class_from_name(self, name):
-        serializer_name = name + 'Serializer'
-        print(globals())
-        serializer_class = globals()[serializer_name]
-        return serializer_class
+from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.decorators import list_route
+from rest_framework.serializers import ValidationError
+
+
+class StatsViewMixin(ModelViewSet):
+    """
+    Provide API endpoint for basic stats on queryset
+    """
+
+    @list_route()
+    def stats(self, request):
+        """
+        Query a field for stats on contents
+        """
+        field = request.query_params.get('field', None)
+
+        if field:
+            qs = self.get_queryset()
+            try:
+                counts = qs.values(field).annotate(Count(field)).order_by()
+            except FieldError:
+                raise ValidationError({'message': 'You must supply a valid field'})
+            return Response(counts)
+        raise ValidationError({'message': 'You must supply a field for stats'})
