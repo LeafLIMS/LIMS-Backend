@@ -53,7 +53,7 @@ class WorkflowTestCase(LoggedInTestCase):
         self._location = Location.objects.create(name="Bench", code="B1")
         self._equipmentSequencer = Equipment.objects.create(name="Sequencer",
                                                             location=self._location,
-                                                            status="active", can_reserve=True)
+                                                            status="idle", can_reserve=True)
 
         self._task1 = TaskTemplate.objects.create(name="TaskTempl1",
                                                   description="First",
@@ -635,7 +635,7 @@ class TaskTestCase(LoggedInTestCase):
         self._location = Location.objects.create(name="Bench", code="B1")
         self._equipmentSequencer = Equipment.objects.create(name="Sequencer",
                                                             location=self._location,
-                                                            status="active", can_reserve=True)
+                                                            status="idle", can_reserve=True)
 
         self._task1 = TaskTemplate.objects.create(name="TaskTempl1",
                                                   description="First",
@@ -1580,7 +1580,7 @@ class RunTestCase(LoggedInTestCase):
         self._location = Location.objects.create(name="Bench", code="B1")
         self._equipmentSequencer = Equipment.objects.create(name="Sequencer",
                                                             location=self._location,
-                                                            status="active", can_reserve=True)
+                                                            status="idle", can_reserve=True)
         self._tempfileDir = tempfile.gettempdir()
         self._copyFile = \
             CopyFileDriver.objects.create(name="Copy1",
