@@ -83,7 +83,7 @@ class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
         return Response(status=204)
 
 
-class InventoryViewSet(viewsets.ModelViewSet, LeveledMixin, StatsViewMixin, ViewPermissionsMixin):
+class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, viewsets.ModelViewSet):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
     permission_classes = (ExtendedObjectPermissions,)

@@ -2,12 +2,12 @@ from django.db.models import Count
 from django.core.exceptions import FieldError
 
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
+from rest_framework import viewsets
 from rest_framework.decorators import list_route
 from rest_framework.serializers import ValidationError
 
 
-class StatsViewMixin(ModelViewSet):
+class StatsViewMixin(viewsets.ViewSet):
     """
     Provide API endpoint for basic stats on queryset
     """
