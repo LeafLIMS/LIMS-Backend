@@ -33,6 +33,7 @@ class ProjectViewSet(ViewPermissionsMixin, StatsViewMixin, viewsets.ModelViewSet
     permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
+    filter_fields = ('archive', 'crm_project__status', 'primary_lab_contact',)
     search_fields = ('project_identifier', 'name', 'primary_lab_contact__username',
                      'crm_project__account__user__first_name',
                      'crm_project__account__user__last_name',)
