@@ -71,14 +71,14 @@ class CRMUserView(APIView):
             contact_id = contact['id']
 
         if contact_id and account_id:
-            user = User.objects.get(username=request.data['email'])
+            user = User.objects.get(email=request.data['email'])
 
             details = CRMAccount(contact_identifier=contact_id,
                                  account_identifier=account_id,
                                  user=user)
             details.save()
 
-            user = User.objects.get(username=request.data['email'])
+            user = User.objects.get(email=request.data['email'])
 
             s = UserSerializer(user)
             return Response(s.data)
@@ -272,12 +272,14 @@ class CRMLinkView(APIView):
                         contact_email = record['OpportunityContactRoles'][
                             'records'][0]['Contact']['Email']
 
+                        first_name, last_name = contact_name.rsplit(' ', 1)
+                        username = first_name[0] + last_name
+
                         try:
-                            u = User.objects.get(username=contact_email)
+                            u = User.objects.get(email=contact_email)
                         except:
-                            first_name, last_name = contact_name.rsplit(' ', 1)
                             u = User.objects.create_user(
-                                contact_email,
+                                username,
                                 email=contact_email
                             )
 
