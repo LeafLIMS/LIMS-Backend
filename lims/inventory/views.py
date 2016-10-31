@@ -241,6 +241,7 @@ class SetViewSet(viewsets.ModelViewSet, ViewPermissionsMixin):
     queryset = Set.objects.all()
     serializer_class = SetSerializer
     permission_classes = (ExtendedObjectPermissions,)
+    search_fields = ('name',)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
 
