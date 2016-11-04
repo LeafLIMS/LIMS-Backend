@@ -4,11 +4,13 @@ import re
 import datetime
 
 from django.db import models
+import reversion
 
 from lims.equipment.models import Equipment
 from lims.datastore.models import DataFile
 
 
+@reversion.register()
 class Driver(models.Model):
     """
     Specifies a class that deals with a specific piece of equipment
@@ -47,6 +49,7 @@ class Driver(models.Model):
         return self.name
 
 
+@reversion.register()
 class CopyFileDriver(models.Model):
     """
     A configurable copy-only driver for equipment.
@@ -74,6 +77,7 @@ class CopyFileDriver(models.Model):
         return self.name
 
 
+@reversion.register()
 class CopyFilePath(models.Model):
     driver = models.ForeignKey(CopyFileDriver, related_name='locations')
     # All interpolation in {} for filename, e.g. {*.py} for python files

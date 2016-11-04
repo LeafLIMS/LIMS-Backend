@@ -1,9 +1,11 @@
 import csv
 
 from django.db import models
+import reversion
 from django.core.exceptions import ObjectDoesNotExist
 
 
+@reversion.register()
 class FileTemplate(models.Model):
     FILE_FOR_CHOICES = (
         ('input', 'Input'),
@@ -88,6 +90,7 @@ class FileTemplate(models.Model):
         return self.name
 
 
+@reversion.register()
 class FileTemplateField(models.Model):
     # Name of the field in the file
     name = models.CharField(max_length=50)

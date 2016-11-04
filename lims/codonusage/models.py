@@ -1,8 +1,10 @@
 from django.db import models
+import reversion
 
 from lims.shared.models import Organism
 
 
+@reversion.register()
 class CodonUsageTable(models.Model):
     species = models.ForeignKey(Organism)
 
@@ -10,6 +12,7 @@ class CodonUsageTable(models.Model):
         return self.species.name
 
 
+@reversion.register()
 class CodonUsage(models.Model):
     name = models.CharField(max_length=3)
     value = models.FloatField()

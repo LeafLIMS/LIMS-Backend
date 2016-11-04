@@ -14,14 +14,15 @@ from lims.permissions.permissions import (IsInAdminGroupOrRO,
                                           ExtendedObjectPermissions,
                                           ExtendedObjectPermissionsFilter)
 
-from lims.shared.mixins import StatsViewMixin
+from lims.shared.mixins import StatsViewMixin, AuditTrailViewMixin
 from .models import (Product, ProductStatus, Project)
 from .serializers import (ProjectSerializer, ProductSerializer,
                           DetailedProductSerializer, ProductStatusSerializer)
 from .parsers import DesignFileParser
 
 
-class ProjectViewSet(ViewPermissionsMixin, StatsViewMixin, viewsets.ModelViewSet):
+class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
+                     viewsets.ModelViewSet):
     """
     View all projects the user has permissions for
 
@@ -65,7 +66,8 @@ class ProductFilter(django_filters.FilterSet):
         }
 
 
-class ProductViewSet(ViewPermissionsMixin, StatsViewMixin, viewsets.ModelViewSet):
+class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
+                     viewsets.ModelViewSet):
     """
     Provides a list of all products
     """
@@ -115,7 +117,7 @@ class ProductViewSet(ViewPermissionsMixin, StatsViewMixin, viewsets.ModelViewSet
         self._parse_design(instance)
 
 
-class ProductStatusViewSet(viewsets.ModelViewSet):
+class ProductStatusViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = ProductStatus.objects.all()
     serializer_class = ProductStatusSerializer
     permission_classes = (IsInAdminGroupOrRO,)

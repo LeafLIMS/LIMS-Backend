@@ -1,4 +1,5 @@
 from django.db import models
+import reversion
 from django.contrib.auth.models import User
 
 from jsonfield import JSONField
@@ -6,6 +7,7 @@ from jsonfield import JSONField
 from lims.equipment.models import Equipment
 
 
+@reversion.register()
 class DataFile(models.Model):
     """
     Metadata describing a file extracted from a piece of equipment
@@ -20,6 +22,7 @@ class DataFile(models.Model):
     equipment = models.ForeignKey(Equipment)
 
 
+@reversion.register()
 class DataEntry(models.Model):
 
     STATE = (

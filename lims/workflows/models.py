@@ -1,4 +1,5 @@
 from django.db import models
+import reversion
 from django.contrib.auth.models import User
 
 from lims.projects.models import Product
@@ -7,6 +8,7 @@ from lims.inventory.models import Item, ItemType, ItemTransfer, AmountMeasure
 from lims.filetemplate.models import FileTemplate
 
 
+@reversion.register()
 class Workflow(models.Model):
     name = models.CharField(max_length=50)
     order = models.CommaSeparatedIntegerField(max_length=200, blank=True)
@@ -41,6 +43,7 @@ class Workflow(models.Model):
         return self.name
 
 
+@reversion.register()
 class RunLabware(models.Model):
     """
     Specifies labware associated with a run
@@ -56,6 +59,7 @@ class RunLabware(models.Model):
         return '{}: {}'.format(self.identifier, self.item.name)
 
 
+@reversion.register()
 class Run(models.Model):
     """
     Takes a series of tasks (e.g. from a workflow) and runs products through them
@@ -147,6 +151,7 @@ class Run(models.Model):
                                                           self.date_finished)
 
 
+@reversion.register()
 class TaskTemplate(models.Model):
 
     name = models.CharField(max_length=100)
@@ -250,6 +255,7 @@ class TaskTemplate(models.Model):
         return self.name
 
 
+@reversion.register()
 class CalculationFieldTemplate(models.Model):
     """
     Store a calculation referenceing variables and inputs
@@ -273,6 +279,7 @@ class CalculationFieldTemplate(models.Model):
         return self.label
 
 
+@reversion.register()
 class InputFieldTemplate(models.Model):
     """
     An input to a task.
@@ -305,6 +312,7 @@ class InputFieldTemplate(models.Model):
         return self.label
 
 
+@reversion.register()
 class VariableFieldTemplate(models.Model):
     template = models.ForeignKey(TaskTemplate, related_name='variable_fields')
     label = models.CharField(max_length=50)
@@ -325,6 +333,7 @@ class VariableFieldTemplate(models.Model):
         return self.label
 
 
+@reversion.register()
 class OutputFieldTemplate(models.Model):
     template = models.ForeignKey(TaskTemplate, related_name='output_fields')
     label = models.CharField(max_length=50)
@@ -348,6 +357,7 @@ class OutputFieldTemplate(models.Model):
         return self.label
 
 
+@reversion.register()
 class StepFieldTemplate(models.Model):
     template = models.ForeignKey(TaskTemplate, related_name='step_fields')
     label = models.CharField(max_length=50)
@@ -365,6 +375,7 @@ class StepFieldTemplate(models.Model):
         return self.label
 
 
+@reversion.register()
 class StepFieldProperty(models.Model):
     step = models.ForeignKey(StepFieldTemplate, related_name='properties')
     label = models.CharField(max_length=50)

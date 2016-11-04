@@ -1,4 +1,5 @@
 from django.db import models
+import reversion
 from django.contrib.auth.models import User
 from django.conf import settings
 
@@ -12,6 +13,7 @@ from lims.orders.models import Order
 from lims.crm.models import CRMProject
 
 
+@reversion.register()
 class Project(models.Model):
     """
     A project is a container for products and contains key identifiying information
@@ -59,6 +61,7 @@ class Project(models.Model):
         return self.name
 
 
+@reversion.register()
 class ProductStatus(models.Model):
     """
     The status of a product as it moves through workflows
@@ -75,6 +78,7 @@ class ProductStatus(models.Model):
         return self.name
 
 
+@reversion.register()
 class Product(models.Model):
     """
     A representation of a product as it progresses through the system
@@ -145,6 +149,7 @@ class Product(models.Model):
         return self.name
 
 
+@reversion.register()
 class Comment(models.Model):
     """
     A user identifiable comment on a Product
@@ -163,6 +168,7 @@ class Comment(models.Model):
         return '{}: {}'.format(self.product, self.date_created)
 
 
+@reversion.register()
 class WorkLog(models.Model):
     project = models.ForeignKey(Project)
     task = models.CharField(max_length=200)

@@ -6,13 +6,14 @@ from rest_framework.exceptions import PermissionDenied
 import django_filters
 
 from lims.permissions.permissions import IsInStaffGroupOrRO
+from lims.shared.mixins import AuditTrailViewMixin
 
 from lims.shared.mixins import StatsViewMixin
 from .models import Equipment, EquipmentReservation
 from .serializers import EquipmentSerializer, EquipmentReservationSerializer
 
 
-class EquipmentViewSet(viewsets.ModelViewSet, StatsViewMixin):
+class EquipmentViewSet(AuditTrailViewMixin, viewsets.ModelViewSet, StatsViewMixin):
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer
     filter_fields = ('can_reserve', 'status',)
@@ -32,7 +33,7 @@ class EquipmentReservationFilter(django_filters.FilterSet):
         }
 
 
-class EquipmentReservationViewSet(viewsets.ModelViewSet):
+class EquipmentReservationViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = EquipmentReservation.objects.all()
     serializer_class = EquipmentReservationSerializer
     filter_class = EquipmentReservationFilter

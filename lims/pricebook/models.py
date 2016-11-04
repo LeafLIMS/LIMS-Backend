@@ -1,6 +1,8 @@
 from django.db import models
+import reversion
 
 
+@reversion.register()
 class Price(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=20)
@@ -11,6 +13,7 @@ class Price(models.Model):
         return self.name
 
 
+@reversion.register()
 class PriceBook(models.Model):
     name = models.CharField(max_length=50, db_index=True)
     description = models.TextField(null=True, blank=True)
