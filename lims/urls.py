@@ -8,7 +8,7 @@ from rest_framework import routers
 from lims.users.views import ObtainAuthToken, UserViewSet, GroupViewSet
 from lims.permissions.views import PermissionViewSet
 
-from lims.shared.views import OrganismViewSet
+from lims.shared.views import OrganismViewSet  # TODO Add Trigger imports here
 
 from lims.orders.views import OrderViewSet
 from lims.addressbook.views import AddressViewSet
@@ -58,6 +58,8 @@ router.register(r'tasks', TaskViewSet, base_name='tasks')
 router.register(r'taskfields', TaskFieldViewSet, base_name='taskfields')
 router.register(r'filetemplates', FileTemplateViewSet, base_name='filetemplates')
 router.register(r'copyfiles', CopyFileDriverViewSet, base_name='copyfiles')
+
+# TODO Add Trigger URLs here
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),

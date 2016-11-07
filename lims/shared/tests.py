@@ -3,9 +3,9 @@ from rest_framework import status
 from .models import Organism
 
 
-class SharedTestCase(LoggedInTestCase):
+class OrganismTestCase(LoggedInTestCase):
     def setUp(self):
-        super(SharedTestCase, self).setUp()
+        super(OrganismTestCase, self).setUp()
 
         self._human = \
             Organism.objects.create(name="Homo sapiens",
@@ -102,3 +102,5 @@ class SharedTestCase(LoggedInTestCase):
         response = self._client.delete("/organisms/%d/" % self._mouse.id)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertIs(Organism.objects.filter(name="Mus musculus").exists(), False)
+
+# TODO Add Trigger tests here
