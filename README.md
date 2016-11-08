@@ -30,7 +30,7 @@ export SALESFORCE_USERNAME='<salesforce username>'
 export SALESFORCE_PASSWORD='<salesforce password>'
 export SALESFORCE_TOKEN='<salesforce token>'
 
-export PROJECT_IDENTIFIER_PREFIX='PROJ'
+export PROJECT_IDENTIFIER_PREFIX='P'
 export PROJECT_IDENTIFIER_START=100 
 
 export LISTEN_HOST=0.0.0.0
