@@ -14,6 +14,7 @@ class PriceBookViewSet(viewsets.ModelViewSet):
     queryset = PriceBook.objects.all()
     serializer_class = PriceBookSerializer
     permission_classes = (IsInAdminGroupOrRO,)
+    filter_fields = ('name', 'identifier',)
 
     @list_route()
     def updateall(self, request):
