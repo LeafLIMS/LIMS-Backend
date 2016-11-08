@@ -17,7 +17,8 @@ env:
 before_script:
   - psql -U $DB_USER -c "create database $DB_NAME;"
   - python manage.py migrate
-  - echo "from django.contrib.auth.models import User; User.objects.create_superuser('test', 'test@example.com', 'test')" | python manage.py shell
+  - python manage.py runscript create_superuser
+  - python manage.py createinitialrevisions
 install: "pip install -r requirements.txt"
 script: 
   - flake8

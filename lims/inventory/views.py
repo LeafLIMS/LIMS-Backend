@@ -16,7 +16,7 @@ from rest_framework.filters import (OrderingFilter,
 from lims.permissions.permissions import (IsInAdminGroupOrRO,
                                           ViewPermissionsMixin, ExtendedObjectPermissions,
                                           ExtendedObjectPermissionsFilter)
-from lims.shared.mixins import StatsViewMixin
+from lims.shared.mixins import StatsViewMixin, AuditTrailViewMixin
 from lims.filetemplate.models import FileTemplate
 from .models import Set, Item, ItemTransfer, ItemType, Location, AmountMeasure
 from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationSerializer,
@@ -28,7 +28,7 @@ from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationS
 ureg = UnitRegistry()
 
 
-class LeveledMixin:
+class LeveledMixin(AuditTrailViewMixin):
     """
     Provide a display value for a heirarchy of elements
     """
@@ -46,7 +46,7 @@ class LeveledMixin:
         }
 
 
-class MeasureViewSet(viewsets.ModelViewSet):
+class MeasureViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = AmountMeasure.objects.all()
     serializer_class = AmountMeasureSerializer
     permission_classes = (IsInAdminGroupOrRO,)
@@ -237,7 +237,7 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
         return Response({'message': 'You must provide a transfer ID'}, status=400)
 
 
-class SetViewSet(viewsets.ModelViewSet, ViewPermissionsMixin):
+class SetViewSet(AuditTrailViewMixin, viewsets.ModelViewSet, ViewPermissionsMixin):
     queryset = Set.objects.all()
     serializer_class = SetSerializer
     permission_classes = (ExtendedObjectPermissions,)

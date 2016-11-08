@@ -1,7 +1,9 @@
 from django.db import models
+import reversion
 from django.contrib.auth.models import User
 
 
+@reversion.register()
 class Address(models.Model):
     institution_name = models.CharField(max_length=200)
     address_1 = models.CharField(max_length=100)

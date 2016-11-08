@@ -5,9 +5,10 @@ from .models import Address
 from .serializers import AddressSerializer
 
 from lims.permissions.permissions import IsAddressOwner, IsAddressOwnerFilter
+from lims.shared.mixins import AuditTrailViewMixin
 
 
-class AddressViewSet(viewsets.ModelViewSet):
+class AddressViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     """
     Provide a list of address for the logged in user.
 

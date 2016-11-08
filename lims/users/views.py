@@ -15,6 +15,7 @@ import django_filters
 from .serializers import (UserSerializer, StaffUserSerializer, SuperUserSerializer,
                           GroupSerializer)
 from lims.permissions.permissions import (IsInAdminGroupOrRO, IsInAdminGroupOrTheUser)
+from lims.shared.mixins import AuditTrailViewMixin
 
 
 class ObtainAuthToken(APIView):
@@ -68,7 +69,7 @@ class UserFilter(django_filters.FilterSet):
         fields = ['has_crm_details']
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     """
     User data.
 
@@ -113,7 +114,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class GroupViewSet(viewsets.ModelViewSet):
+class GroupViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = (IsInAdminGroupOrRO,)

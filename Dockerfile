@@ -31,6 +31,8 @@ RUN mkdir getlims
 COPY . getlims
 WORKDIR /usr/src/app/getlims
 RUN pip install -r requirements.txt
+RUN python manage.py migrate
+RUN python manage.py createinitialrevisions
 
 CMD ["sh", "-c", "gunicorn lims.wsgi -w 2 -b $LISTEN_HOST:$LISTEN_PORT --log-level -"]
 

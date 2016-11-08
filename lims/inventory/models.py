@@ -1,10 +1,12 @@
 from django.db import models
+import reversion
 from django.contrib.auth.models import User
 
 from mptt.models import MPTTModel, TreeForeignKey
 from pint import UnitRegistry, UndefinedUnitError
 
 
+@reversion.register()
 class ItemType(MPTTModel):
     """
     Provides a tree based model of types, each which can have parents/children
@@ -34,6 +36,7 @@ class ItemType(MPTTModel):
         return self.name
 
 
+@reversion.register()
 class Tag(models.Model):
     name = models.CharField(max_length=30)
 
@@ -41,6 +44,7 @@ class Tag(models.Model):
         return self.name
 
 
+@reversion.register()
 class AmountMeasure(models.Model):
     """
     A measurement and corrosponding postfix
@@ -57,6 +61,7 @@ class AmountMeasure(models.Model):
         return "{} ({})".format(self.name, self.symbol)
 
 
+@reversion.register()
 class Location(MPTTModel):
     """
     Provides a physical location for an item
@@ -84,6 +89,7 @@ class Location(MPTTModel):
         return self.name
 
 
+@reversion.register()
 class Set(models.Model):
     """
     A named set of items in the inventory
@@ -104,6 +110,7 @@ class Set(models.Model):
         return self.name
 
 
+@reversion.register()
 class Item(models.Model):
     """
     Represents an item in a inventory
@@ -149,6 +156,7 @@ class Item(models.Model):
         return self.name
 
 
+@reversion.register()
 class ItemProperty(models.Model):
     """
     Represents a singular user defined property of an item
@@ -161,6 +169,7 @@ class ItemProperty(models.Model):
         return self.name
 
 
+@reversion.register()
 class ItemTransfer(models.Model):
     """
     Represents an amount of item in transfer for task

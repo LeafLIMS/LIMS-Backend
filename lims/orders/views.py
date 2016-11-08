@@ -9,12 +9,13 @@ from rest_framework.decorators import list_route
 from rest_framework.response import Response
 
 from lims.shared.pagination import PageNumberPaginationSmall
+from lims.shared.mixins import AuditTrailViewMixin
 
 from .models import Order
 from .serializers import OrderSerializer
 
 
-class OrderViewSet(viewsets.ModelViewSet):
+class OrderViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
     pagination_class = PageNumberPaginationSmall

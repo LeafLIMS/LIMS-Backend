@@ -1,6 +1,8 @@
 from django.db import models
+import reversion
 
 
+@reversion.register()
 class Organism(models.Model):
     """
     Basic information on an Organism
@@ -12,6 +14,7 @@ class Organism(models.Model):
         return self.name
 
 
+@reversion.register()
 class LimsPermission(models.Model):
     """
     Allow access to the LIMS system

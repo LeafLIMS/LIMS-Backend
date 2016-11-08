@@ -1,4 +1,5 @@
 from django.db import models
+import reversion
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import DateTimeRangeField
 from django.utils import timezone
@@ -8,6 +9,7 @@ from psycopg2.extras import DateTimeTZRange
 from lims.inventory.models import Location
 
 
+@reversion.register()
 class Equipment(models.Model):
     EQUIPMENT_STATUS_CHOICES = (
         ('active', 'Active',),
@@ -38,6 +40,7 @@ class Equipment(models.Model):
         return self.name
 
 
+@reversion.register()
 class EquipmentReservation(models.Model):
     start = models.DateTimeField(db_index=True)
     end = models.DateTimeField(db_index=True)

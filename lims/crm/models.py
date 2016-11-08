@@ -1,10 +1,12 @@
 from django.db import models
+import reversion
 from django.contrib.auth.models import User
 from django.conf import settings
 
 from lims.orders.models import Order
 
 
+@reversion.register()
 class CRMAccount(models.Model):
     contact_identifier = models.CharField(max_length=50)
     account_identifier = models.CharField(max_length=50)
@@ -28,6 +30,7 @@ class CRMAccount(models.Model):
         return self.user.username
 
 
+@reversion.register()
 class CRMProject(models.Model):
     project_identifier = models.CharField(max_length=50)
     name = models.CharField(max_length=300)
@@ -52,6 +55,7 @@ class CRMProject(models.Model):
         return self.name
 
 
+@reversion.register()
 class CRMQuote(models.Model):
     quote_identifier = models.CharField(max_length=50)
 

@@ -245,3 +245,53 @@ class AddressTestCase(LoggedInTestCase):
         response = self._client.delete("/addresses/%d/" % self._joeBloggsAddress.id)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertIs(Address.objects.filter(institution_name="Beetroot Institute").exists(), False)
+
+    def _setup_audittrail(self):
+        self._asAdmin()
+        new_address = {"institution_name": "Leek Institute",
+                       "address_1": "45 Mole Hill",
+                       "address_2": "High St",
+                       "city": "Cardiff",
+                       "postcode": "CF1 1AA",
+                       "country": "Wales",
+                       "user": self._janeDoe.id}
+        response = self._client.post("/addresses/", new_address, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        address = Address.objects.get(institution_name="Leek Institute")
+        updated_address = {"institution_name": "Onion Institute Revised"}
+        response = self._client.patch("/addresses/%d/" % address.id,
+                                      updated_address, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_admin_audit_history(self):
+        self._setup_audittrail()
+        address = Address.objects.get(institution_name="Onion Institute Revised")
+        response = self._client.get("/addresses/%d/history/" % address.id)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        history = response.data
+        self.assertEqual(len(history), 2)
+        v0 = history[0]
+        v1 = history[1]
+        self.assertEqual(v0["version"], 0)
+        self.assertEqual(v0["data"]["institution_name"], "Leek Institute")
+        self.assertEqual(v1["version"], 1)
+        self.assertEqual(v1["data"]["institution_name"], "Onion Institute Revised")
+
+    def test_admin_audit_compare(self):
+        self._setup_audittrail()
+        address = Address.objects.get(institution_name="Onion Institute Revised")
+        response = self._client.get("/addresses/%d/compare/?version1=0&version2=1" % address.id)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        changes = response.data
+        self.assertEqual(len(changes), 1)
+        self.assertEqual(changes["institution_name"]["version1"], "Leek Institute")
+        self.assertEqual(changes["institution_name"]["version2"], "Onion Institute Revised")
+
+    def test_admin_audit_revert(self):
+        self._setup_audittrail()
+        address = Address.objects.get(institution_name="Onion Institute Revised")
+        response = self._client.post("/addresses/%d/revert/?version=0" % address.id, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIs(Address.objects.filter(institution_name="Onion Institute Revised").exists(),
+                      False)
+        self.assertIs(Address.objects.filter(institution_name="Leek Institute").exists(), True)

@@ -39,6 +39,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'reversion',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_docs',
@@ -76,6 +77,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'reversion.middleware.RevisionMiddleware'
 )
 
 AUTHENTICATION_BACKENDS = (
@@ -120,6 +122,7 @@ DATABASES = {
     }
 }
 
+ATOMIC_REQUESTS = True
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/

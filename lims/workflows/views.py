@@ -29,7 +29,7 @@ from lims.permissions.permissions import (ViewPermissionsMixin,
                                           ExtendedObjectPermissions,
                                           ExtendedObjectPermissionsFilter)
 
-from lims.shared.mixins import StatsViewMixin
+from lims.shared.mixins import StatsViewMixin, AuditTrailViewMixin
 from lims.filetemplate.models import FileTemplate
 from lims.inventory.models import (Item, ItemTransfer, AmountMeasure, Location,
                                    ItemType)
@@ -58,7 +58,7 @@ from lims.datastore.serializers import DataEntrySerializer
 from lims.equipment.models import Equipment
 
 
-class WorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
+class WorkflowViewSet(AuditTrailViewMixin, ViewPermissionsMixin, viewsets.ModelViewSet):
     """
     Provide a list of workflow templates that are available.
 
@@ -116,7 +116,7 @@ class WorkflowViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
         return Response({'message': 'Please provide a task position'}, status=400)
 
 
-class RunViewSet(ViewPermissionsMixin, StatsViewMixin, viewsets.ModelViewSet):
+class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, viewsets.ModelViewSet):
     """
     List all runs, active only be default
     """
@@ -675,7 +675,7 @@ class TaskFilterSet(django_filters.FilterSet):
         }
 
 
-class TaskViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
+class TaskViewSet(AuditTrailViewMixin, ViewPermissionsMixin, viewsets.ModelViewSet):
     """
     Provide a list of TaskTemplates available
     """
@@ -708,7 +708,7 @@ class TaskViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
             return Response(serializer.data)  # Raw data, not objects
 
 
-class TaskFieldViewSet(ViewPermissionsMixin, viewsets.ModelViewSet):
+class TaskFieldViewSet(AuditTrailViewMixin, ViewPermissionsMixin, viewsets.ModelViewSet):
     """
     Provides a list of all task fields
     """
