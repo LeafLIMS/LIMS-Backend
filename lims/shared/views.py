@@ -19,7 +19,7 @@ class OrganismViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     permission_classes = (IsInAdminGroupOrRO,)
 
 
-class TriggerSetViewSet(viewsets.ModelViewSet):
+class TriggerSetViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = TriggerSet.objects.all()
     serializer_class = TriggerSetSerializer
     permission_classes = (IsInAdminGroupOrRO,)
@@ -38,13 +38,13 @@ class TriggerSetViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class TriggerViewSet(viewsets.ModelViewSet):
+class TriggerViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = Trigger.objects.all()
     serializer_class = TriggerSerializer
     permission_classes = (IsInAdminGroupOrRO,)
 
 
-class TriggerSubscriptionViewSet(viewsets.ModelViewSet):
+class TriggerSubscriptionViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     serializer_class = TriggerSubscriptionSerializer
     filter_backends = (DjangoFilterBackend,)
 

@@ -1,8 +1,8 @@
 from django.db import models
 import reversion
 import six
+import sys
 from django.contrib.auth.models import User
-from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.core.mail import send_mail
 from lims.settings import ALERT_EMAIL_FROM
@@ -53,8 +53,9 @@ class TriggerSet(models.Model):
                          default='{name}: {model} instance {instance} triggered on {date}.')
 
     @staticmethod
-    @receiver(post_save, dispatch_uid='Fire Trigger Sets')
-    def _fire_trigger_sets(sender, instance=None, created=False, **kwargs):
+    def _fire_trigger_sets(sender, instance=None, created=False, raw=False, **kwargs):
+        if raw:
+            return  # We do not want to fire on loading raw data
         model = sender.__name__
         for triggerSet in TriggerSet.objects.filter(model=model):
             if triggerSet.all_triggers_fire(instance, created):
@@ -94,6 +95,9 @@ class TriggerSet(models.Model):
         for field, value in replace_fields:
             content = content.replace('{{{}}}'.format(field), value)
         return content
+
+if 'test' not in sys.argv:  # We do not want to fire when running migration on test db
+    post_save.connect(TriggerSet._fire_trigger_sets, dispatch_uid='Fire Trigger Sets')
 
 
 @reversion.register()

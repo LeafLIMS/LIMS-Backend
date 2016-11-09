@@ -9,31 +9,34 @@ class OrganismSerializer(serializers.ModelSerializer):
         model = Organism
 
 
-class TriggerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Trigger
-        depth = 1
-
-
 class TriggerSetSerializer(serializers.ModelSerializer):
     class Meta:
         model = TriggerSet
-        depth = 1
+
+
+class TriggerSerializer(serializers.ModelSerializer):
+    triggerSet = TriggerSetSerializer(read_only=True)
+
+    class Meta:
+        model = Trigger
 
 
 class TriggerAlertSerializer(serializers.ModelSerializer):
+    triggerSet = TriggerSetSerializer(read_only=True)
+
     class Meta:
         model = TriggerAlert
-        depth = 2
 
 
 class TriggerAlertStatusSerializer(serializers.ModelSerializer):
+    triggerAlert = TriggerAlertSerializer(read_only=True)
+
     class Meta:
         model = TriggerAlertStatus
-        depth = 3
 
 
 class TriggerSubscriptionSerializer(serializers.ModelSerializer):
+    triggerSet = TriggerSetSerializer(read_only=True)
+
     class Meta:
         model = TriggerSubscription
-        depth = 2
