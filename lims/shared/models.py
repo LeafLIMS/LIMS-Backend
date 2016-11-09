@@ -37,54 +37,53 @@ class TriggerSet(models.Model):
     LOW = 'L'
     MEDIUM = 'M'
     HIGH = 'H'
-    SEVERITY_CHOICES = {
-        LOW: 'low',
-        MEDIUM: 'medium',
-        HIGH: 'high'
-    }
-    model = models.CharField(blank=False, null=False, default='Item')
+    SEVERITY_CHOICES = (
+        (LOW, 'low',),
+        (MEDIUM, 'medium',),
+        (HIGH, 'high',)
+    )
+    model = models.CharField(max_length=80, blank=False, null=False, default='Item')
     severity = models.CharField(blank=False, null=False, max_length=1, choices=SEVERITY_CHOICES,
                                 default=LOW)
-    name = models.CharField(blank=False, null=False, default="My Trigger")
-    emailTitle = models.CharField(blank=False, null=False, default='Alert from GET LIMS')
+    name = models.TextField(blank=False, null=False, default="My Trigger")
+    emailTitle = models.CharField(max_length=255, blank=False, null=False,
+                                  default='Alert from GET LIMS')
     emailTemplate = \
-        models.CharField(blank=False, null=False,
+        models.TextField(blank=False, null=False,
                          default='{name}: {model} instance {instance} triggered on {date}.')
 
     @staticmethod
-    @receiver(post_save, dispatch_uid='Fire Triggers')
-    def fire_trigger(sender, instance=None, created=False, **kwargs):
+    @receiver(post_save, dispatch_uid='Fire Trigger Sets')
+    def _fire_trigger_sets(sender, instance=None, created=False, **kwargs):
         model = sender.__name__
-        for triggerSet in TriggerSet.objects.filter(model=model).all():
-            if triggerSet.all_triggers_fire(instance):
+        for triggerSet in TriggerSet.objects.filter(model=model):
+            if triggerSet.all_triggers_fire(instance, created):
                 email_recipients = []
                 alert = TriggerAlert.objects.create(triggerSet=triggerSet, instanceId=instance.id)
                 for subscription in triggerSet.subscriptions.all():
+                    alert.statuses.create(user=subscription.user,
+                                          status=TriggerAlertStatus.ACTIVE,
+                                          lastUpdatedBy=subscription.user)
                     if subscription.email:
                         email_recipients.append(subscription.user.email)
-                    status = TriggerAlertStatus.objects.create(user=subscription.user,
-                                                               status=TriggerAlertStatus.ACTIVE,
-                                                               lastUpdatedBy=subscription.user,
-                                                               triggerAlert=alert)
-                    status.save()
                 alert.save()
                 if len(email_recipients) > 0:
-                    content = triggerSet.complete_email_template(instance, alert.fired)
+                    content = triggerSet._complete_email_template(instance, alert.fired)
                     send_mail(
                         triggerSet.emailTitle,
                         content,
                         ALERT_EMAIL_FROM,
                         email_recipients,
-                        fail_silently=False,
+                        fail_silently=True,
                     )
 
-    def all_triggers_fire(self, instance):
+    def all_triggers_fire(self, instance=None, created=False):
         for trigger in self.triggers.all():
-            if not trigger.trigger_fires(instance):
+            if not trigger.trigger_fires(instance, created):
                 return False
         return True
 
-    def complete_email_template(self, instance, fired):
+    def _complete_email_template(self, instance, fired):
         content = self.emailTemplate
         replace_fields = {
             "model": self.model,
@@ -99,37 +98,42 @@ class TriggerSet(models.Model):
 
 @reversion.register()
 class Trigger(models.Model):
-    EQ = '='
+    EQ = '=='
     LE = '<='
     GE = '>='
     LT = '<'
     GT = '>'
     NE = '!='
-    OPERATOR_CHOICES = {
-        LT: 'less than',
-        LE: 'less than or equal to',
-        EQ: 'equal to',
-        GE: 'greater than or equal to',
-        GT: 'greater than',
-        NE: 'not equal to'
-    }
+    OPERATOR_CHOICES = (
+        (LT, 'less than',),
+        (LE, 'less than or equal to',),
+        (EQ, 'equal to',),
+        (GE, 'greater than or equal to',),
+        (GT, 'greater than',),
+        (NE, 'not equal to',),
+    )
     triggerSet = models.ForeignKey(TriggerSet, related_name="triggers")
-    field = models.CharField(blank=False, null=False, default='id')
+    field = models.CharField(max_length=80, blank=False, null=False, default='id')
     operator = models.CharField(blank=False, null=False, max_length=2, choices=OPERATOR_CHOICES,
                                 default=EQ)
-    value = models.CharField(blank=False, null=False, default='1')
+    value = models.CharField(max_length=255, blank=False, null=False, default='1')
+    fireOnCreate = False
 
-    def trigger_fires(self, instance):
-        if hasattr(instance, self.field):
-            test_value = self.value
-            instance_value = getattr(instance, self.field)
-            if isinstance(instance_value, six.string_types):
-                # Wrap only strings in quotes
-                test_value = "'%s'" % self.value
-                instance_value = "'%s'" % instance_value
-            expr = '%s%s%s' % (instance_value, self.operator, test_value)
-            return eval(expr, {"__builtins__": {}})
-        return False
+    def trigger_fires(self, instance=None, created=False):
+        if not instance:
+            return False
+        if created and not self.fireOnCreate:
+            return False
+        if not hasattr(instance, self.field):
+            return False
+        test_value = self.value
+        instance_value = getattr(instance, self.field)
+        if isinstance(instance_value, six.string_types):
+            # Wrap only strings in quotes
+            test_value = "'%s'" % self.value
+            instance_value = "'%s'" % instance_value
+        expr = '%s %s %s' % (instance_value, self.operator, test_value)
+        return eval(expr, {"__builtins__": {}})
 
 
 @reversion.register()
@@ -144,16 +148,17 @@ class TriggerAlertStatus(models.Model):
     ACTIVE = 'A'
     SILENCED = 'S'
     DISMISSED = 'D'
-    STATUS_CHOICES = {
-        ACTIVE: 'Active',
-        SILENCED: 'Silenced',
-        DISMISSED: 'Dismissed'
-    }
-    user = models.ManyToManyField(User)
+    STATUS_CHOICES = (
+        (ACTIVE, 'Active',),
+        (SILENCED, 'Silenced',),
+        (DISMISSED, 'Dismissed',),
+    )
+    user = models.ForeignKey(User, related_name="alerts")
     status = models.CharField(blank=False, null=False, max_length=1, choices=STATUS_CHOICES,
                               default=ACTIVE)
     lastUpdated = models.DateTimeField(auto_now=True)
-    lastUpdatedBy = models.ForeignKey(User)
+    lastUpdatedBy = models.ForeignKey(User, related_name="updatedalerts", blank=True, null=True,
+                                      on_delete=models.SET_NULL)
     triggerAlert = models.ForeignKey(TriggerAlert, related_name="statuses")
 
 
@@ -161,4 +166,4 @@ class TriggerAlertStatus(models.Model):
 class TriggerSubscription(models.Model):
     triggerSet = models.ForeignKey(TriggerSet, related_name="subscriptions")
     user = models.ForeignKey(User)
-    email = models.BooleanField(default=False, blank=False, null=False, )
+    email = models.BooleanField(default=False, blank=False, null=False)

@@ -257,7 +257,9 @@ DEFAULT_USER_PERMISSIONS = (
     "Can add equipment reservation",
     "Can change equipment reservation",
     "Can delete equipment reservation",
-    # TODO Add Trigger permissions here
+    "Can add trigger subscription",
+    "Can change trigger subscription",
+    "Can delete trigger subscription",
 )
 DEFAULT_STAFF_PERMISSIONS = (
     "Can add order",

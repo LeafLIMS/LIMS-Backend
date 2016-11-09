@@ -8,7 +8,8 @@ from rest_framework import routers
 from lims.users.views import ObtainAuthToken, UserViewSet, GroupViewSet
 from lims.permissions.views import PermissionViewSet
 
-from lims.shared.views import OrganismViewSet  # TODO Add Trigger imports here
+from lims.shared.views import OrganismViewSet, TriggerAlertStatusViewSet, TriggerSetViewSet, \
+    TriggerViewSet, TriggerSubscriptionViewSet
 
 from lims.orders.views import OrderViewSet
 from lims.addressbook.views import AddressViewSet
@@ -59,16 +60,19 @@ router.register(r'taskfields', TaskFieldViewSet, base_name='taskfields')
 router.register(r'filetemplates', FileTemplateViewSet, base_name='filetemplates')
 router.register(r'copyfiles', CopyFileDriverViewSet, base_name='copyfiles')
 
-# TODO Add Trigger URLs here
+router.register(r'triggers', TriggerViewSet, base_name='triggers')
+router.register(r'triggersets', TriggerSetViewSet, base_name='triggersets')
+router.register(r'subscriptions', TriggerSubscriptionViewSet, base_name='subscriptions')
+router.register(r'alerts', TriggerAlertStatusViewSet, base_name='alerts')
 
 urlpatterns = [
-    url(r'^admin/', include(admin.site.urls)),
-    url(r'^users/token/', ObtainAuthToken.as_view()),
-    url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    url(r'^crm/user/', CRMUserView.as_view()),
-    url(r'^crm/project/update/', CRMUpdateProjectView.as_view()),
-    url(r'^crm/project/', CRMProjectView.as_view()),
-    url(r'^crm/link/', CRMLinkView.as_view()),
-    url(r'^docs/', include('rest_framework_docs.urls')),
-    url(r'^', include(router.urls)),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+                  url(r'^admin/', include(admin.site.urls)),
+                  url(r'^users/token/', ObtainAuthToken.as_view()),
+                  url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+                  url(r'^crm/user/', CRMUserView.as_view()),
+                  url(r'^crm/project/update/', CRMUpdateProjectView.as_view()),
+                  url(r'^crm/project/', CRMProjectView.as_view()),
+                  url(r'^crm/link/', CRMLinkView.as_view()),
+                  url(r'^docs/', include('rest_framework_docs.urls')),
+                  url(r'^', include(router.urls)),
+              ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
