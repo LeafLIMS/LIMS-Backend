@@ -68,7 +68,7 @@ class TriggerAlertStatusViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin
         else:
             return TriggerAlertStatus.objects.filter(user=self.request.user)
 
-    @detail_route()
+    @detail_route(methods=['DELETE'])
     def silence(self, request, pk=None):
         # Check have permissions
         alertstatus = self.get_object()
@@ -83,7 +83,7 @@ class TriggerAlertStatusViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin
         alertstatus.save()
         return Response(status=204)
 
-    @detail_route()
+    @detail_route(methods=['DELETE'])
     def dismiss(self, request, pk=None):
         alertstatus = self.get_object()
         if alertstatus is None:

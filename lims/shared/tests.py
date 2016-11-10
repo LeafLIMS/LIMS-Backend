@@ -267,6 +267,8 @@ class TriggerTestCase(LoggedInTestCase):
         response = self._client.patch("/addresses/%d/" % self._joeBloggsAddress.id,
                                       updated_address, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Disable signals to avoid affecting other tests
+        post_save.disconnect(receiver=TriggerSet._fire_trigger_sets, dispatch_uid='Fire Trigger Sets')
 
     # TODO admin create alert - fail
     # TODO admin edit alert - fail

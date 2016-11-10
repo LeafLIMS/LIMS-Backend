@@ -1,11 +1,10 @@
 from django.db import models
 import reversion
 import six
-import sys
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.core.mail import send_mail
-from lims.settings import ALERT_EMAIL_FROM
+from lims.settings import ALERT_EMAIL_FROM, TESTMODE
 
 
 @reversion.register()
@@ -96,8 +95,9 @@ class TriggerSet(models.Model):
             content = content.replace('{{{}}}'.format(field), value)
         return content
 
-if 'test' not in sys.argv:  # We do not want to fire when running migration on test db
-    post_save.connect(TriggerSet._fire_trigger_sets, dispatch_uid='Fire Trigger Sets')
+    # Yes this really is code in a class, so that it gets executed on load
+    if not TESTMODE:  # We do not want to fire when running migration on test db
+        post_save.connect(_fire_trigger_sets, dispatch_uid='Fire Trigger Sets')
 
 
 @reversion.register()
