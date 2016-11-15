@@ -4,6 +4,7 @@ from django.contrib.auth.models import Group
 from rest_framework.response import Response
 from rest_framework.filters import DjangoFilterBackend
 from rest_framework.serializers import ValidationError
+import datetime
 
 from lims.permissions.permissions import IsInAdminGroupOrRO
 from lims.shared.mixins import AuditTrailViewMixin
@@ -89,6 +90,8 @@ class TriggerAlertStatusViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin
             return Response(status=403)
         # Silence for this user only
         alertstatus.status = TriggerAlertStatus.SILENCED
+        alertstatus.last_updated_by = request.user
+        alertstatus.last_updated = datetime.datetime.now()
         alertstatus.save()
         return Response(status=204)
 
@@ -105,5 +108,7 @@ class TriggerAlertStatusViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin
         for related_alert in alertstatus.triggeralert.statuses.all():
             if related_alert.status == TriggerAlertStatus.ACTIVE:
                 related_alert.status = TriggerAlertStatus.DISMISSED
+                related_alert.last_updated_by = request.user
+                related_alert.last_updated = datetime.datetime.now()
                 related_alert.save()
         return Response(status=204)
