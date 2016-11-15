@@ -1,7 +1,6 @@
 from lims.shared.loggedintestcase import LoggedInTestCase
 from rest_framework import status
-from .models import Organism, Trigger, TriggerAlertStatus, TriggerAlert, TriggerSet, \
-    TriggerSubscription
+from .models import Organism, Trigger, TriggerAlertStatus, TriggerSet, TriggerSubscription
 from lims.addressbook.models import Address
 from django.db.models.signals import post_save
 import datetime
