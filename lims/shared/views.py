@@ -3,6 +3,7 @@ from rest_framework.decorators import detail_route
 from django.contrib.auth.models import Group
 from rest_framework.response import Response
 from rest_framework.filters import DjangoFilterBackend
+from rest_framework.serializers import ValidationError
 
 from lims.permissions.permissions import IsInAdminGroupOrRO
 from lims.shared.mixins import AuditTrailViewMixin
@@ -55,6 +56,14 @@ class TriggerSubscriptionViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
         else:
             return TriggerSubscription.objects.filter(user=self.request.user)
 
+    def perform_create(self, serializer):
+        # Allow an admin user to set the user but otherwise can only create own subscriptions
+        if self.request.user.groups.filter(name='admin').exists() or self.request.user == \
+                serializer.validated_data['user']:
+            serializer.save()
+        else:
+            raise ValidationError('You cannot add a subscription to another user')
+
 
 class TriggerAlertStatusViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
                                 viewsets.GenericViewSet):  # NB No create, edit, or delete
@@ -93,8 +102,8 @@ class TriggerAlertStatusViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin
                 not Group.objects.get(name="admin") in self.request.user.groups.all():
             return Response(status=403)
         # Dismiss for all users that have not already silenced this alert
-        for relatedAlert in alertstatus.triggerAlert.statuses.all():
-            if relatedAlert.status == TriggerAlertStatus.ACTIVE:
-                relatedAlert.status = TriggerAlertStatus.DISMISSED
-                relatedAlert.save()
+        for related_alert in alertstatus.triggeralert.statuses.all():
+            if related_alert.status == TriggerAlertStatus.ACTIVE:
+                related_alert.status = TriggerAlertStatus.DISMISSED
+                related_alert.save()
         return Response(status=204)

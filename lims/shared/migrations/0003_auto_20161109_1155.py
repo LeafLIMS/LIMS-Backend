@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(serialize=False, primary_key=True, verbose_name='ID', auto_created=True)),
                 ('fired', models.DateTimeField(auto_now_add=True)),
-                ('instanceId', models.IntegerField()),
+                ('instance_id', models.IntegerField()),
             ],
         ),
         migrations.CreateModel(
@@ -36,9 +36,9 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(serialize=False, primary_key=True, verbose_name='ID', auto_created=True)),
                 ('status', models.CharField(default='A', choices=[('A', 'Active'), ('S', 'Silenced'), ('D', 'Dismissed')], max_length=1)),
-                ('lastUpdated', models.DateTimeField(auto_now=True)),
-                ('lastUpdatedBy', models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=django.db.models.deletion.SET_NULL, blank=True, null=True, related_name='updatedalerts')),
-                ('triggerAlert', models.ForeignKey(to='shared.TriggerAlert', related_name='statuses')),
+                ('last_updated', models.DateTimeField(auto_now=True)),
+                ('last_updated_by', models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=django.db.models.deletion.SET_NULL, blank=True, null=True, related_name='updatedalerts')),
+                ('triggeralert', models.ForeignKey(to='shared.TriggerAlert', related_name='statuses')),
                 ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL, related_name='alerts')),
             ],
         ),
@@ -49,8 +49,8 @@ class Migration(migrations.Migration):
                 ('model', models.CharField(default='Item', max_length=80)),
                 ('severity', models.CharField(default='L', choices=[('L', 'low'), ('M', 'medium'), ('H', 'high')], max_length=1)),
                 ('name', models.TextField(default='My Trigger')),
-                ('emailTitle', models.CharField(default='Alert from GET LIMS', max_length=255)),
-                ('emailTemplate', models.TextField(default='{name}: {model} instance {instance} triggered on {date}.')),
+                ('email_title', models.CharField(default='Alert from GET LIMS', max_length=255)),
+                ('email_template', models.TextField(default='{name}: {model} instance {instance} triggered on {date}.')),
             ],
         ),
         migrations.CreateModel(
@@ -58,18 +58,18 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(serialize=False, primary_key=True, verbose_name='ID', auto_created=True)),
                 ('email', models.BooleanField(default=False)),
-                ('triggerSet', models.ForeignKey(to='shared.TriggerSet', related_name='subscriptions')),
+                ('triggerset', models.ForeignKey(to='shared.TriggerSet', related_name='subscriptions')),
                 ('user', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
             ],
         ),
         migrations.AddField(
             model_name='triggeralert',
-            name='triggerSet',
+            name='triggerset',
             field=models.ForeignKey(to='shared.TriggerSet', related_name='alerts'),
         ),
         migrations.AddField(
             model_name='trigger',
-            name='triggerSet',
+            name='triggerset',
             field=models.ForeignKey(to='shared.TriggerSet', related_name='triggers'),
         ),
     ]

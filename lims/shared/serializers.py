@@ -15,28 +15,32 @@ class TriggerSetSerializer(serializers.ModelSerializer):
 
 
 class TriggerSerializer(serializers.ModelSerializer):
-    triggerSet = TriggerSetSerializer(read_only=True)
+    triggerset_id = serializers.PrimaryKeyRelatedField(
+        queryset=TriggerSet.objects.all(), source='triggerset', write_only=True)
+    triggerset = TriggerSetSerializer(read_only=True)
 
     class Meta:
         model = Trigger
 
 
 class TriggerAlertSerializer(serializers.ModelSerializer):
-    triggerSet = TriggerSetSerializer(read_only=True)
+    triggerset = TriggerSetSerializer(read_only=True)
 
     class Meta:
         model = TriggerAlert
 
 
 class TriggerAlertStatusSerializer(serializers.ModelSerializer):
-    triggerAlert = TriggerAlertSerializer(read_only=True)
+    triggeralert = TriggerAlertSerializer(read_only=True)
 
     class Meta:
         model = TriggerAlertStatus
 
 
 class TriggerSubscriptionSerializer(serializers.ModelSerializer):
-    triggerSet = TriggerSetSerializer(read_only=True)
+    triggerset_id = serializers.PrimaryKeyRelatedField(
+        queryset=TriggerSet.objects.all(), source='triggerset', write_only=True)
+    triggerset = TriggerSetSerializer(read_only=True)
 
     class Meta:
         model = TriggerSubscription
