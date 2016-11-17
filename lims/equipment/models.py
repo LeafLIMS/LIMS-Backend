@@ -40,7 +40,7 @@ class Equipment(models.Model):
         return self.name
 
 
-@reversion.register()
+# @reversion.register()
 class EquipmentReservation(models.Model):
     start = models.DateTimeField(db_index=True)
     end = models.DateTimeField(db_index=True)
@@ -60,6 +60,10 @@ class EquipmentReservation(models.Model):
 
     checked_in = models.BooleanField(default=False)
 
+    def full_user_name(self):
+        return '{} {}'.format(self.reserved_by.first_name,
+                              self.reserved_by.last_name)
+
     def __str__(self):
         return '{} reserved for {} from {} to {}'.format(
             self.equipment_reserved.name, self.title(),
@@ -77,7 +81,4 @@ class EquipmentReservation(models.Model):
         super(EquipmentReservation, self).save(*args, **kwargs)
 
     def title(self):
-        if self.reserved_for:
-            return self.reserved_for
-        else:
-            return self.reserved_by.username
+        return self.full_user_name()

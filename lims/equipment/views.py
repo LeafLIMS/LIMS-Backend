@@ -30,6 +30,9 @@ class EquipmentReservationFilter(django_filters.FilterSet):
             'start': ['exact', 'gte'],
             'end': ['exact', 'lte'],
             'equipment_reserved': ['exact'],
+            'checked_in': ['exact'],
+            'is_confirmed': ['exact'],
+            'reserved_by__username': ['exact'],
         }
 
 

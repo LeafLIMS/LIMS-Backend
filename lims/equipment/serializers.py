@@ -21,6 +21,7 @@ class EquipmentReservationSerializer(serializers.ModelSerializer):
     reserved_by = serializers.SlugRelatedField(
         read_only=True,
         slug_field='username')
+    full_user_name = serializers.CharField(read_only=True)
 
     class Meta:
         model = EquipmentReservation
