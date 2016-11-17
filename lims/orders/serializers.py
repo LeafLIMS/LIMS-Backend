@@ -1,17 +1,11 @@
-from django.contrib.auth.models import User
-
 from rest_framework import serializers
 
 from lims.crm.serializers import CRMProjectSerializer
-from .models import Order, Service
+from .models import Order
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    services = serializers.SlugRelatedField(
-        many=True,
-        queryset=Service.objects.all(),
-        slug_field='name')
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), allow_null=True)
+    user = serializers.PrimaryKeyRelatedField(read_only=True, allow_null=True)
     crm = CRMProjectSerializer(read_only=True)
 
     class Meta:

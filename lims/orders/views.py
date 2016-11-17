@@ -7,10 +7,12 @@ from simple_salesforce import Salesforce
 from rest_framework import viewsets
 from rest_framework.decorators import list_route
 from rest_framework.response import Response
+from rest_framework import serializers
 
 from lims.shared.pagination import PageNumberPaginationSmall
 from lims.shared.mixins import AuditTrailViewMixin
 
+from lims.crm.helpers import CRMCreateProjectFromOrder
 from .models import Order
 from .serializers import OrderSerializer
 
@@ -19,6 +21,8 @@ class OrderViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
     pagination_class = PageNumberPaginationSmall
+    filter_fields = ('complete',)
+    search_fields = ('name',)
 
     def get_queryset(self):
         if (self.request.user.is_superuser or
@@ -28,10 +32,14 @@ class OrderViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
             return Order.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        if serializer.validated_data['user'] is None:
-            serializer.save(user=self.request.user)
-        else:
-            serializer.save(user=serializer.validated_data['user'])
+        try:
+            crm_project = CRMCreateProjectFromOrder(self.request,
+                                                    serializer.validated_data)
+        except:
+            raise serializers.ValidationError({'message': 'Could not create the order in CRM'})
+        order = serializer.save(user=self.request.user)
+        crm_project.order = order
+        crm_project.save()
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()

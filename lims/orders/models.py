@@ -25,16 +25,14 @@ class Order(models.Model):
     )
 
     name = models.CharField(max_length=200)
-    status = models.CharField(max_length=100)
-    services = models.ManyToManyField(Service)
     data = JSONField()
-    status_bar_status = models.CharField(
-        max_length=30, choices=STATUS_BAR_CHOICES, default="Submitted")
 
     user = models.ForeignKey(User)
 
     date_placed = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
+
+    complete = models.BooleanField(default=False)
 
     is_quote = models.BooleanField(default=False)
 
