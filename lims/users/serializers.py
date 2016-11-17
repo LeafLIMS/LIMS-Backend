@@ -69,6 +69,29 @@ class UserSerializer(serializers.ModelSerializer):
         return instance
 
 
+class RegisterUserSerializer(UserSerializer):
+    """
+    Like a UserSerializer but with fields needed for CRM + addresses
+    """
+    email = serializers.EmailField()
+    institution_name = serializers.CharField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    address_1 = serializers.CharField()
+    address_2 = serializers.CharField(allow_null=True)
+    city = serializers.CharField()
+    postcode = serializers.CharField()
+    country = serializers.CharField()
+
+    class Meta:
+        model = User
+        fields = ('password', 'username',
+                  'first_name', 'last_name',
+                  'email', 'institution_name', 'address_1',
+                  'address_2', 'city', 'postcode', 'country',)
+        extra_kwargs = {'password': {'write_only': True}}
+
+
 class StaffUserSerializer(UserSerializer):
 
     class Meta(UserSerializer.Meta):

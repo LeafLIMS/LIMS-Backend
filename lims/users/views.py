@@ -12,8 +12,11 @@ from rest_framework.decorators import list_route
 
 import django_filters
 
+from lims.addressbook.serializers import AddressSerializer
+from lims.crm.helpers import CRMCreateContact
+from lims.crm.serializers import CreateCRMAccountSerializer
 from .serializers import (UserSerializer, StaffUserSerializer, SuperUserSerializer,
-                          GroupSerializer)
+                          GroupSerializer, RegisterUserSerializer)
 from lims.permissions.permissions import (IsInAdminGroupOrRO, IsInAdminGroupOrTheUser)
 from lims.shared.mixins import AuditTrailViewMixin
 
@@ -35,22 +38,11 @@ class ObtainAuthToken(APIView):
             user = serializer.validated_data['user']
             usr = User.objects.get(username=user)
 
-            if user.has_perm('shared.lims_access') or user.is_superuser:
-                if usr.groups.filter(name='Internal Customer'):
-                    group = 'internal'
-                elif usr.is_staff:
-                    group = 'staff'
-                else:
-                    group = 'external'
+            groups = [g.name for g in user.groups.all()]
 
-                groups = [g.name for g in user.groups.all()]
-
-                token, created = Token.objects.get_or_create(user=user)
-                return Response({'token': token.key, 'status': group,
-                                 'id': usr.id, 'groups': groups})
-            else:
-                return Response(
-                    {'message': 'You do not have permissions to use this resource'}, status=403)
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({'token': token.key,
+                             'id': usr.id, 'groups': groups})
         return Response({'message': 'Username/password incorrect'}, status=400)
 
 
@@ -103,12 +95,24 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
         """
         Register a user in the system. Access to all without authentication.
 
+        Checks/creates a CRM account and address if possible.
         """
+        required_data = RegisterUserSerializer(data=request.data)
         serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
+        if required_data.is_valid():
+            # It's already been validated above but we still need
+            # to re-validate for the serializer to work
+            serializer.is_valid()
             instance = serializer.save()
-            user_group, created = Group.objects.get_or_create(name='user')
-            instance.groups.add(user_group)
+            # Create and address and link to CRM
+            request.data['user'] = instance.username
+            address = AddressSerializer(data=request.data)
+            if address.is_valid():
+                address.save()
+            # Validate data for CRM
+            crm_data = CreateCRMAccountSerializer(data=request.data)
+            crm_data.is_valid()
+            CRMCreateContact(request, crm_data.validated_data)
             return Response(serializer.data, status=201)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
