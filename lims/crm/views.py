@@ -178,6 +178,49 @@ class CRMProjectView(APIView):
         return Response({'message': 'Project and quote created'})
 
 
+class CRMUpdateAccountView(APIView):
+    """
+    Update a CRM account with the latest information from the CRM itself
+    """
+    permission_classes = (ExtendedObjectPermissions,)
+    queryset = CRMAccount.objects.none()
+
+    def post(self, request, format=None):
+        crm_account_ids = request.data.get('crm_ids', None)
+
+        if crm_account_ids:
+            accounts = CRMAccount.objects.filter(id__in=crm_account_ids)
+
+            crm_identifiers = ["'" + p.contact_identifier + "'" for p in accounts.all()]
+
+            sf = Salesforce(instance_url=settings.SALESFORCE_URL,
+                            username=settings.SALESFORCE_USERNAME,
+                            password=settings.SALESFORCE_PASSWORD,
+                            security_token=settings.SALESFORCE_TOKEN)
+
+            contacts_query = ("SELECT c.Id,c.AccountId,c.FirstName,c.LastName,c.Email,a.Name "
+                              "FROM Contact c, c.Account a WHERE c.Id IN ({})").format(
+                             ",".join(crm_identifiers))
+
+            contacts = sf.query(contacts_query)
+            if contacts['totalSize'] > 0:
+                records = contacts['records']
+                for record in records:
+                    try:
+                        account = CRMAccount.objects.get(contact_identifier=record['Id'])
+                    except:
+                        pass
+                    else:
+                        account.account_identifier = record['AccountId']
+                        account.contact_identifier = record['Id']
+                        if record['Account']:
+                            account.account_name = record['Account']['Name']
+                        account.save()
+                return Response({'message': 'CRM accounts updated'})
+            return Response({'message': 'No accounts found on CRM system'}, status=404)
+        return Response({'message': 'Please provide a list of CRM account IDs'}, status=400)
+
+
 class CRMUpdateProjectView(APIView):
     """
     Update CRM projects with the latest information from the database.
@@ -205,7 +248,6 @@ class CRMUpdateProjectView(APIView):
             if crm_project_data['totalSize'] > 0:
                 records = crm_project_data['records']
                 for record in records:
-                    proj = CRMProject.objects.get(project_identifier=record['Id'])
                     try:
                         proj = CRMProject.objects.get(project_identifier=record['Id'])
                     except:

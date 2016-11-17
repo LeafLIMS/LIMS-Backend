@@ -9,7 +9,7 @@ from lims.orders.models import Order
 @reversion.register()
 class CRMAccount(models.Model):
     contact_identifier = models.CharField(max_length=50)
-    account_identifier = models.CharField(max_length=50)
+    account_identifier = models.CharField(max_length=50, null=True, blank=True)
 
     account_name = models.CharField(max_length=200)
 
@@ -24,7 +24,9 @@ class CRMAccount(models.Model):
         return settings.SALESFORCE_URL + '/' + self.contact_identifier
 
     def account_url(self):
-        return settings.SALESFORCE_URL + '/' + self.account_identifier
+        if self.account_identifier:
+            return settings.SALESFORCE_URL + '/' + self.account_identifier
+        return ''
 
     def __str__(self):
         return self.user.username
@@ -35,7 +37,7 @@ class CRMProject(models.Model):
     project_identifier = models.CharField(max_length=50)
     name = models.CharField(max_length=300)
     description = models.TextField(blank=True, null=True)
-    date_created = models.DateTimeField()
+    date_created = models.DateTimeField(auto_now_add=True)
     status = models.CharField(blank=True, default='', max_length=100)
 
     account = models.ForeignKey(CRMAccount)
@@ -76,4 +78,4 @@ class CRMQuote(models.Model):
         return settings.SALESFORCE_URL + '/' + self.quote_identifier
 
     def __str__(self):
-        return self.project.order.name + ': ' + self.quote_identifier
+        return self.quote_name
