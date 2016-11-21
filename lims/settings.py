@@ -257,6 +257,9 @@ DEFAULT_USER_PERMISSIONS = (
     "Can add equipment reservation",
     "Can change equipment reservation",
     "Can delete equipment reservation",
+    "Can add trigger subscription",
+    "Can change trigger subscription",
+    "Can delete trigger subscription",
 )
 DEFAULT_STAFF_PERMISSIONS = (
     "Can add order",
@@ -328,3 +331,7 @@ DEFAULT_STAFF_PERMISSIONS = (
 SWAGGER_SETTINGS = {
     'is_authenticated': True,
 }
+
+
+# ALERTS
+ALERT_EMAIL_FROM = 'GET LIMS <GetLIMS@getlims.org>'

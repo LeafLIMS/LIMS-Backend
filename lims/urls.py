@@ -8,7 +8,8 @@ from rest_framework import routers
 from lims.users.views import ObtainAuthToken, UserViewSet, GroupViewSet
 from lims.permissions.views import PermissionViewSet
 
-from lims.shared.views import OrganismViewSet
+from lims.shared.views import OrganismViewSet, TriggerAlertStatusViewSet, TriggerSetViewSet, \
+    TriggerViewSet, TriggerSubscriptionViewSet
 
 from lims.orders.views import OrderViewSet
 from lims.addressbook.views import AddressViewSet
@@ -59,6 +60,11 @@ router.register(r'tasks', TaskViewSet, base_name='tasks')
 router.register(r'taskfields', TaskFieldViewSet, base_name='taskfields')
 router.register(r'filetemplates', FileTemplateViewSet, base_name='filetemplates')
 router.register(r'copyfiles', CopyFileDriverViewSet, base_name='copyfiles')
+
+router.register(r'triggers', TriggerViewSet, base_name='triggers')
+router.register(r'triggersets', TriggerSetViewSet, base_name='triggersets')
+router.register(r'subscriptions', TriggerSubscriptionViewSet, base_name='subscriptions')
+router.register(r'alerts', TriggerAlertStatusViewSet, base_name='alerts')
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
