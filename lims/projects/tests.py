@@ -16,9 +16,7 @@ class ProjectTestCase(LoggedInTestCase):
 
         self._joeBloggsOrder = \
             Order.objects.create(name="Order1",
-                                 status="In Limbo",
                                  data={},
-                                 status_bar_status="Submitted",
                                  user=self._joeBloggs,
                                  is_quote=False,
                                  quote_sent=False,
@@ -36,9 +34,7 @@ class ProjectTestCase(LoggedInTestCase):
 
         self._janeDoeOrder = \
             Order.objects.create(name="Order2",
-                                 status="Also in limbo",
                                  data={},
-                                 status_bar_status="Submitted",
                                  user=self._janeDoe,
                                  is_quote=False,
                                  quote_sent=False,
@@ -858,9 +854,7 @@ class ProductTestCase(LoggedInTestCase):
 
         self._joeBloggsOrder = \
             Order.objects.create(name="Order1",
-                                 status="In Limbo",
                                  data={},
-                                 status_bar_status="Submitted",
                                  user=self._joeBloggs,
                                  is_quote=False,
                                  quote_sent=False,
@@ -878,9 +872,7 @@ class ProductTestCase(LoggedInTestCase):
 
         self._janeDoeOrder = \
             Order.objects.create(name="Order2",
-                                 status="Also in limbo",
                                  data={},
-                                 status_bar_status="Submitted",
                                  user=self._janeDoe,
                                  is_quote=False,
                                  quote_sent=False,

@@ -14,9 +14,7 @@ class OrderTestCase(LoggedInTestCase):
         self._service_whistling = Service.objects.create(name="Whistling")
 
         self._order1 = Order.objects.create(name="Order1",
-                                            status="In Limbo",
                                             data={},
-                                            status_bar_status="Submitted",
                                             user=self._joeBloggs,
                                             is_quote=False,
                                             quote_sent=False,
@@ -24,12 +22,9 @@ class OrderTestCase(LoggedInTestCase):
                                             po_reference=None,
                                             invoice_sent=False,
                                             has_paid=False)
-        self._order1.services.add(self._service_cleaning, self._service_sequencing)
 
         self._order2 = Order.objects.create(name="Order2",
-                                            status="Done and dusted",
                                             data={"Key1": "Value1", "Key2": "Value2"},
-                                            status_bar_status="Project Shipped",
                                             user=self._janeDoe,
                                             is_quote=True,
                                             quote_sent=True,
@@ -37,15 +32,12 @@ class OrderTestCase(LoggedInTestCase):
                                             po_reference="PO1",
                                             invoice_sent=True,
                                             has_paid=True)
-        self._order2.services.add(self._service_whistling, self._service_sequencing)
 
     def test_presets(self):
         self.assertIs(Order.objects.filter(name="Order1").exists(), True)
         order1 = Order.objects.get(name="Order1")
         self.assertEqual(order1.name, "Order1")
-        self.assertEqual(order1.status, "In Limbo")
         self.assertEqual(order1.data, {})
-        self.assertEqual(order1.status_bar_status, "Submitted")
         self.assertEqual(order1.user, self._joeBloggs)
         self.assertIs(order1.is_quote, False)
         self.assertIs(order1.quote_sent, False)
@@ -57,9 +49,7 @@ class OrderTestCase(LoggedInTestCase):
         self.assertIs(Order.objects.filter(name="Order2").exists(), True)
         order2 = Order.objects.get(name="Order2")
         self.assertEqual(order2.name, "Order2")
-        self.assertEqual(order2.status, "Done and dusted")
         self.assertEqual(order2.data, {"Key1": "Value1", "Key2": "Value2"})
-        self.assertEqual(order2.status_bar_status, "Project Shipped")
         self.assertEqual(order2.user, self._janeDoe)
         self.assertIs(order2.is_quote, True)
         self.assertIs(order2.quote_sent, True)
@@ -104,9 +94,7 @@ class OrderTestCase(LoggedInTestCase):
         self.assertEqual(len(orders["results"]), 1)
         order1 = orders["results"][0]
         self.assertEqual(order1["name"], "Order1")
-        self.assertEqual(order1["status"], "In Limbo")
         self.assertEqual(order1["data"], {})
-        self.assertEqual(order1["status_bar_status"], "Submitted")
         self.assertIs(order1["is_quote"], False)
         self.assertIs(order1["quote_sent"], False)
         self.assertIs(order1["po_receieved"], False)
@@ -120,9 +108,7 @@ class OrderTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         order1 = response.data
         self.assertEqual(order1["name"], "Order1")
-        self.assertEqual(order1["status"], "In Limbo")
         self.assertEqual(order1["data"], {})
-        self.assertEqual(order1["status_bar_status"], "Submitted")
         self.assertIs(order1["is_quote"], False)
         self.assertIs(order1["quote_sent"], False)
         self.assertIs(order1["po_receieved"], False)
@@ -150,9 +136,7 @@ class OrderTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         order1 = response.data
         self.assertEqual(order1["name"], "Order1")
-        self.assertEqual(order1["status"], "In Limbo")
         self.assertEqual(order1["data"], {})
-        self.assertEqual(order1["status_bar_status"], "Submitted")
         self.assertIs(order1["is_quote"], False)
         self.assertIs(order1["quote_sent"], False)
         self.assertIs(order1["po_receieved"], False)
@@ -163,11 +147,8 @@ class OrderTestCase(LoggedInTestCase):
     def test_user_create_own(self):
         self._asJaneDoe()
         new_order = {"name": "Order3",
-                     "status": "YippyYah",
                      "data": {},
-                     "status_bar_status": "Order Received",
                      "user": self._janeDoe.id,
-                     "services": [self._service_sequencing.name],
                      "is_quote": False,
                      "quote_sent": False,
                      "po_receieved": True,
@@ -183,9 +164,7 @@ class OrderTestCase(LoggedInTestCase):
         self.assertIs(Order.objects.filter(name="Order3").exists(), True)
         order3 = Order.objects.get(name="Order3")
         self.assertEqual(order3.name, "Order3")
-        self.assertEqual(order3.status, "YippyYah")
         self.assertEqual(order3.data, {})
-        self.assertEqual(order3.status_bar_status, "Order Received")
         self.assertEqual(order3.user, self._janeDoe)
         self.assertIs(order3.is_quote, False)
         self.assertIs(order3.quote_sent, False)
@@ -209,9 +188,7 @@ class OrderTestCase(LoggedInTestCase):
     def test_user_create_other(self):
         self._asJaneDoe()
         new_order = {"name": "Order4",
-                     "status": "YippyYah",
                      "data": {},
-                     "status_bar_status": "Order Received",
                      "user": self._joeBloggs.id,
                      "is_quote": False,
                      "quote_sent": False,
@@ -227,11 +204,8 @@ class OrderTestCase(LoggedInTestCase):
     def test_admin_create_any(self):
         self._asAdmin()
         new_order = {"name": "Order3",
-                     "status": "YippyYah",
                      "data": {},
                      "user": self._joeBloggs.id,
-                     "services": [self._service_sequencing.name],
-                     "status_bar_status": "Order Received",
                      "is_quote": False,
                      "quote_sent": False,
                      "po_receieved": True,
@@ -247,9 +221,7 @@ class OrderTestCase(LoggedInTestCase):
         self.assertIs(Order.objects.filter(name="Order3").exists(), True)
         order3 = Order.objects.get(name="Order3")
         self.assertEqual(order3.name, "Order3")
-        self.assertEqual(order3.status, "YippyYah")
         self.assertEqual(order3.data, {})
-        self.assertEqual(order3.status_bar_status, "Order Received")
         self.assertEqual(order3.user, self._joeBloggs)
         self.assertIs(order3.is_quote, False)
         self.assertIs(order3.quote_sent, False)
@@ -280,9 +252,7 @@ class OrderTestCase(LoggedInTestCase):
         self.assertIs(Order.objects.filter(name="Order 5").exists(), True)
         order5 = Order.objects.get(name="Order 5")
         self.assertEqual(order5.name, "Order 5")
-        self.assertEqual(order5.status, "Done and dusted")
         self.assertEqual(order5.data, {"Key1": "Value1", "Key2": "Value2"})
-        self.assertEqual(order5.status_bar_status, "Project Shipped")
         self.assertEqual(order5.user, self._janeDoe)
         self.assertIs(order5.is_quote, True)
         self.assertIs(order5.quote_sent, True)
@@ -310,9 +280,7 @@ class OrderTestCase(LoggedInTestCase):
         self.assertIs(Order.objects.filter(name="Order 5").exists(), True)
         order5 = Order.objects.get(name="Order 5")
         self.assertEqual(order5.name, "Order 5")
-        self.assertEqual(order5.status, "Done and dusted")
         self.assertEqual(order5.data, {"Key1": "Value1", "Key2": "Value2"})
-        self.assertEqual(order5.status_bar_status, "Project Shipped")
         self.assertEqual(order5.user, self._janeDoe)
         self.assertIs(order5.is_quote, True)
         self.assertIs(order5.quote_sent, True)
