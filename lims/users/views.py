@@ -115,6 +115,7 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
             CRMCreateContact(request, crm_data.validated_data)
             return Response(serializer.data, status=201)
         else:
+            serializer.is_valid()
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

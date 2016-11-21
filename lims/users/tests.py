@@ -202,6 +202,12 @@ class UserTestCase(LoggedInTestCase):
                     "password": "worms",
                     "first_name": "Test",
                     "last_name": "User",
+                    "institution_name": "Unseen University",
+                    "address_1": "1 Test Street",
+                    "address_2": "Testwood",
+                    "city": "Testington",
+                    "postcode": "T1 1TS",
+                    "country": "United Kingdom",
                     "groups": ["joe_group"]}
         response = self._client.post("/users/register/", new_user, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
