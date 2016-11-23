@@ -92,6 +92,14 @@ class RegisterUserSerializer(UserSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
 
+class SimpleUserSerializer(UserSerializer):
+
+    class Meta(UserSerializer.Meta):
+        fields = ('id', 'username',
+                  'first_name', 'last_name',
+                  'email', 'groups',)
+
+
 class StaffUserSerializer(UserSerializer):
 
     class Meta(UserSerializer.Meta):

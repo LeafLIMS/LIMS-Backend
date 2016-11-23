@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User, Group, Permission
 from lims.addressbook.models import Address
 from lims.shared.loggedintestcase import LoggedInTestCase
+from django.contrib.auth.hashers import check_password
 from rest_framework import status
 
 
@@ -175,6 +176,33 @@ class UserTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         user1 = User.objects.get(username="Jane Doe")
         self.assertEqual(user1.email, "onion@apple.com")
+
+    def test_user_change_own_password(self):
+        self._asJaneDoe()
+        new_password = {'new_password': 'super duper password'}
+        response = self._client.post("/users/%d/change_password/" % self._janeDoe.id,
+                                     new_password, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user1 = User.objects.get(username="Jane Doe")
+        self.assertIs(check_password('super duper password', user1.password), True)
+
+    def test_user_change_other_password(self):
+        self._asJoeBloggs()
+        new_password = {'new_password': 'super duper password'}
+        response = self._client.post("/users/%d/change_password/" % self._janeDoe.id,
+                                     new_password, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        user1 = User.objects.get(username="Joe Bloggs")
+        self.assertIs(check_password('super duper password', user1.password), False)
+
+    def test_admin_change_any_password(self):
+        self._asAdmin()
+        new_password = {'new_password': 'super duper password'}
+        response = self._client.post("/users/%d/change_password/" % self._joeBloggs.id,
+                                     new_password, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user1 = User.objects.get(username="Joe Bloggs")
+        self.assertIs(check_password('super duper password', user1.password), True)
 
     def test_user_delete_own(self):
         self._asJoeBloggs()

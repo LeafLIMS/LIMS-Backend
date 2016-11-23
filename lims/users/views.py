@@ -7,16 +7,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework import status
-from rest_framework.permissions import AllowAny
-from rest_framework.decorators import list_route
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.decorators import list_route, detail_route
+from rest_framework.validators import ValidationError
 
 import django_filters
 
 from lims.addressbook.serializers import AddressSerializer
 from lims.crm.helpers import CRMCreateContact
 from lims.crm.serializers import CreateCRMAccountSerializer
-from .serializers import (UserSerializer, StaffUserSerializer, SuperUserSerializer,
-                          GroupSerializer, RegisterUserSerializer)
+from .serializers import (UserSerializer, GroupSerializer,
+                          RegisterUserSerializer, SimpleUserSerializer,)
 from lims.permissions.permissions import (IsInAdminGroupOrRO, IsInAdminGroupOrTheUser)
 from lims.shared.mixins import AuditTrailViewMixin
 
@@ -72,22 +73,31 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     filter_class = UserFilter
 
     def get_queryset(self):
-        if self.request.user.groups.filter(name='staff').exists():
+        if self.request.user.groups.filter(name='admin').exists():
             return User.objects.all()
         else:
             return User.objects.filter(username=self.request.user.username)
 
-    def get_serializer_class(self):
-        if self.request.user.is_superuser:
-            return SuperUserSerializer
-        elif self.request.user.is_staff:
-            return StaffUserSerializer
-        return UserSerializer
+    @detail_route(methods=['post'])
+    def change_password(self, request, pk=None):
+        """
+        Reset password for a given user
+        """
+        new_password = request.data.get('new_password', None)
+        if new_password:
+            user = self.get_object()
+            if request.user.id == user.id or request.user.groups.filter(name='staff').exists():
+                user.set_password(new_password)
+                user.save()
+                return Response({'message': 'Password for {} changed'.format(user.username)})
+            raise ValidationError({'message':
+                                  'You do not have permissions to change this users password'})
+        raise ValidationError({'message': 'You must supply a new password'})
 
-    @list_route()
+    @list_route(permission_classes=[IsAuthenticatedOrReadOnly])
     def staff(self, request):
-        results = self.get_queryset().filter(groups__name='staff')
-        serializer = self.get_serializer(results, many=True)
+        results = User.objects.filter(groups__name='staff')
+        serializer = SimpleUserSerializer(results, many=True)
         return Response(serializer.data)
 
     @list_route(methods=['post'], permission_classes=[AllowAny])
