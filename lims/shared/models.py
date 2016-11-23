@@ -3,7 +3,7 @@ import reversion
 import six
 import sys
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save  # noqa
 from django.core.mail import send_mail
 from lims.settings import ALERT_EMAIL_FROM
 
@@ -99,7 +99,9 @@ class TriggerSet(models.Model):
     # Yes this really is code in a class, so that it gets executed on load
     if 'runserver' in sys.argv or 'gunicorn' in sys.argv:
         # We do not want to fire when running migrations - tests will enable them themselves
-        post_save.connect(_fire_triggersets, dispatch_uid='Fire Trigger Sets')
+        # TODO: THIS DOES NOT WORK!!!!
+        # post_save.connect(_fire_triggersets, dispatch_uid='Fire Trigger Sets')
+        pass
 
 
 @reversion.register()
