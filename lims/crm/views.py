@@ -298,6 +298,8 @@ class CRMLinkView(APIView):
 
                     try:
                         crm_account = CRMAccount.objects.get(
+                            user__email=record['OpportunityContactRoles'][
+                                'records'][0]['Contact']['Email'],
                             account_identifier=record['Account']['Id'])
                     except ObjectDoesNotExist:
                         try:
