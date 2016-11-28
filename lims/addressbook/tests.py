@@ -105,7 +105,7 @@ class AddressTestCase(LoggedInTestCase):
                        "city": "Cardiff",
                        "postcode": "CF1 1AA",
                        "country": "Wales",
-                       "user": self._janeDoe.id}
+                       "user": self._janeDoe.username}
         response = self._client.post("/addresses/", new_address, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -154,7 +154,7 @@ class AddressTestCase(LoggedInTestCase):
                        "city": "Cardiff",
                        "postcode": "CF1 1AA",
                        "country": "Wales",
-                       "user": self._janeDoe.id}
+                       "user": self._janeDoe.username}
         response = self._client.post("/addresses/", new_address, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -254,7 +254,7 @@ class AddressTestCase(LoggedInTestCase):
                        "city": "Cardiff",
                        "postcode": "CF1 1AA",
                        "country": "Wales",
-                       "user": self._janeDoe.id}
+                       "user": self._janeDoe.username}
         response = self._client.post("/addresses/", new_address, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         address = Address.objects.get(institution_name="Leek Institute")
