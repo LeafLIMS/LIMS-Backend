@@ -262,7 +262,7 @@ class UserTestCase(LoggedInTestCase):
         self._asJoeBloggs()
         response = self._client.get("/users/staff/", format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)
+        self.assertEqual(len(response.data), 2)
 
     def test_admin_list_staff(self):
         self._asAdmin()

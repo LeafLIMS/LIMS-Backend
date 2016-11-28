@@ -152,6 +152,16 @@ MEDIA_ROOT = BASE_DIR + '/files/'
 MEDIA_URL = '/files/'
 
 #
+# Email settings
+#
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
+EMAIL_PORT = os.environ.get('EMAIL_PORT', '465')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', True)
+EMAIL_FROM = os.environ.get('EMAIL_FROM', 'Leaf LIMS')
+
+#
 # Logging
 #
 LOGGING = {

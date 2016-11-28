@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import list_route, detail_route
 from rest_framework.validators import ValidationError
 
@@ -20,6 +20,7 @@ from .serializers import (UserSerializer, GroupSerializer,
                           RegisterUserSerializer, SimpleUserSerializer,)
 from lims.permissions.permissions import (IsInAdminGroupOrRO, IsInAdminGroupOrTheUser)
 from lims.shared.mixins import AuditTrailViewMixin
+from lims.users.models import ResetCode
 
 
 class ObtainAuthToken(APIView):
@@ -78,7 +79,7 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
         else:
             return User.objects.filter(username=self.request.user.username)
 
-    @detail_route(methods=['post'])
+    @detail_route(methods=['patch'])
     def change_password(self, request, pk=None):
         """
         Reset password for a given user
@@ -86,7 +87,7 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
         new_password = request.data.get('new_password', None)
         if new_password:
             user = self.get_object()
-            if request.user.id == user.id or request.user.groups.filter(name='staff').exists():
+            if request.user.id == user.id or request.user.groups.filter(name='admin').exists():
                 user.set_password(new_password)
                 user.save()
                 return Response({'message': 'Password for {} changed'.format(user.username)})
@@ -94,7 +95,7 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
                                   'You do not have permissions to change this users password'})
         raise ValidationError({'message': 'You must supply a new password'})
 
-    @list_route(permission_classes=[IsAuthenticatedOrReadOnly])
+    @list_route(permission_classes=[IsAuthenticated])
     def staff(self, request):
         results = User.objects.filter(groups__name='staff')
         serializer = SimpleUserSerializer(results, many=True)
@@ -127,6 +128,69 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
         else:
             serializer.is_valid()
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @list_route(permission_classes=[AllowAny])
+    def exists(self, request):
+        """
+        Check if a given email address exists as a user in the system
+        """
+        email = request.query_params.get('email', None)
+        if email:
+            exists = User.objects.filter(email=email).exists()
+            output = {'exists': exists}
+            if exists:
+                user = User.objects.get(email=email)
+                output['username'] = user.username
+            return Response(output)
+        return Response({'message': 'An email address is required'}, status=400)
+
+    @list_route(permission_classes=[AllowAny])
+    def get_reset_code(self, request):
+        """
+        Get a reset code for an email address and email user
+        """
+        email = request.query_params.get('email', None)
+        if email:
+            try:
+                user = User.objects.get(email=email)
+            except:
+                raise ValidationError({'message': 'Email address not in system'})
+            else:
+                try:
+                    exists = ResetCode.objects.get(account__email=email)
+                except:
+                    pass
+                else:
+                    exists.delete()
+                reset_code = ResetCode(account=user)
+                reset_code.save()
+                if reset_code.send_email():
+                    return Response({'message': 'Email sent'})
+                return Response({'message': 'Email failed to send'}, status=500)
+        return Response({'message': 'Please provide an email address'}, status=400)
+
+    @list_route(methods=['patch'], permission_classes=[AllowAny])
+    def reset_account(self, request):
+        """
+        Reset a single user account using a generated code
+        """
+        email = request.data.get('email', None)
+        reset_code = request.data.get('code', None)
+        new_password = request.data.get('new_password', None)
+
+        if email and new_password and reset_code:
+            try:
+                reset_data = ResetCode.objects.get(code=reset_code,
+                                                   account__email=email)
+            except:
+                return Response({'message': 'Unable to find a reset for the account'}, status=400)
+            else:
+                reset_data.account.set_password(new_password)
+                reset_data.account.save()
+                reset_data.delete()
+                return Response({'message': 'Account {} reset'.format(
+                                reset_data.account.username)})
+        raise ValidationError({'message': 'Please provide email, code and password data'})
 
 
 class GroupViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
