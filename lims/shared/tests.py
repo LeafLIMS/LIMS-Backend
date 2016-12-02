@@ -364,7 +364,7 @@ class TriggerTestCase(LoggedInTestCase):
     def test_admin_create_subscription(self):
         self._asAdmin()
         new_sub = {"triggerset_id": self._joeBloggsTriggerSet.id,
-                   "user": self._janeDoe.id,
+                   "user": self._janeDoe.username,
                    "email": True
                    }
         response = self._client.post("/subscriptions/", new_sub, format='json')
@@ -375,7 +375,7 @@ class TriggerTestCase(LoggedInTestCase):
     def test_user_create_own_subscription(self):
         self._asJaneDoe()
         new_sub = {"triggerset_id": self._joeBloggsTriggerSet.id,
-                   "user": self._janeDoe.id,
+                   "user": self._janeDoe.username,
                    "email": True
                    }
         response = self._client.post("/subscriptions/", new_sub, format='json')
@@ -386,7 +386,7 @@ class TriggerTestCase(LoggedInTestCase):
     def test_user_create_any_subscription(self):
         self._asJoeBloggs()
         new_sub = {"triggerset_id": self._joeBloggsTriggerSet.id,
-                   "user": self._janeDoe.id,
+                   "user": self._janeDoe.username,
                    "email": True
                    }
         response = self._client.post("/subscriptions/", new_sub, format='json')
