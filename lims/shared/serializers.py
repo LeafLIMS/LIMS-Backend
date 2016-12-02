@@ -1,3 +1,5 @@
+from django.contrib.auth.models import User
+
 from rest_framework import serializers
 
 from .models import Organism, Trigger, TriggerSet, TriggerAlert, TriggerAlertStatus, \
@@ -41,6 +43,7 @@ class TriggerSubscriptionSerializer(serializers.ModelSerializer):
     triggerset_id = serializers.PrimaryKeyRelatedField(
         queryset=TriggerSet.objects.all(), source='triggerset', write_only=True)
     triggerset = TriggerSetSerializer(read_only=True)
+    user = serializers.SlugRelatedField(slug_field='username', queryset=User.objects.all())
 
     class Meta:
         model = TriggerSubscription

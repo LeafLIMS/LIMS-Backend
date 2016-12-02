@@ -1,7 +1,6 @@
 from django.db import models
 import reversion
 import six
-import sys
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save  # noqa
 from django.core.mail import send_mail
@@ -71,7 +70,7 @@ class TriggerSet(models.Model):
                 if len(email_recipients) > 0:
                     content = triggerset._complete_email_template(instance, alert.fired)
                     send_mail(
-                        triggerset.emailTitle,
+                        triggerset.email_title,
                         content,
                         ALERT_EMAIL_FROM,
                         email_recipients,
@@ -95,13 +94,6 @@ class TriggerSet(models.Model):
         for field, value in replace_fields.items():
             content = content.replace('{{{}}}'.format(field), repr(value))
         return content
-
-    # Yes this really is code in a class, so that it gets executed on load
-    if 'runserver' in sys.argv or 'gunicorn' in sys.argv:
-        # We do not want to fire when running migrations - tests will enable them themselves
-        # TODO: THIS DOES NOT WORK!!!!
-        # post_save.connect(_fire_triggersets, dispatch_uid='Fire Trigger Sets')
-        pass
 
 
 @reversion.register()
@@ -141,6 +133,7 @@ class Trigger(models.Model):
             test_value = "r'%s'" % self.value
             instance_value = "r'%s'" % instance_value
         expr = '%s %s %s' % (instance_value, self.operator, test_value)
+        # TODO: Replace eval with something less worrying
         return eval(expr, {"__builtins__": {}})
 
 
