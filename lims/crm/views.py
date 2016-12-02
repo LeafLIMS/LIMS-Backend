@@ -39,13 +39,15 @@ class CRMUserView(APIView):
         contact_id = ''
         account_id = ''
 
+        add_only = request.data.get('add_only', False)
+
         contacts_query = ("SELECT Id,AccountId,FirstName,LastName,Email "
                           "FROM Contact WHERE Email = '{}'").format(request.data['email'])
         contacts = sf.query(contacts_query)
         if contacts['totalSize'] > 0:
             contact_id = contacts['records'][0]['Id']
             account_id = contacts['records'][0]['AccountId']
-        else:
+        elif add_only is False:
             account_query = "SELECT Id,Name FROM Account WHERE Name = '{}'".format(
                 request.data['institution_name'])
             accounts = sf.query(account_query)
