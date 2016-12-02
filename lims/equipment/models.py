@@ -60,6 +60,8 @@ class EquipmentReservation(models.Model):
 
     checked_in = models.BooleanField(default=False)
 
+    reservation_details = models.TextField(null=True, blank=True)
+
     def full_user_name(self):
         return '{} {}'.format(self.reserved_by.first_name,
                               self.reserved_by.last_name)
