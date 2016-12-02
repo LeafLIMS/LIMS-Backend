@@ -49,6 +49,7 @@ INSTALLED_APPS = (
     'django_countries',
     'ordered_model',
     'django_extensions',
+    'channels',
     'guardian',
     'lims.shared',
     'lims.users',
@@ -160,6 +161,16 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', True)
 EMAIL_FROM = os.environ.get('EMAIL_FROM', 'Leaf LIMS')
+
+#
+# Async/queue settings
+#
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'asgi_ipc.IPCChannelLayer',
+        'ROUTING': 'lims.urls.channel_routing',
+    },
+}
 
 #
 # Logging

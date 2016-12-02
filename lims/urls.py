@@ -5,11 +5,14 @@ from django.conf import settings
 
 from rest_framework import routers
 
+from channels.routing import route
+
 from lims.users.views import ObtainAuthToken, UserViewSet, GroupViewSet
 from lims.permissions.views import PermissionViewSet
 
 from lims.shared.views import OrganismViewSet, TriggerAlertStatusViewSet, TriggerSetViewSet, \
     TriggerViewSet, TriggerSubscriptionViewSet
+from lims.shared.consumers import send_email
 
 from lims.orders.views import OrderViewSet
 from lims.addressbook.views import AddressViewSet
@@ -78,3 +81,7 @@ urlpatterns = [
     url(r'^docs/', include('rest_framework_docs.urls')),
     url(r'^', include(router.urls)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+channel_routing = [
+    route('send-email', send_email)
+]

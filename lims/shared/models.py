@@ -3,8 +3,7 @@ import reversion
 import six
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save  # noqa
-from django.core.mail import send_mail
-from lims.settings import ALERT_EMAIL_FROM
+from channels import Channel
 
 
 @reversion.register()
@@ -69,13 +68,12 @@ class TriggerSet(models.Model):
                 alert.save()
                 if len(email_recipients) > 0:
                     content = triggerset._complete_email_template(instance, alert.fired)
-                    send_mail(
-                        triggerset.email_title,
-                        content,
-                        ALERT_EMAIL_FROM,
-                        email_recipients,
-                        fail_silently=True,
-                    )
+                    message = {
+                        'title': triggerset.email_title,
+                        'content': content,
+                        'recipients': email_recipients,
+                    }
+                    Channel('send-email').send(message)
 
     def all_triggers_fire(self, instance=None, created=False):
         for trigger in self.triggers.all():
