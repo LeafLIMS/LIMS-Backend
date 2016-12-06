@@ -10,8 +10,9 @@
    - NB. Edit the Dockerfile first to specify key environment variables e.g. server and port to listen on
    - `docker build --no-cache -t getlims/lims:v<version> .`
    
-- Migrate (update) the database:
+- Migrate (update) the database and create initial revisions:
    - `docker run -t -i --link db:db getlims/lims:v<version> python manage.py migrate`
+   - `docker run -t -i --link db:db getlims/lims:v<version> python manage.py createinitialrevisions`
 
 - First time only, add superuser:
    - `docker run -t -i --link db:db getlims/lims:v<version> python manage.py createsuperuser`
