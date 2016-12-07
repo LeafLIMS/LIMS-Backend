@@ -41,12 +41,13 @@ class CRMUserView(APIView):
 
         add_only = request.data.get('add_only', False)
 
-        contacts_query = ("SELECT Id,AccountId,FirstName,LastName,Email "
+        contacts_query = ("SELECT Id,AccountId,Account.name,FirstName,LastName,Email "
                           "FROM Contact WHERE Email = '{}'").format(request.data['email'])
         contacts = sf.query(contacts_query)
         if contacts['totalSize'] > 0:
             contact_id = contacts['records'][0]['Id']
             account_id = contacts['records'][0]['AccountId']
+            account_name = contacts['records'][0]['Account']['Name']
         elif add_only is False:
             account_query = "SELECT Id,Name FROM Account WHERE Name = '{}'".format(
                 request.data['institution_name'])
@@ -77,6 +78,7 @@ class CRMUserView(APIView):
 
             details = CRMAccount(contact_identifier=contact_id,
                                  account_identifier=account_id,
+                                 account_name=account_name,
                                  user=user)
             details.save()
 
@@ -84,7 +86,20 @@ class CRMUserView(APIView):
 
             s = UserSerializer(user)
             return Response(s.data)
-        return Response({'No CRM data added to account'})
+        return Response({'No CRM data added to account'}, status=204)
+
+    def delete(self, request, format=None):
+        email = request.query_params.get('email', None)
+        if email:
+            try:
+                user = User.objects.get(email=email)
+                crm_account = CRMAccount.objects.get(user=user)
+            except:
+                return Response({'message': 'User or account not found'}, status=404)
+            else:
+                crm_account.delete()
+                return Response({'message': 'CRM account removed'})
+        return Response({'message': 'Please provide an email address'}, status=400)
 
 
 class CRMProjectView(APIView):
