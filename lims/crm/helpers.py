@@ -126,6 +126,15 @@ def CRMCreateProjectFromOrder(request, serialized_data):
             'UnitPrice': prices[item['code']]['price']
         })
 
+        # Create a line item on the project as well for reporting
+        sf.OpportunityLineItem.create({
+            'OpportunityId': crm_project_data['id'],
+            'PricebookEntryId': item_id,
+            'Description': item['label'],
+            'Quantity': item['amount'],
+            'UnitPrice': prices[item['code']]['price']
+        })
+
     quote_data = sf.Quote.get(quote_created['id'])
 
     crm_quote = CRMQuote(project=crm_project,
