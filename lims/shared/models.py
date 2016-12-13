@@ -126,10 +126,13 @@ class Trigger(models.Model):
             return False
         test_value = self.value
         instance_value = getattr(instance, self.field)
+        if isinstance(instance_value, object):
+            instance_value = str(instance_value)
         if isinstance(instance_value, six.string_types):
             # Wrap only strings in quotes
-            test_value = "r'%s'" % self.value
             instance_value = "r'%s'" % instance_value
+        if isinstance(test_value, six.string_types):
+            test_value = "r'%s'" % self.value
         expr = '%s %s %s' % (instance_value, self.operator, test_value)
         # TODO: Replace eval with something less worrying
         return eval(expr, {"__builtins__": {}})
