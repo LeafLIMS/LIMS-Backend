@@ -257,6 +257,11 @@ CORS_ALLOW_HEADERS = (
 ORGANISATION_NAME = os.environ.get('ORGANISATION_NAME', 'GET LIMS')
 
 #
+# CRM Settings
+#
+ENABLE_CRM = os.environ.get('ENABLE_CRM', True)
+
+#
 # Salesforce settings
 #
 SALESFORCE_URL = os.environ.get('SALESFORCE_URL', 'https://login.salesforce.com')

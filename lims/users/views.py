@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User, Group
+from django.conf import settings
 
 from rest_framework import parsers, renderers
 from rest_framework.authtoken.models import Token
@@ -121,9 +122,10 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
             if address.is_valid():
                 address.save()
             # Validate data for CRM
-            crm_data = CreateCRMAccountSerializer(data=request.data)
-            crm_data.is_valid()
-            CRMCreateContact(request, crm_data.validated_data)
+            if settings.ENABLE_CRM:
+                crm_data = CreateCRMAccountSerializer(data=request.data)
+                crm_data.is_valid()
+                CRMCreateContact(request, crm_data.validated_data)
             return Response(serializer.data, status=201)
         else:
             serializer.is_valid()

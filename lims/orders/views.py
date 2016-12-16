@@ -32,14 +32,15 @@ class OrderViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
             return Order.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        try:
-            crm_project = CRMCreateProjectFromOrder(self.request,
-                                                    serializer.validated_data)
-        except:
-            raise serializers.ValidationError({'message': 'Could not create the order in CRM'})
-        order = serializer.save(user=self.request.user)
-        crm_project.order = order
-        crm_project.save()
+        if settings.ENABLE_CRM:
+            try:
+                crm_project = CRMCreateProjectFromOrder(self.request,
+                                                        serializer.validated_data)
+            except:
+                raise serializers.ValidationError({'message': 'Could not create the order in CRM'})
+            order = serializer.save(user=self.request.user)
+            crm_project.order = order
+            crm_project.save()
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
