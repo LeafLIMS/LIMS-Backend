@@ -169,6 +169,9 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'asgi_redis.RedisChannelLayer',
         'ROUTING': 'lims.urls.channel_routing',
+        'CONFIG': {
+            'hosts': [os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379')]
+        }
     },
 }
 
