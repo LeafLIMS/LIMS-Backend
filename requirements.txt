@@ -1,4 +1,4 @@
-asgi-ipc==1.2.0
+asgi-redis==1.0.0
 asgiref==1.0.0
 autobahn==0.17.0
 biopython==1.66
@@ -51,4 +51,3 @@ tlslite==0.4.8
 Twisted==16.6.0
 txaio==2.5.2
 zope.interface==4.3.2
-
