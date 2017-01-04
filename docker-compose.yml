@@ -1,0 +1,20 @@
+version: '2'
+services:
+  db:
+    image: postgres
+  backend:
+    build: .
+    command: bash -c "python manage.py migrate && python manage.py createinitialrevisions && python manage.py runscript create_superuser && python manage.py runserver"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    links:
+      - db
+  frontend:
+    build: ../LIMS-Frontend
+    command: apachectl -DFOREGROUND
+    ports:
+      - "9000:9000"
+    depends_on:
+      - backend

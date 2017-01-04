@@ -5,4 +5,7 @@ from django.contrib.auth.models import User
 
 
 def run():
-    User.objects.create_superuser('test', 'test@example.com', 'test')
+    try:
+        User.objects.create_superuser('test', 'test@example.com', 'test')
+    except:
+        pass # Ignore because if it already exists then the outcome is the same
