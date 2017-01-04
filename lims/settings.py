@@ -167,7 +167,7 @@ EMAIL_FROM = os.environ.get('EMAIL_FROM', 'Leaf LIMS')
 #
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'asgi_ipc.IPCChannelLayer',
+        'BACKEND': 'asgi_redis.RedisChannelLayer',
         'ROUTING': 'lims.urls.channel_routing',
     },
 }
@@ -254,7 +254,7 @@ CORS_ALLOW_HEADERS = (
 #
 # App configuration
 #
-ORGANISATION_NAME = os.environ.get('ORGANISATION_NAME', 'GET LIMS')
+ORGANISATION_NAME = os.environ.get('ORGANISATION_NAME', 'Leaf LIMS')
 
 #
 # CRM Settings
@@ -360,4 +360,4 @@ SWAGGER_SETTINGS = {
 
 
 # ALERTS
-ALERT_EMAIL_FROM = 'GET LIMS <GetLIMS@getlims.org>'
+ALERT_EMAIL_FROM = 'Leaf LIMS <LeafLIMS@localhost>'

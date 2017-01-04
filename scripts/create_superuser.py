@@ -8,4 +8,4 @@ def run():
     try:
         User.objects.create_superuser('test', 'test@example.com', 'test')
     except:
-        pass # Ignore because if it already exists then the outcome is the same
+        pass  # Ignore because if it already exists then the outcome is the same
