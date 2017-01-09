@@ -279,6 +279,12 @@ PROJECT_IDENTIFIER_PREFIX = os.environ.get('PROJECT_IDENTIFIER_PREFIX', 'P')
 PROJECT_IDENTIFIER_START = os.environ.get('PROJECT_IDENTIFIER_START', 100)
 
 #
+# Admin user defaults
+#
+SETUP_ADMIN_EMAIL = os.environ.get('SETUP_ADMIN_EMAIL', '')
+SETUP_ADMIN_PASSWORD = os.environ.get('SETUP_ADMIN_PASSWORD', None)
+
+#
 # Default groups and permissions
 #
 DEFAULT_GROUPS = ('user', 'staff', 'admin',)
