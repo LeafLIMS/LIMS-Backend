@@ -45,6 +45,7 @@ class ObtainAuthToken(APIView):
 
             token, created = Token.objects.get_or_create(user=user)
             return Response({'token': token.key,
+                             'crm': settings.ENABLE_CRM,
                              'id': usr.id, 'groups': groups})
         return Response({'message': 'Username/password incorrect'}, status=400)
 

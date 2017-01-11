@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 import sys
+from ast import literal_eval
 
 TESTMODE = sys.argv[1:2] == ['test']
 
@@ -262,7 +263,7 @@ ORGANISATION_NAME = os.environ.get('ORGANISATION_NAME', 'Leaf LIMS')
 #
 # CRM Settings
 #
-ENABLE_CRM = os.environ.get('ENABLE_CRM', True)
+ENABLE_CRM = literal_eval(os.environ.get('ENABLE_CRM', True))
 
 #
 # Salesforce settings
