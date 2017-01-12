@@ -263,7 +263,7 @@ ORGANISATION_NAME = os.environ.get('ORGANISATION_NAME', 'Leaf LIMS')
 #
 # CRM Settings
 #
-ENABLE_CRM = literal_eval(os.environ.get('ENABLE_CRM', True))
+ENABLE_CRM = literal_eval(os.environ.get('ENABLE_CRM', 'True'))
 
 #
 # Salesforce settings
