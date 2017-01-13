@@ -1,6 +1,12 @@
+import csv
+import zipfile
+import codecs
+
 import django_filters
 
 from rest_framework import viewsets
+from rest_framework.response import Response
+from rest_framework.decorators import detail_route
 from rest_framework.validators import ValidationError
 from rest_framework.filters import (OrderingFilter,
                                     SearchFilter,
@@ -43,6 +49,63 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
         instance = serializer.save(created_by=self.request.user)
         self.assign_permissions(instance, permissions)
+
+    @detail_route(methods=['POST'])
+    def import_products(self, request, pk=None):
+        """
+        Create products on a project using CSV and ZIP files.
+        """
+        # Two files to import: CSV and ZIP of products
+        # Parse CSV
+        # Unzip designs
+        # Go through CSV file, creating products
+        # For each product parse the design
+        # Return list of created projects + failures
+        products_file = request.data.get('products_file')
+        designs_file = request.data.get('designs_file')
+
+        rejected = []
+        completed = []
+
+        if products_file:
+            # Read the CSV file of products into a list
+            decoded_file = codecs.iterdecode(products_file, 'utf-8')
+            products = [line for line in csv.DictReader(decoded_file, skipinitialspace=True)]
+            # Open the zip file for reading, assign the files within to a dict with filenames
+            designs = {}
+            if designs_file:
+                with zipfile.ZipFile(designs_file, 'r') as dzip:
+                    for file_path in dzip.namelist():
+                        filename = file_path.split('/')[-1]
+                        with dzip.open(file_path) as d:
+                            designs[filename] = d.read()
+            # Iteratre through products creating them and linking design
+            for p in products:
+                # Replace the name of the design file with the actual contents
+                if p.get('design', None):
+                    p['design'] = designs[p['design']].decode('UTF-8')
+                p['project'] = self.get_object().id
+                serializer = ProductSerializer(data=p)
+                if serializer.is_valid():
+                    instance = serializer.save(created_by=request.user)
+                    items = []
+                    parser = DesignFileParser(instance.design)
+                    if instance.design_format == 'csv':
+                        items = parser.parse_csv()
+                    elif instance.design_format == 'gb':
+                        items = parser.parse_gb()
+                    for i in items:
+                        instance.linked_inventory.add(i)
+                    completed.append(p)
+                else:
+                    p['reason'] = serializer.errors
+                    rejected.append(p)
+            return Response({'message': 'Import completed',
+                             'completed': completed,
+                             'rejected': rejected})
+        else:
+            return Response({'message': 'Please supply a product definition and file of designs'},
+                            status=400)
 
 
 class ProductFilter(django_filters.FilterSet):
