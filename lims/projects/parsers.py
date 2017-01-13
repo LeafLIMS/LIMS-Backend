@@ -35,23 +35,26 @@ class DesignFileParser:
             return False
 
     def parse_gb(self):
-        record = SeqIO.read(self.file_data, 'genbank')
         items = []
-        for feat in record.features:
-            # The file sometimes has lowercase and sometimes uppercase
-            # types so normalise to lowercase.
-            if feat.type.lower() in self.GENBANK_FEATURE_TYPES:
-                name = ''
-                # Look for the label key. Other keys can be set but
-                # most software simply sets the label key and nothing
-                # else.
-                for key, value in feat.qualifiers.items():
-                    if key == 'label':
-                        name = value[0]
-                if name:
-                    item = self.get_inventory_item(name)
-                    if item:
-                        items.append(item)
+        try:
+            record = SeqIO.read(self.file_data, 'genbank')
+            for feat in record.features:
+                # The file sometimes has lowercase and sometimes uppercase
+                # types so normalise to lowercase.
+                if feat.type.lower() in self.GENBANK_FEATURE_TYPES:
+                    name = ''
+                    # Look for the label key. Other keys can be set but
+                    # most software simply sets the label key and nothing
+                    # else.
+                    for key, value in feat.qualifiers.items():
+                        if key == 'label':
+                            name = value[0]
+                    if name:
+                        item = self.get_inventory_item(name)
+                        if item:
+                            items.append(item)
+        except:
+            pass
         return items
 
     def parse_csv(self):
