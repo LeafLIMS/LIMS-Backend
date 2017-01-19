@@ -408,10 +408,11 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
 
                 # TODO: RunLabware creation
                 # Link labeware barcode -> transfer
+                # At this point transfers have the amount taken but are not complete
+                # until task finished
                 for t in transfers:
                     t.run_identifier = task_run_identifier
                     t.do_transfer(self.ureg)
-                    t.transfer_complete = True
                     t.save()
                     run.transfers.add(t)
 
@@ -556,6 +557,13 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         run = self.get_object()
 
         if run.task_in_progress and run.is_active:
+
+            # Now the task is complete any transfers can be marked as complete
+            transfers = run.transfers.filter(run_identifier=run.task_run_identifier)
+            for t in transfers:
+                t.transfer_complete = True
+                t.save()
+
             failed_products = []
             if product_failures:
                 # If failures create new run based on current

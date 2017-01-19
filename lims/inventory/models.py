@@ -128,6 +128,9 @@ class Item(models.Model):
     amount_measure = models.ForeignKey(AmountMeasure)
     location = TreeForeignKey(Location, null=True, blank=True)
 
+    # Add an optional "wells" for recording the number of items that can fit on it, if any
+    wells = models.IntegerField(default=0)
+
     added_by = models.ForeignKey(User)
     added_on = models.DateTimeField(auto_now_add=True)
     last_updated_on = models.DateTimeField(auto_now=True)
@@ -181,6 +184,13 @@ class ItemTransfer(models.Model):
     barcode = models.CharField(max_length=20, blank=True, null=True)
     coordinates = models.CharField(max_length=2, blank=True, null=True)
 
+    # Link the current transfer to a another ItemTransfer e.g. a plate
+    # Can then use this to construct a "plate view"
+    linked_transfer = models.ForeignKey('self', blank=True, null=True)
+
+    # Location -> not yet implemented
+    # location = models.ForeignKey(Location, default=get_default_location)
+
     date_created = models.DateTimeField(auto_now_add=True)
 
     # You're adding not taking away
@@ -190,6 +200,17 @@ class ItemTransfer(models.Model):
 
     class Meta:
         ordering = ['-date_created']
+
+    def save(self, *args, **kwargs):
+        # Link to an existing ItemTransfer with the given barcode
+        if self.barcode:
+            try:
+                linked = ItemTransfer.objects.get(barcode=self.barcode, transfer_complete=False)
+            except:
+                pass
+            else:
+                self.linked_transfer = linked
+        super(ItemTransfer, self).save(*args, **kwargs)
 
     def _as_measured_value(self, amount, measure, ureg):
         """
