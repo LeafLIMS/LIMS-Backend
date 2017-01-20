@@ -78,7 +78,7 @@ class RegisterUserSerializer(UserSerializer):
     first_name = serializers.CharField()
     last_name = serializers.CharField()
     address_1 = serializers.CharField()
-    address_2 = serializers.CharField(allow_null=True)
+    address_2 = serializers.CharField(allow_null=True, required=False)
     city = serializers.CharField()
     postcode = serializers.CharField()
     country = serializers.CharField()
