@@ -53,6 +53,9 @@ class InputFieldValueSerializer(serializers.Serializer):
     inventory_identifier = serializers.CharField()
     from_input_file = serializers.NullBooleanField()
 
+    destination_barcode = serializers.CharField(required=False, allow_null=True)
+    destination_coordinates = serializers.CharField(required=False, allow_null=True)
+
 
 class VariableFieldTemplateSerializer(serializers.ModelSerializer):
     measure = serializers.SlugRelatedField(
@@ -328,6 +331,7 @@ class TaskValuesSerializer(serializers.Serializer):
     product_input_measure = serializers.CharField()
     labware_identifier = serializers.CharField()
     labware_amount = serializers.IntegerField()
+    labware_barcode = serializers.CharField(required=False, allow_null=True)
     equipment_choice = serializers.CharField()
     input_fields = InputFieldValueSerializer(many=True)
     variable_fields = VariableFieldValueSerializer(many=True)

@@ -223,14 +223,16 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             raise serializers.ValidationError(message)
         return item
 
-    def _update_amounts(self, item, amount, store):
+    def _update_amounts(self, item, amount, store, field):
         """
         Referenced update of an amount indexed by identifier
         """
         if item not in store:
-            store[item] = amount
+            store[item] = {'amount': amount,
+                           'barcode': field.get('destintion_barcode', None),
+                           'coordinates': field.get('destination_coordinates', None)}
         else:
-            store[item] += amount
+            store[item]['amount'] += amount
 
     def _update_item_amounts(self, field, key, data_item_amounts, sum_item_amounts):
         """
@@ -239,7 +241,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         amount = self._as_measured_value(field['amount'], field['measure'])
         item = self._get_from_inventory(field['inventory_identifier'])
         data_item_amounts[key][item] = amount
-        self._update_amounts(item, amount, sum_item_amounts)
+        self._update_amounts(item, amount, sum_item_amounts, field)
 
     def _get_item_amounts(self, data_items, task_data):
         """
@@ -252,10 +254,14 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         labware_identifier = task_data.validated_data['labware_identifier']
         labware_item = self._get_from_inventory(labware_identifier)
         labware_required = task_data.validated_data['labware_amount']
+        labware_barcode = task_data.validated_data.get('labware_barcode', None)
         labware_symbol = None
         if labware_item.amount_measure is not None:
             labware_symbol = labware_item.amount_measure.symbol
-        sum_item_amounts[labware_item] = self._as_measured_value(labware_required, labware_symbol)
+        sum_item_amounts[labware_item] = {
+                'amount': self._as_measured_value(labware_required, labware_symbol),
+                'barcode': labware_barcode,
+        }
 
         # Get task input field amounts
         for key, item in data_items.items():
@@ -276,8 +282,8 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         valid_amounts = True
         for item, required in sum_item_amounts.items():
             available = self._as_measured_value(item.amount_available, item.amount_measure.symbol)
-            if available < required:
-                missing = (available - required) * -1
+            if available < required['amount']:
+                missing = (available - required['amount']) * -1
                 message = 'Inventory item {0} ({1}) is short of amount by {2:.2f}'.format(
                     item.identifier, item.name, missing)
                 errors.append(message)
@@ -291,14 +297,16 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         transfers = []
         for item, amount in sum_item_amounts.items():
             try:
-                amount_symbol = '{:~}'.format(amount).split(' ')[1]
+                amount_symbol = '{:~}'.format(amount['amount']).split(' ')[1]
                 measure = AmountMeasure.objects.get(symbol=amount_symbol)
-                amount = amount.magnitude
+                amount['amount'] = amount['amount'].magnitude
             except:
                 measure = AmountMeasure.objects.get(symbol='items')
             transfers.append(ItemTransfer(
                 item=item,
-                amount_taken=amount,
+                barcode=amount.get('barcode', None),
+                coordinates=amount.get('coordinates', None),
+                amount_taken=amount['amount'],
                 amount_measure=measure))
         return transfers
 
