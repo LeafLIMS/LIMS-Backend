@@ -126,6 +126,10 @@ class Item(models.Model):
     in_inventory = models.BooleanField(default=False)
     amount_available = models.FloatField(default=0)
     amount_measure = models.ForeignKey(AmountMeasure)
+    concentration = models.FloatField(default=0)
+    concentration_measure = models.ForeignKey(AmountMeasure,
+                                              blank=True, null=True,
+                                              related_name='concentration_measure')
     location = TreeForeignKey(Location, null=True, blank=True)
 
     # Add an optional "wells" for recording the number of items that can fit on it, if any

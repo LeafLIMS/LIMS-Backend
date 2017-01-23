@@ -1097,6 +1097,7 @@ class ItemTestCase(LoggedInTestCase):
 
         self._measure = AmountMeasure.objects.create(name="Litre", symbol="l")
         self._measure2 = AmountMeasure.objects.create(name="Millilitre", symbol="ml")
+        self._measure3 = AmountMeasure.objects.create(name="Nanograms/microlitre", symbol="ng/ul")
         self._location = Location.objects.create(name="On top of the cupboard", code="L1")
         self._location2 = Location.objects.create(name="On a shelf", code="L2",
                                                   parent=self._location)
@@ -1121,6 +1122,8 @@ class ItemTestCase(LoggedInTestCase):
                                           item_type=self._itemtype2,
                                           amount_available=3,
                                           amount_measure=self._measure,
+                                          concentration=0.5,
+                                          concentration_measure=self._measure3,
                                           location=self._location,
                                           added_by=self._joeBloggs)
         self._item3 = Item.objects.create(name="Item3",
@@ -1192,6 +1195,8 @@ class ItemTestCase(LoggedInTestCase):
         self.assertIs(i.in_inventory, True)
         self.assertEqual(i.amount_available, 3)
         self.assertEqual(i.amount_measure, self._measure)
+        self.assertEqual(i.concentration, 0.5)
+        self.assertEqual(i.concentration_measure, self._measure3)
         self.assertEqual(i.location, self._location)
         self.assertEqual(i.added_by, self._joeBloggs)
         i = Item.objects.get(name="Item3")

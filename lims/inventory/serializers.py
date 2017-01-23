@@ -70,7 +70,8 @@ class ItemPreviewSerializer(serializers.ModelSerializer):
         model = Item
         depth = 1
         fields = ('id', 'name', 'identifier', 'in_inventory', 'amount_available',
-                  'item_type', 'amount_measure', 'location',)
+                  'item_type', 'amount_measure', 'concentration', 'concentration_measure',
+                  'location',)
 
 
 class ItemTransferPreviewSerializer(serializers.ModelSerializer):
@@ -91,6 +92,9 @@ class ItemSerializer(serializers.ModelSerializer, SerializerPermissionsMixin):
         slug_field='username'
     )
     amount_measure = serializers.SlugRelatedField(
+        queryset=AmountMeasure.objects.all(), slug_field='symbol')
+    concentration_measure = serializers.SlugRelatedField(
+        required=False, allow_null=True,
         queryset=AmountMeasure.objects.all(), slug_field='symbol')
     item_type = serializers.SlugRelatedField(queryset=ItemType.objects.all(), slug_field='name')
     location = serializers.SlugRelatedField(queryset=Location.objects.all(), slug_field='code')
@@ -154,11 +158,15 @@ class DetailedItemSerializer(ItemSerializer):
 class SimpleItemSerializer(serializers.ModelSerializer):
     amount_measure = serializers.SlugRelatedField(
         queryset=AmountMeasure.objects.all(), slug_field='symbol')
+    concentration_measure = serializers.SlugRelatedField(
+        required=False, allow_null=True,
+        queryset=AmountMeasure.objects.all(), slug_field='symbol')
 
     class Meta:
         model = Item
         fields = ('name', 'identifier',
-                  'amount_measure', 'amount_available')
+                  'amount_measure', 'amount_available',
+                  'concentration', 'concentration_measure')
 
 
 class AmountMeasureSerializer(serializers.ModelSerializer):
