@@ -186,6 +186,7 @@ class StepFieldTemplateSerializer(serializers.ModelSerializer):
 
 class StepFieldValueSerializer(serializers.Serializer):
     label = serializers.CharField()
+    description = serializers.CharField(required=False, allow_null=True)
     properties = StepFieldPropertyValueSerializer(many=True)
 
 
