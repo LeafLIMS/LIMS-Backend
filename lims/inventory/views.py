@@ -202,7 +202,7 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
                 amount_taken=raw_amount,
                 amount_measure=measure,
                 barcode=transfer_details.get('barcode', ''),
-                coordinates=transfer_details.get('coodinates', ''),
+                coordinates=transfer_details.get('coordinates', ''),
                 transfer_complete=is_complete,
                 is_addition=is_addition
             )
