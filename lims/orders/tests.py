@@ -186,6 +186,7 @@ class OrderTestCase(LoggedInTestCase):
         orders = response.data
         self.assertEqual(len(orders["results"]), 2)
 
+    @override_settings(ENABLE_CRM=False)
     def test_user_create_other(self):
         self._asJaneDoe()
         new_order = {"name": "Order4",
@@ -199,7 +200,7 @@ class OrderTestCase(LoggedInTestCase):
                      "has_paid": False
                      }
         response = self._client.post("/orders/", new_order, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIs(Order.objects.filter(name="Order4").exists(), True)
         self.assertEqual(Order.objects.get(name="Order4").user, self._janeDoe)
 
