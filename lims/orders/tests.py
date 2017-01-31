@@ -1,3 +1,4 @@
+from django.test import override_settings
 from lims.shared.loggedintestcase import LoggedInTestCase
 from rest_framework import status
 from .models import Order, Service
@@ -144,11 +145,11 @@ class OrderTestCase(LoggedInTestCase):
         self.assertIs(order1["invoice_sent"], False)
         self.assertIs(order1["has_paid"], False)
 
+    @override_settings(ENABLE_CRM=False)
     def test_user_create_own(self):
         self._asJaneDoe()
         new_order = {"name": "Order3",
                      "data": {},
-                     "user": self._janeDoe.id,
                      "is_quote": False,
                      "quote_sent": False,
                      "po_receieved": True,
@@ -199,48 +200,8 @@ class OrderTestCase(LoggedInTestCase):
                      }
         response = self._client.post("/orders/", new_order, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIs(Order.objects.filter(name="Order4").exists(), False)
-
-    def test_admin_create_any(self):
-        self._asAdmin()
-        new_order = {"name": "Order3",
-                     "data": {},
-                     "user": self._joeBloggs.id,
-                     "is_quote": False,
-                     "quote_sent": False,
-                     "po_receieved": True,
-                     "po_reference": "PO2",
-                     "invoice_sent": True,
-                     "has_paid": False
-                     }
-        response = self._client.post("/orders/", new_order, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        # The DB now has 3 orders in and that the new order is among them
-        self.assertEqual(Order.objects.count(), 3)
-        self.assertIs(Order.objects.filter(name="Order3").exists(), True)
-        order3 = Order.objects.get(name="Order3")
-        self.assertEqual(order3.name, "Order3")
-        self.assertEqual(order3.data, {})
-        self.assertEqual(order3.user, self._joeBloggs)
-        self.assertIs(order3.is_quote, False)
-        self.assertIs(order3.quote_sent, False)
-        self.assertIs(order3.po_receieved, True)
-        self.assertEqual(order3.po_reference, "PO2")
-        self.assertIs(order3.invoice_sent, True)
-        self.assertIs(order3.has_paid, False)
-
-        # Other user still sees just their order but we see both our old and new ones
-        self._asJoeBloggs()
-        response = self._client.get('/orders/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        orders = response.data
-        self.assertEqual(len(orders["results"]), 2)
-        self._asJaneDoe()
-        response = self._client.get('/orders/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        orders = response.data
-        self.assertEqual(len(orders["results"]), 1)
+        self.assertIs(Order.objects.filter(name="Order4").exists(), True)
+        self.assertEqual(Order.objects.get(name="Order4").user, self._janeDoe)
 
     def test_user_edit_own(self):
         self._asJaneDoe()

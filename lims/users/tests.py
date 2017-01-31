@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User, Group, Permission
+from django.test import override_settings
 from lims.addressbook.models import Address
 from lims.shared.loggedintestcase import LoggedInTestCase
 from django.contrib.auth.hashers import check_password
@@ -116,6 +117,7 @@ class UserTestCase(LoggedInTestCase):
         self.assertIs(User.objects.filter(username="Test_User").exists(), False)
         self.assertEqual(User.objects.count(), 5)
 
+    @override_settings(ENABLE_CRM=False)
     def test_admin_create(self):
         self._asAdmin()
         new_user = {"username": "Test_User",
@@ -180,8 +182,8 @@ class UserTestCase(LoggedInTestCase):
     def test_user_change_own_password(self):
         self._asJaneDoe()
         new_password = {'new_password': 'super duper password'}
-        response = self._client.post("/users/%d/change_password/" % self._janeDoe.id,
-                                     new_password, format='json')
+        response = self._client.patch("/users/%d/change_password/" % self._janeDoe.id,
+                                      new_password, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         user1 = User.objects.get(username="Jane Doe")
         self.assertIs(check_password('super duper password', user1.password), True)
@@ -189,17 +191,17 @@ class UserTestCase(LoggedInTestCase):
     def test_user_change_other_password(self):
         self._asJoeBloggs()
         new_password = {'new_password': 'super duper password'}
-        response = self._client.post("/users/%d/change_password/" % self._janeDoe.id,
-                                     new_password, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        response = self._client.patch("/users/%d/change_password/" % self._janeDoe.id,
+                                      new_password, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         user1 = User.objects.get(username="Joe Bloggs")
         self.assertIs(check_password('super duper password', user1.password), False)
 
     def test_admin_change_any_password(self):
         self._asAdmin()
         new_password = {'new_password': 'super duper password'}
-        response = self._client.post("/users/%d/change_password/" % self._joeBloggs.id,
-                                     new_password, format='json')
+        response = self._client.patch("/users/%d/change_password/" % self._joeBloggs.id,
+                                      new_password, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         user1 = User.objects.get(username="Joe Bloggs")
         self.assertIs(check_password('super duper password', user1.password), True)
@@ -223,6 +225,7 @@ class UserTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertIs(User.objects.filter(username="Joe Bloggs").exists(), False)
 
+    @override_settings(ENABLE_CRM=False)
     def test_anonymous_register(self):
         self._asAnonymous()
         new_user = {"username": "Test_User",

@@ -22,22 +22,27 @@ class PriceBookViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save()
-        get_pricebooks()
+        if settings.ENABLE_CRM:
+            get_pricebooks()
 
     @list_route(methods=['POST'])
     def updateall(self, request):
-        get_pricebooks()
-        return Response({'message': 'Pricebooks updated'})
+        if settings.ENABLE_CRM:
+            get_pricebooks()
+            return Response({'message': 'Pricebooks updated'})
+        return Response({'message': 'No pricebooks updated; CRM disabled'})
 
     @list_route()
     def on_crm(self, request):
         """
         List of all pricebooks available on thr CRM
         """
-        sf = Salesforce(instance_url=settings.SALESFORCE_URL,
-                        username=settings.SALESFORCE_USERNAME,
-                        password=settings.SALESFORCE_PASSWORD,
-                        security_token=settings.SALESFORCE_TOKEN)
+        if settings.ENABLE_CRM:
+            sf = Salesforce(instance_url=settings.SALESFORCE_URL,
+                            username=settings.SALESFORCE_USERNAME,
+                            password=settings.SALESFORCE_PASSWORD,
+                            security_token=settings.SALESFORCE_TOKEN)
 
-        pricebooks = sf.query("SELECT id,name FROM Pricebook2")
-        return Response(pricebooks['records'])
+            pricebooks = sf.query("SELECT id,name FROM Pricebook2")
+            return Response(pricebooks['records'])
+        return Response([])

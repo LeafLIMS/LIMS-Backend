@@ -1,3 +1,4 @@
+from django.test import override_settings
 from lims.shared.loggedintestcase import LoggedInTestCase
 from rest_framework import status
 from .models import Price, PriceBook
@@ -108,6 +109,7 @@ class PriceBookTestCase(LoggedInTestCase):
         self.assertEqual(price1_2["identifier"], "FLA1")
         self.assertEqual(price1_2["price"], 4.47)
 
+    @override_settings(ENABLE_CRM=False)
     def test_user_create(self):
         self._asJaneDoe()
         new_pricebook1 = {"name": "Test Pricebook",
@@ -119,6 +121,7 @@ class PriceBookTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(PriceBook.objects.count(), 2)
 
+    @override_settings(ENABLE_CRM=False)
     def test_admin_create(self):
         self._asAdmin()
         new_pricebook1 = {"name": "Test Pricebook",
@@ -161,14 +164,15 @@ class PriceBookTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertIs(PriceBook.objects.filter(description="Test 1").exists(), False)
 
-    def DISABLED_test_user_updateall(self):
+    @override_settings(ENABLE_CRM=False)
+    def test_user_updateall(self):
         self._asJoeBloggs()
-        response = self._client.get("/pricebooks/updateall/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["message"], "Pricebooks updated")
+        response = self._client.post("/pricebooks/updateall/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def DISABLED_test_admin_updateall(self):
+    @override_settings(ENABLE_CRM=False)
+    def test_admin_updateall(self):
         self._asAdmin()
-        response = self._client.get("/pricebooks/updateall/")
+        response = self._client.post("/pricebooks/updateall/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["message"], "Pricebooks updated")
+        self.assertEqual(response.data["message"], "No pricebooks updated; CRM disabled")
