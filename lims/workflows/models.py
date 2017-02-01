@@ -76,6 +76,7 @@ class Run(models.Model):
     # Created/updated at the start of every task.
     task_run_identifier = models.UUIDField(null=True, blank=True)
 
+    equipment_used = models.ForeignKey(Equipment, blank=True, null=True)
     products = models.ManyToManyField(Product, blank=True,
                                       related_name='runs')
     labware = models.ManyToManyField(RunLabware, blank=True,

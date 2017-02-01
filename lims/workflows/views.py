@@ -394,6 +394,9 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 if equipment.status != 'idle':
                     raise serializers.ValidationError({'message':
                                                       'Equipment is currently in use'})
+                equipment.status = 'active'
+                equipment.save()
+                run.equipment_used = equipment
 
                 if not valid_amounts:
                     raise ValidationError({'message': '\n'.join(errors)})
@@ -443,6 +446,12 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             # Get any transfers for this task
             transfers_for_this_task = run.transfers.filter(run_identifier=run.task_run_identifier)
             data_entries = DataEntry.objects.filter(task_run_identifier=run.task_run_identifier)
+
+            equipment = run.equipment_used
+            equipment.status = 'idle'
+            equipment.save()
+            run.equipment_used = None
+
             # Transfer all the things taken back into the inventory
             for t in transfers_for_this_task:
                 t.is_addition = True
@@ -643,6 +652,10 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     e.save()
 
             run.task_in_progress = False
+            equipment = run.equipment_used
+            equipment.status = 'idle'
+            equipment.save()
+            run.equipment_used = None
 
             # advance task by one OR end if no more tasks
             if run.current_task == len(run.get_task_list()) - 1:
