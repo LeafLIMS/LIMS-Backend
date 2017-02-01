@@ -229,7 +229,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         """
         if item not in store:
             store[item] = {'amount': amount,
-                           'barcode': field.get('destintion_barcode', None),
+                           'barcode': field.get('destination_barcode', None),
                            'coordinates': field.get('destination_coordinates', None)}
         else:
             store[item]['amount'] += amount
