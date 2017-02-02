@@ -18,8 +18,8 @@ from lims.orders.views import OrderViewSet
 from lims.addressbook.views import AddressViewSet
 from lims.pricebook.views import PriceBookViewSet
 
-from lims.inventory.views import (InventoryViewSet,
-                                  SetViewSet, MeasureViewSet, ItemTypeViewSet, LocationViewSet)
+from lims.inventory.views import (InventoryViewSet, SetViewSet, MeasureViewSet, ItemTypeViewSet,
+                                  LocationViewSet, ItemTransferViewSet)
 from lims.codonusage.views import CodonUsageTableViewSet
 from lims.projects.views import (ProjectViewSet, ProductViewSet, ProductStatusViewSet)
 from lims.workflows.views import (WorkflowViewSet, RunViewSet,
@@ -49,6 +49,7 @@ router.register(r'organisms', OrganismViewSet, base_name='organisms')
 router.register(r'measures', MeasureViewSet, base_name='measures')
 router.register(r'itemtypes', ItemTypeViewSet, base_name='itemtypes')
 router.register(r'locations', LocationViewSet, base_name='locations')
+router.register(r'transfers', ItemTransferViewSet, base_name='transfers')
 
 router.register(r'equipment', EquipmentViewSet, base_name='equipment')
 router.register(r'equipmentreservation', EquipmentReservationViewSet,

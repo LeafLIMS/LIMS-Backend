@@ -20,7 +20,8 @@ from lims.shared.mixins import StatsViewMixin, AuditTrailViewMixin
 from lims.filetemplate.models import FileTemplate
 from .models import Set, Item, ItemTransfer, ItemType, Location, AmountMeasure
 from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationSerializer,
-                          ItemSerializer, DetailedItemSerializer, SetSerializer)
+                          ItemSerializer, DetailedItemSerializer, SetSerializer,
+                          ItemTransferSerializer)
 
 
 # Define as module level due to issues with file locking
@@ -291,3 +292,15 @@ class SetViewSet(AuditTrailViewMixin, viewsets.ModelViewSet, ViewPermissionsMixi
             return Response(status=204)
         return Response(
             {'message': 'The id of the item to add to the inventory is required'}, status=400)
+
+
+class ItemTransferViewSet(AuditTrailViewMixin, viewsets.ReadOnlyModelViewSet, ViewPermissionsMixin):
+    queryset = ItemTransfer.objects.all()
+    serializer_class = ItemTransferSerializer
+    search_fields = ('item__name', 'item__identifier', 'barcode',)
+    filter_fields = ('transfer_complete',)
+    filter_backends = (SearchFilter, DjangoFilterBackend,
+                       OrderingFilter,)
+
+    def get_queryset(self):
+        return ItemTransfer.objects.filter(transfer_complete=False)

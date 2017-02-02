@@ -57,9 +57,12 @@ class ItemTransferSerializer(serializers.ModelSerializer):
         queryset=AmountMeasure.objects.all(),
         slug_field='symbol'
     )
+    # Whut???
+    item_name = serializers.CharField(read_only=True)
 
     class Meta:
         model = ItemTransfer
+        fields = '__all__'
 
 
 class ItemPreviewSerializer(serializers.ModelSerializer):
@@ -173,9 +176,3 @@ class AmountMeasureSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AmountMeasure
-
-
-class ItemTransferSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = ItemTransfer

@@ -184,8 +184,8 @@ class ItemTransfer(models.Model):
     item = models.ForeignKey(Item, related_name='transfers')
     amount_taken = models.IntegerField(default=0)
     amount_measure = models.ForeignKey(AmountMeasure)
-    run_identifier = models.UUIDField(blank=True, null=True)
-    barcode = models.CharField(max_length=20, blank=True, null=True)
+    run_identifier = models.UUIDField(blank=True, null=True, db_index=True)
+    barcode = models.CharField(max_length=20, blank=True, null=True, db_index=True)
     coordinates = models.CharField(max_length=2, blank=True, null=True)
 
     # Link the current transfer to a another ItemTransfer e.g. a plate
@@ -200,10 +200,13 @@ class ItemTransfer(models.Model):
     # You're adding not taking away
     is_addition = models.BooleanField(default=False)
 
-    transfer_complete = models.BooleanField(default=False)
+    transfer_complete = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         ordering = ['-date_created']
+
+    def item_name(self):
+        return self.item.name
 
     def save(self, *args, **kwargs):
         # Link to an existing ItemTransfer with the given barcode
