@@ -21,6 +21,7 @@ from lims.permissions.permissions import (IsInAdminGroupOrRO,
                                           ExtendedObjectPermissionsFilter)
 
 from lims.shared.mixins import StatsViewMixin, AuditTrailViewMixin
+from lims.datastore.serializers import AttachmentSerializer
 from .models import (Product, ProductStatus, Project)
 from .serializers import (ProjectSerializer, ProductSerializer,
                           DetailedProductSerializer, ProductStatusSerializer)
@@ -178,6 +179,32 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
         # If so, parse the design to extract info to get parts from
         # inventory.
         self._parse_design(instance)
+
+    @detail_route(methods=['POST'])
+    def add_attachment(self, request, pk=None):
+        request.data['created_by'] = request.user.username
+        serializer = AttachmentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(created_by=request.user)
+            product = self.get_object()
+            product.attachments.add(serializer.instance)
+            return Response({'message': 'File attachment added'})
+        return Response({'message': 'Please supply a file to upload'}, status=400)
+
+    @detail_route(methods=['DELETE'])
+    def delete_attachment(self, request, pk=None):
+        attachment_id = request.query_params.get('id', None)
+        if attachment_id:
+            product = Product.objects.get(pk=pk)
+            try:
+                attachment = product.attachments.get(pk=attachment_id)
+            except:
+                return Response({'message': 'Attachment not found'}, status=404)
+            else:
+                product.attachments.remove(attachment)
+                attachment.delete()
+                return Response({'message': 'Attachment deleted from product'})
+        return Response({'message': 'Please supply an attachment ID'}, status=400)
 
 
 class ProductStatusViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):

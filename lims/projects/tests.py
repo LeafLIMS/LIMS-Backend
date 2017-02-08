@@ -1,7 +1,10 @@
+from io import BytesIO
 from lims.shared.loggedintestcase import LoggedInTestCase
 from rest_framework import status
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.conf import settings
 from django.contrib.auth.models import Permission, Group
+from lims.datastore.models import Attachment
 from .models import Project, Order, Product, ProductStatus, Item, ItemType, Organism
 from lims.inventory.models import AmountMeasure
 from .parsers import DesignFileParser
@@ -925,6 +928,13 @@ class ProductTestCase(LoggedInTestCase):
                                    created_by=self._janeDoe,
                                    project=self._janeDoeProject)
 
+        # Add an attachment to one of the products
+        self._attachment_file = BytesIO(b'This is just a random piece of text thats in a file')
+        self._attachment = Attachment.objects.create(created_by=self._joeBloggs,
+                                                     attachment=SimpleUploadedFile(
+                                                        'test', self._attachment_file.read()))
+        self._joeBloggsProduct.attachments.add(self._attachment)
+
         # We have to simulate giving Joe and Jane's groups access to these products. Joe can see and
         # edit only his.
         # Jane can see and edit hers, and see Joe's but not edit it.
@@ -1241,6 +1251,26 @@ item_3,test,test,test,test,test"""}
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         product = Product.objects.get(name="Product1")
         self.assertEqual(product.optimised_for, self._mouse)
+
+    def test_add_attachment(self):
+        self._asJaneDoe()
+        self._attachment_file.seek(0)
+        attachment = {'attachment': self._attachment_file}
+        self._janeDoe.user_permissions.add(Permission.objects.get(codename="add_product"))
+        response = self._client.post("/products/%d/add_attachment/" % self._janeDoeProduct.id,
+                                     attachment)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        product = Product.objects.get(pk=self._janeDoeProduct.id)
+        self.assertEqual(product.attachments.count(), 1)
+
+    def test_delete_attachment(self):
+        self._asJoeBloggs()
+        url = '/products/{}/delete_attachment/?id={}'.format(self._joeBloggsProduct.id,
+                                                             self._attachment.id)
+        response = self._client.delete(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        product = Product.objects.get(pk=self._joeBloggsProduct.id)
+        self.assertEqual(product.attachments.count(), 0)
 
     def test_user_delete_own(self):
         self._asJaneDoe()

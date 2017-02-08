@@ -11,6 +11,7 @@ from lims.shared.models import Organism
 from lims.inventory.models import ItemType, Item
 from lims.orders.models import Order
 from lims.crm.models import CRMProject
+from lims.datastore.models import Attachment
 
 
 @reversion.register()
@@ -117,6 +118,8 @@ class Product(models.Model):
     # Anything created or linked in the inventroy to this product
     linked_inventory = models.ManyToManyField(Item, blank=True,
                                               related_name='products')
+
+    attachments = models.ManyToManyField(Attachment, blank=True)
 
     class Meta:
         permissions = (

@@ -57,3 +57,17 @@ class DataEntry(models.Model):
 
     class Meta:
         ordering = ['-date_created']
+
+
+@reversion.register()
+class Attachment(models.Model):
+    """
+    A file stored on the system and linked to one or more items
+    """
+    attachment = models.FileField()
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_modified = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User)
+
+    def attachment_name(self):
+        return self.attachment.name.split('/')[-1]

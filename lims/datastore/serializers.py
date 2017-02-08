@@ -1,6 +1,8 @@
+from django.contrib.auth.models import User
+
 from rest_framework import serializers
 
-from .models import DataFile, DataEntry
+from .models import DataFile, DataEntry, Attachment
 
 
 class DataFileSerializer(serializers.ModelSerializer):
@@ -33,3 +35,14 @@ class CompactDataEntrySerializer(DataEntrySerializer):
         fields = ('id', 'task_run_identifier', 'date_created', 'state',
                   'run', 'created_by', 'task',)
         model = DataEntry
+
+
+class AttachmentSerializer(serializers.ModelSerializer):
+    created_by = serializers.SlugRelatedField(
+        queryset=User.objects.all(),
+        slug_field='username'
+    )
+    attachment_name = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Attachment
