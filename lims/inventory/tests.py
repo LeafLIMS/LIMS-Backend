@@ -55,14 +55,14 @@ class LocationTestCase(LoggedInTestCase):
         response = self._client.get('/locations/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         locations = response.data
-        self.assertEqual(len(locations["results"]), 3)
+        self.assertEqual(len(locations["results"]), 4)
 
     def test_admin_list(self):
         self._asAdmin()
         response = self._client.get('/locations/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         locations = response.data
-        self.assertEqual(len(locations["results"]), 3)
+        self.assertEqual(len(locations["results"]), 4)
 
     def test_user_view(self):
         self._asJaneDoe()
@@ -90,14 +90,14 @@ class LocationTestCase(LoggedInTestCase):
         response = self._client.post("/locations/", new_location, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         # The DB should still only have 3 locations
-        self.assertEqual(Location.objects.count(), 3)
+        self.assertEqual(Location.objects.count(), 4)
 
     def test_admin_create(self):
         self._asAdmin()
         new_location = {"name": "Test", "code": "X", "parent": self._top.code}
         response = self._client.post("/locations/", new_location, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Location.objects.count(), 4)
+        self.assertEqual(Location.objects.count(), 5)
         self.assertIs(Location.objects.filter(name="Test").exists(), True)
         loc = Location.objects.get(name="Test")
         self.assertEqual(loc.code, "X")
@@ -194,14 +194,14 @@ class ItemTypeTestCase(LoggedInTestCase):
         response = self._client.get('/itemtypes/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         itemtypes = response.data
-        self.assertEqual(len(itemtypes["results"]), 3)
+        self.assertEqual(len(itemtypes["results"]), 4)
 
     def test_admin_list(self):
         self._asAdmin()
         response = self._client.get('/itemtypes/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         itemtypes = response.data
-        self.assertEqual(len(itemtypes["results"]), 3)
+        self.assertEqual(len(itemtypes["results"]), 4)
 
     def test_user_view(self):
         self._asJaneDoe()
@@ -226,15 +226,15 @@ class ItemTypeTestCase(LoggedInTestCase):
         new_it = {"name": "Test", "parent": self._top.name}
         response = self._client.post("/itemtypes/", new_it, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        # The DB should still only have 3 itemtypes
-        self.assertEqual(ItemType.objects.count(), 3)
+        # The DB should still only have 4 itemtypes
+        self.assertEqual(ItemType.objects.count(), 4)
 
     def test_admin_create(self):
         self._asAdmin()
         new_it = {"name": "Test", "parent": self._top.name}
         response = self._client.post("/itemtypes/", new_it, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(ItemType.objects.count(), 4)
+        self.assertEqual(ItemType.objects.count(), 5)
         self.assertIs(ItemType.objects.filter(name="Test").exists(), True)
         it = ItemType.objects.get(name="Test")
         self.assertEqual(it.parent, self._top)
@@ -245,7 +245,7 @@ class ItemTypeTestCase(LoggedInTestCase):
         response = self._client.patch("/itemtypes/%d/" % self._bottom.id,
                                       updated_it, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIs(ItemType.objects.filter(parent=None).count(), 1)
+        self.assertIs(ItemType.objects.filter(parent=None).count(), 2)
 
     def test_admin_edit(self):
         self._asAdmin()
@@ -253,7 +253,7 @@ class ItemTypeTestCase(LoggedInTestCase):
         response = self._client.patch("/itemtypes/%d/" % self._bottom.id,
                                       updated_it, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIs(ItemType.objects.filter(parent=None).count(), 2)
+        self.assertIs(ItemType.objects.filter(parent=None).count(), 3)
         b = ItemType.objects.get(name="Bottom")
         self.assertIsNone(b.parent)
         m = ItemType.objects.get(name="Middle")
@@ -293,11 +293,11 @@ class AmountMeasureTestCase(LoggedInTestCase):
     def setUp(self):
         super(AmountMeasureTestCase, self).setUp()
 
-        self._millilitre = AmountMeasure.objects.create(name="Millilitre", symbol="ml")
-        self._gram = AmountMeasure.objects.create(name="Gram", symbol="g")
+        self._millilitre, c = AmountMeasure.objects.get_or_create(name="Millilitres", symbol="ml")
+        self._gram, c = AmountMeasure.objects.get_or_create(name="Gram", symbol="g")
 
     def test_presets(self):
-        ml = AmountMeasure.objects.get(name="Millilitre")
+        ml = AmountMeasure.objects.get(name="Millilitres")
         self.assertEqual(ml.symbol, "ml")
         g = AmountMeasure.objects.get(name="Gram")
         self.assertEqual(g.symbol, "g")
@@ -321,21 +321,21 @@ class AmountMeasureTestCase(LoggedInTestCase):
         response = self._client.get('/measures/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         measures = response.data
-        self.assertEqual(len(measures["results"]), 2)
+        self.assertEqual(len(measures["results"]), 15)
 
     def test_admin_list(self):
         self._asAdmin()
         response = self._client.get('/measures/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         measures = response.data
-        self.assertEqual(len(measures["results"]), 2)
+        self.assertEqual(len(measures["results"]), 15)
 
     def test_user_view(self):
         self._asJaneDoe()
         response = self._client.get('/measures/%d/' % self._millilitre.id)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         ml = response.data
-        self.assertEqual(ml["name"], "Millilitre")
+        self.assertEqual(ml["name"], "Millilitres")
         self.assertEqual(ml["symbol"], "ml")
 
     def test_admin_view(self):
@@ -343,7 +343,7 @@ class AmountMeasureTestCase(LoggedInTestCase):
         response = self._client.get('/measures/%d/' % self._millilitre.id)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         ml = response.data
-        self.assertEqual(ml["name"], "Millilitre")
+        self.assertEqual(ml["name"], "Millilitres")
         self.assertEqual(ml["symbol"], "ml")
 
     def test_user_create(self):
@@ -352,14 +352,14 @@ class AmountMeasureTestCase(LoggedInTestCase):
         response = self._client.post("/measures/", new_amt, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         # The DB should still only have 2 measures
-        self.assertEqual(AmountMeasure.objects.count(), 2)
+        self.assertEqual(AmountMeasure.objects.count(), 26)
 
     def test_admin_create(self):
         self._asAdmin()
         new_amt = {"name": "Blob", "symbol": "b"}
         response = self._client.post("/measures/", new_amt, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(AmountMeasure.objects.count(), 3)
+        self.assertEqual(AmountMeasure.objects.count(), 27)
         self.assertIs(AmountMeasure.objects.filter(name="Blob").exists(), True)
         b = AmountMeasure.objects.get(name="Blob")
         self.assertEqual(b.symbol, "b")
@@ -395,7 +395,7 @@ class AmountMeasureTestCase(LoggedInTestCase):
         self.assertIs(AmountMeasure.objects.filter(name="Gram").exists(), False)
 
     def test_amountmeasure_str(self):
-        self.assertEqual(self._millilitre.__str__(), "Millilitre (ml)")
+        self.assertEqual(self._millilitre.__str__(), "Millilitres (ml)")
 
 
 class SetTestCase(LoggedInTestCase):
@@ -1095,8 +1095,8 @@ class ItemTestCase(LoggedInTestCase):
     def setUp(self):
         super(ItemTestCase, self).setUp()
 
-        self._measure = AmountMeasure.objects.create(name="Litre", symbol="l")
-        self._measure2 = AmountMeasure.objects.create(name="Millilitre", symbol="ml")
+        self._measure, c = AmountMeasure.objects.get_or_create(name="Litres", symbol="l")
+        self._measure2, c = AmountMeasure.objects.get_or_create(name="Millilitres", symbol="ml")
         self._measure3 = AmountMeasure.objects.create(name="Nanograms/microlitre", symbol="ng/ul")
         self._location = Location.objects.create(name="On top of the cupboard", code="L1")
         self._location2 = Location.objects.create(name="On a shelf", code="L2",
