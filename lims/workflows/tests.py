@@ -49,7 +49,7 @@ class WorkflowTestCase(LoggedInTestCase):
 
         self._prodinput = ItemType.objects.create(name="ExampleStuff", parent=None)
         self._labware = ItemType.objects.create(name="ExampleLabware", parent=None)
-        self._millilitre = AmountMeasure.objects.create(name="Millilitre", symbol="ml")
+        self._millilitre, c = AmountMeasure.objects.get_or_create(name="Millilitres", symbol="ml")
         self._location = Location.objects.create(name="Bench", code="B1")
         self._equipmentSequencer = Equipment.objects.create(name="Sequencer",
                                                             location=self._location,
@@ -631,7 +631,7 @@ class TaskTestCase(LoggedInTestCase):
 
         self._prodinput = ItemType.objects.create(name="ExampleStuff", parent=None)
         self._labware = ItemType.objects.create(name="ExampleLabware", parent=None)
-        self._millilitre = AmountMeasure.objects.create(name="Millilitre", symbol="ml")
+        self._millilitre, c = AmountMeasure.objects.get_or_create(name="Millilitres", symbol="ml")
         self._location = Location.objects.create(name="Bench", code="B1")
         self._equipmentSequencer = Equipment.objects.create(name="Sequencer",
                                                             location=self._location,
@@ -1575,9 +1575,8 @@ class RunTestCase(LoggedInTestCase):
 
         self._prodinput = ItemType.objects.create(name="ExampleStuff", parent=None)
         self._labware = ItemType.objects.create(name="ExampleLabware", parent=None)
-        self._millilitre = AmountMeasure.objects.create(name="Millilitre", symbol="ml")
-        self._location = Location.objects.create(name="Lab", code="L1")
-        self._location = Location.objects.create(name="Bench", code="B1")
+        self._millilitre, c = AmountMeasure.objects.get_or_create(name="Millilitres", symbol="ml")
+        self._location, c = Location.objects.get_or_create(name="Lab", code="L")
         self._equipmentSequencer = Equipment.objects.create(name="Sequencer",
                                                             location=self._location,
                                                             status="idle", can_reserve=True)

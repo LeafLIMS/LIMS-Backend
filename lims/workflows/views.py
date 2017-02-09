@@ -174,6 +174,8 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 itm_data = {
                     'amount': task_data.validated_data['product_input_amount'],
                     'measure': task_data.validated_data['product_input_measure'],
+                    'barcode': '',
+                    'coordinates': '',
                 }
                 data_items[key]['product_inputs'][itm.identifier] = itm_data
         return data_items
@@ -507,6 +509,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     'id': ft.id,
                 })
             output_data = {
+                'current_task': run.current_task,
                 'transfers': serialized_transfers.data,
                 'data': serialized_data_entries.data,
                 'equipment_files': equipment_files,
@@ -570,6 +573,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         # is_manual_finish = request.query_params.get('manual', False)
         # A comma seperated list of product ID's that failed the task
         product_failures = request.data.get('failures', None)
+        restart_task_at = request.data.get('restart_task_at', None)
 
         run = self.get_object()
 
@@ -581,6 +585,13 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 t.transfer_complete = True
                 t.save()
 
+            all_entries = DataEntry.objects.filter(
+                task_run_identifier=run.task_run_identifier,
+                product__in=run.products.all())
+
+            # Handle filepath copy stuff
+            self._copy_files(all_entries)
+
             failed_products = []
             if product_failures:
                 # If failures create new run based on current
@@ -588,10 +599,18 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 failure_ids = str(product_failures).split(',')
                 failed_products = run.products.filter(id__in=failure_ids)
                 new_name = '{} (failed)'.format(run.name)
+
+                # Set the task to a different task if needs to be earlier
+                # Tasks are zero indexed but labelled as 1 indexed so subtract 1
+                if restart_task_at is not None:
+                    set_task_as = int(restart_task_at) - 1
+                else:
+                    set_task_as = run.current_task
+
                 new_run = Run(
                     name=new_name,
                     tasks=run.tasks,
-                    current_task=run.current_task,
+                    current_task=set_task_as,
                     has_started=True,
                     started_by=request.user)
                 new_run.save()
@@ -607,18 +626,15 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 # Remove the failed products from the current run
                 run.products.remove(*failed_products)
 
+            # Exclude failed products
+            entries = all_entries.exclude(product__in=failed_products)
+
             # find and mark dataentry complete!
-            entries = DataEntry.objects.filter(
-                task_run_identifier=run.task_run_identifier,
-                product__in=run.products.all()).exclude(product__in=failed_products)
             entries.update(state='succeeded')
 
             # mark labware inactive
             active_labware = run.labware.filter(is_active=True)
             active_labware.update(is_active=False)
-
-            # Handle filepath copy stuff
-            self._copy_files(entries)
 
             # Create ouputs from the task
             runindex = 0
