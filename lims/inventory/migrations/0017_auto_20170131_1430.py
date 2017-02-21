@@ -51,7 +51,7 @@ def make_itemtypes(apps, schema_editor):
         ('Item',)
     ]
     for item in default_itemtypes:
-         itm = ItemType(name=item, lft=0, rght=0, level=0, tree_id=0)
+         itm = ItemType(name=item[0], lft=0, rght=0, level=0, tree_id=0)
          itm.save()
 
 
