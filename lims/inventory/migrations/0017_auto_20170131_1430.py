@@ -6,10 +6,10 @@ from django.db import models, migrations
 def make_locations(apps, schema_editor):
     Location = apps.get_model('inventory', 'Location')
     default_locations = [
-        ('Lab', 'L'),
+        ('Lab', 'L', 1,),
     ]
     for item in default_locations:
-        l = Location(name=item[0], code=item[1], lft=0, rght=0, level=0, tree_id=0)
+        l = Location(name=item[0], code=item[1], lft=0, rght=0, level=0, tree_id=item[2])
         l.save()
 
 def make_measures(apps, schema_editor):
