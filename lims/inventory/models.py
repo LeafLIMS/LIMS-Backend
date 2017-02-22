@@ -71,9 +71,13 @@ class Location(MPTTModel):
     parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
 
     class Meta:
+        ordering = ['tree_id', '-lft']
         permissions = (
             ('view_location', 'View location',),
         )
+
+    class MPTTMeta:
+        order_insertion_by = ['id']
 
     def has_children(self):
         return True if self.get_descendant_count() > 0 else False

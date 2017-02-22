@@ -75,6 +75,11 @@ class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     permission_classes = (IsInAdminGroupOrRO,)
     search_fields = ('name',)
 
+    def filter_queryset(self, queryset):
+        super(LocationViewSet, self).filter_queryset(queryset)
+        # Set ordering explicitly as django-filter borks the defaults
+        return queryset.order_by('tree_id', '-lft')
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         if instance.has_children():

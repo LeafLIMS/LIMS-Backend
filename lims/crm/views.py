@@ -351,7 +351,7 @@ class CRMLinkView(APIView):
 
                             try:
                                 u = User.objects.get(email=contact_email)
-                            except:
+                            except User.DoesNotExist:
                                 u = User.objects.create_user(
                                     username,
                                     email=contact_email
