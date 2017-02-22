@@ -114,6 +114,7 @@ class Product(models.Model):
                                      blank=True,
                                      null=True,
                                      max_length=20)
+    sbol = models.TextField(blank=True, null=True)
 
     # Anything created or linked in the inventroy to this product
     linked_inventory = models.ManyToManyField(Item, blank=True,
