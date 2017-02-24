@@ -76,9 +76,6 @@ class Location(MPTTModel):
             ('view_location', 'View location',),
         )
 
-    class MPTTMeta:
-        order_insertion_by = ['id']
-
     def has_children(self):
         return True if self.get_descendant_count() > 0 else False
 
