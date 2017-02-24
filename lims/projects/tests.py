@@ -655,11 +655,12 @@ class ParserTestCase(LoggedInTestCase):
 
     def test_csv_parser(self):
         csv = """Name,Description,Role,Color,Sequence,@metadata
-Item_1,test,test,test,test,test
-Item_2,test,test,test,test,test
-item_3,test,test,test,test,test"""
+Item_1,test,promoter,test,test,test
+Item_2,test,ribosome entry site,test,test,test
+item_3,test,cds,test,test,test
+item_4,test,terminator,test,test,test"""
         parser = DesignFileParser(data=csv)
-        items = parser.parse_csv()
+        items, sbol = parser.parse_csv()
         self.assertEqual(set(items), set(self._expected_items))
 
     def test_genbank_parser(self):
@@ -832,8 +833,118 @@ ORIGIN
      4981 tgccatgact cagattctaa ttttaagcta ttcaatttct ctttgatc
 //"""
         parser = DesignFileParser(data=gb)
-        items = parser.parse_gb()
+        items, sbol = parser.parse_gb()
         self.assertEqual(set(items), set(self._expected_items))
+
+    def test_sbol_to_list(self):
+        sbol = """<rdf:RDF xmlns:dcterms="http://purl.org/dc/terms/"
+   xmlns:prov="http://www.w3.org/ns/prov#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:sbol="http://sbols.org/v2#">
+  <sbol:ComponentDefinition rdf:about="http://leaflims.github.io/ComponentDefinition/Construct/1.0.0">
+    <sbol:component>
+      <sbol:Component rdf:about="http://leaflims.github.io/ComponentDefinition/Construct/Item_1/1.0.0">
+        <sbol:access rdf:resource="http://sbols.org/v2#public"/>
+        <sbol:definition rdf:resource="http://leaflims.github.io/ComponentDefinition/Item_1/1.0.0"/>
+        <sbol:displayId>Item_1</sbol:displayId>
+        <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/Item_1"/>
+        <sbol:version>1.0.0</sbol:version>
+      </sbol:Component>
+    </sbol:component>
+    <sbol:component>
+      <sbol:Component rdf:about="http://leaflims.github.io/ComponentDefinition/Construct/Item_2/1.0.0">
+        <sbol:access rdf:resource="http://sbols.org/v2#public"/>
+        <sbol:definition rdf:resource="http://leaflims.github.io/ComponentDefinition/Item_2/1.0.0"/>
+        <sbol:displayId>Item_2</sbol:displayId>
+        <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/Item_2"/>
+        <sbol:version>1.0.0</sbol:version>
+      </sbol:Component>
+    </sbol:component>
+    <sbol:component>
+      <sbol:Component rdf:about="http://leaflims.github.io/ComponentDefinition/Construct/item_3/1.0.0">
+        <sbol:access rdf:resource="http://sbols.org/v2#public"/>
+        <sbol:definition rdf:resource="http://leaflims.github.io/ComponentDefinition/item_3/1.0.0"/>
+        <sbol:displayId>item_3</sbol:displayId>
+        <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/item_3"/>
+        <sbol:version>1.0.0</sbol:version>
+      </sbol:Component>
+    </sbol:component>
+    <sbol:component>
+      <sbol:Component rdf:about="http://leaflims.github.io/ComponentDefinition/Construct/item_4/1.0.0">
+        <sbol:access rdf:resource="http://sbols.org/v2#public"/>
+        <sbol:definition rdf:resource="http://leaflims.github.io/ComponentDefinition/item_4/1.0.0"/>
+        <sbol:displayId>item_4</sbol:displayId>
+        <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/item_4"/>
+        <sbol:version>1.0.0</sbol:version>
+      </sbol:Component>
+    </sbol:component>
+    <sbol:displayId>Construct</sbol:displayId>
+    <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct"/>
+    <sbol:sequenceConstraint>
+      <sbol:SequenceConstraint rdf:about="http://leaflims.github.io/ComponentDefinition/Construct/constraint1/1.0.0">
+        <sbol:displayId>constraint1</sbol:displayId>
+        <sbol:object rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/item_3/1.0.0"/>
+        <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/constraint1"/>
+        <sbol:restriction rdf:resource="http://sbols.org/v2#precedes"/>
+        <sbol:subject rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/Item_1/1.0.0"/>
+        <sbol:version>1.0.0</sbol:version>
+      </sbol:SequenceConstraint>
+    </sbol:sequenceConstraint>
+    <sbol:sequenceConstraint>
+      <sbol:SequenceConstraint rdf:about="http://leaflims.github.io/ComponentDefinition/Construct/constraint2/1.0.0">
+        <sbol:displayId>constraint2</sbol:displayId>
+        <sbol:object rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/item_4/1.0.0"/>
+        <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/constraint2"/>
+        <sbol:restriction rdf:resource="http://sbols.org/v2#precedes"/>
+        <sbol:subject rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/item_3/1.0.0"/>
+        <sbol:version>1.0.0</sbol:version>
+      </sbol:SequenceConstraint>
+    </sbol:sequenceConstraint>
+    <sbol:sequenceConstraint>
+      <sbol:SequenceConstraint rdf:about="http://leaflims.github.io/ComponentDefinition/Construct/constraint3/1.0.0">
+        <sbol:displayId>constraint3</sbol:displayId>
+        <sbol:object rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/Item_2/1.0.0"/>
+        <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/constraint3"/>
+        <sbol:restriction rdf:resource="http://sbols.org/v2#precedes"/>
+        <sbol:subject rdf:resource="http://leaflims.github.io/ComponentDefinition/Construct/item_4/1.0.0"/>
+        <sbol:version>1.0.0</sbol:version>
+      </sbol:SequenceConstraint>
+    </sbol:sequenceConstraint>
+    <sbol:type rdf:resource="http://www.biopax.org/release/biopax-level3.owl#DnaRegion"/>
+    <sbol:version>1.0.0</sbol:version>
+  </sbol:ComponentDefinition>
+  <sbol:ComponentDefinition rdf:about="http://leaflims.github.io/ComponentDefinition/Item_1/1.0.0">
+    <sbol:displayId>Item_1</sbol:displayId>
+    <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/Item_1"/>
+    <sbol:role rdf:resource="http://identifiers.org/so/SO:0000167"/>
+    <sbol:type rdf:resource="http://www.biopax.org/release/biopax-level3.owl#DnaRegion"/>
+    <sbol:version>1.0.0</sbol:version>
+  </sbol:ComponentDefinition>
+  <sbol:ComponentDefinition rdf:about="http://leaflims.github.io/ComponentDefinition/Item_2/1.0.0">
+    <sbol:displayId>Item_2</sbol:displayId>
+    <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/Item_2"/>
+    <sbol:role rdf:resource="http://identifiers.org/so/SO:0000139"/>
+    <sbol:type rdf:resource="http://www.biopax.org/release/biopax-level3.owl#DnaRegion"/>
+    <sbol:version>1.0.0</sbol:version>
+  </sbol:ComponentDefinition>
+  <sbol:ComponentDefinition rdf:about="http://leaflims.github.io/ComponentDefinition/item_3/1.0.0">
+    <sbol:displayId>item_3</sbol:displayId>
+    <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/item_3"/>
+    <sbol:role rdf:resource="http://identifiers.org/so/SO:0000316"/>
+    <sbol:type rdf:resource="http://www.biopax.org/release/biopax-level3.owl#DnaRegion"/>
+    <sbol:version>1.0.0</sbol:version>
+  </sbol:ComponentDefinition>
+  <sbol:ComponentDefinition rdf:about="http://leaflims.github.io/ComponentDefinition/item_4/1.0.0">
+    <sbol:displayId>item_4</sbol:displayId>
+    <sbol:persistentIdentity rdf:resource="http://leaflims.github.io/ComponentDefinition/item_4"/>
+    <sbol:role rdf:resource="http://identifiers.org/so/SO:0000141"/>
+    <sbol:type rdf:resource="http://www.biopax.org/release/biopax-level3.owl#DnaRegion"/>
+    <sbol:version>1.0.0</sbol:version>
+  </sbol:ComponentDefinition>
+</rdf:RDF>
+"""  # noqa
+        parser = DesignFileParser(data=sbol)
+        parser.sbol_to_list()
 
 
 class ProductTestCase(LoggedInTestCase):

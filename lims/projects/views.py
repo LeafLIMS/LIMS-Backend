@@ -92,9 +92,9 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
                     items = []
                     parser = DesignFileParser(instance.design)
                     if instance.design_format == 'csv':
-                        items = parser.parse_csv()
+                        items, sbol = parser.parse_csv()
                     elif instance.design_format == 'gb':
-                        items = parser.parse_gb()
+                        items, sbol = parser.parse_gb()
                     for i in items:
                         instance.linked_inventory.add(i)
                     completed.append(p)
@@ -152,11 +152,13 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
             items = []
             parser = DesignFileParser(instance.design)
             if instance.design_format == 'csv':
-                items = parser.parse_csv()
+                items, sbol = parser.parse_csv()
             elif instance.design_format == 'gb':
-                items = parser.parse_gb()
+                items, sbol = parser.parse_gb()
             for i in items:
                 instance.linked_inventory.add(i)
+            instance.sbol = sbol
+            instance.save()
 
     def get_serializer_class(self):
         # Use a more compact serializer when listing.
@@ -179,6 +181,17 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
         # If so, parse the design to extract info to get parts from
         # inventory.
         self._parse_design(instance)
+
+    @detail_route(methods=['POST'])
+    def replace_design(self, request, pk=None):
+        new_design = request.data.get('design_file', None)
+        if new_design:
+            instance = self.get_object()
+            instance.design = new_design
+            instance.save()
+            self._parse_design(instance)
+            return Response({'message': 'Design file changed'})
+        return Response({'message': 'Please supply a design file'}, status=400)
 
     @detail_route(methods=['POST'])
     def add_attachment(self, request, pk=None):

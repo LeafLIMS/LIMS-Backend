@@ -10,6 +10,8 @@ from lims.permissions.permissions import (SerializerPermissionsMixin,
 from lims.shared.models import Organism
 from .models import (Project, Product, ProductStatus, Comment, WorkLog)
 from lims.datastore.serializers import CompactDataEntrySerializer, AttachmentSerializer
+from .parsers import DesignFileParser
+from lims.inventory.models import Item
 
 
 class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
@@ -66,6 +68,21 @@ class DetailedProductSerializer(ProductSerializer):
     linked_inventory = LinkedItemSerializer(many=True, read_only=True)
     data = CompactDataEntrySerializer(many=True, read_only=True)
     attachments = AttachmentSerializer(read_only=True, many=True)
+    sbol_diagram = serializers.SerializerMethodField()
+
+    def get_sbol_diagram(self, obj):
+        if obj.sbol:
+            parser = DesignFileParser(obj.sbol)
+            elements = parser.sbol_to_list()
+            for e in elements:
+                try:
+                    item = Item.objects.get(name=e['name'])
+                except Item.DoesNotExist:
+                    pass
+                else:
+                    e['item'] = item.id
+            return elements
+        return []
 
 
 class ProductStatusSerializer(serializers.ModelSerializer):
