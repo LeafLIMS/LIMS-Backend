@@ -70,7 +70,7 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
 
         if products_file:
             # Read the CSV file of products into a list
-            decoded_file = codecs.iterdecode(products_file, 'utf-8')
+            decoded_file = codecs.iterdecode(products_file, 'utf-8-sig')
             products = [line for line in csv.DictReader(decoded_file, skipinitialspace=True)]
             # Open the zip file for reading, assign the files within to a dict with filenames
             designs = {}
@@ -78,13 +78,13 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
                 with zipfile.ZipFile(designs_file, 'r') as dzip:
                     for file_path in dzip.namelist():
                         filename = file_path.split('/')[-1]
-                        with dzip.open(file_path) as d:
+                        with dzip.open(file_path, 'rU') as d:
                             designs[filename] = d.read()
             # Iteratre through products creating them and linking design
             for p in products:
                 # Replace the name of the design file with the actual contents
                 if p.get('design', None):
-                    p['design'] = designs[p['design']].decode('UTF-8')
+                    p['design'] = designs[p['design']].decode('utf-8-sig')
                 p['project'] = self.get_object().id
                 serializer = ProductSerializer(data=p)
                 if serializer.is_valid():
