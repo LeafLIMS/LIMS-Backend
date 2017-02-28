@@ -153,7 +153,12 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         run = self.get_object()
         task_input_items = {}
         for p in run.products.all():
-            task_input_items[p] = list(p.linked_inventory.filter(item_type__name=input_type))
+            input_type_mdl = ItemType.objects.get(name=input_type)
+            # Get all decendents of the item type
+            with_children = input_type_mdl.get_descendants(include_self=True)
+            # Get list of names of types
+            itn = [t.name for t in with_children]
+            task_input_items[p] = list(p.linked_inventory.filter(item_type__name__in=itn))
         return task_input_items
 
     def _generate_data_dict(self, input_items, task_data):
@@ -303,7 +308,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 measure = AmountMeasure.objects.get(symbol=amount_symbol)
                 amount['amount'] = amount['amount'].magnitude
             except:
-                measure = AmountMeasure.objects.get(symbol='items')
+                measure = AmountMeasure.objects.get(symbol='item')
             transfers.append(ItemTransfer(
                 item=item,
                 barcode=amount.get('barcode', None),
