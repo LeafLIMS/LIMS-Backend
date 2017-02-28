@@ -1,5 +1,6 @@
 import io
 import ast
+import json
 
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -127,17 +128,17 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
                 filetemplate = FileTemplate.objects.get(id=file_template_id)
             except FileTemplate.DoesNotExist:
                 return Response({'message': 'File template does not exist'}, status=404)
-            # encoding = 'utf-8' if request.encoding is None else request.encoding
-            # f = io.TextIOWrapper(uploaded_file.file, encoding=encoding)
-            f = io.StringIO("".join(uploaded_file))
+            encoding = 'utf-8' if request.encoding is None else request.encoding
+            f = io.TextIOWrapper(uploaded_file.file, encoding=encoding)
+            # f = io.StringIO("".join(uploaded_file))
             items_to_import = filetemplate.read(f)
             saved = []
             rejected = []
             if items_to_import:
                 for identifier, item_data in items_to_import.items():
                     item_data['identifier'] = ' '.join(identifier)
-                    # item_data['assign_groups'] = json.loads(permissions)
-                    item_data['assign_groups'] = permissions
+                    item_data['assign_groups'] = json.loads(permissions)
+                    # item_data['assign_groups'] = permissions
                     if 'properties' not in item_data:
                         item_data['properties'] = []
                     else:
