@@ -131,7 +131,7 @@ class CalculationFieldValueSerializer(serializers.Serializer):
 
 
 class StepFieldPropertySerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(allow_null=True)
+    id = serializers.IntegerField(allow_null=True, required=False)
     measure = serializers.SlugRelatedField(
         queryset=AmountMeasure.objects.all(),
         slug_field='symbol'
@@ -148,6 +148,7 @@ class StepFieldPropertyValueSerializer(serializers.Serializer):
     """
     Serializes the values from an input field
     """
+    id = serializers.IntegerField(required=False, allow_null=True)
     label = serializers.CharField()
     amount = serializers.FloatField()
     measure = serializers.CharField()
