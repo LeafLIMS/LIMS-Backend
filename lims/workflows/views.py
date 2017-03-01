@@ -331,17 +331,19 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         data_item_amounts = {}
 
         # Get labware amounts
-        labware_identifier = task_data.validated_data['labware_identifier']
-        labware_item = self._get_from_inventory(labware_identifier)
-        labware_required = task_data.validated_data['labware_amount']
-        labware_barcode = task_data.validated_data.get('labware_barcode', None)
-        labware_symbol = None
-        if labware_item.amount_measure is not None:
-            labware_symbol = labware_item.amount_measure.symbol
-        sum_item_amounts[labware_item] = {
-                'amount': self._as_measured_value(labware_required, labware_symbol),
-                'barcode': labware_barcode,
-        }
+        print(task_data.validated_data.get('labware_not_required', False))
+        if task_data.validated_data.get('labware_not_required', False) is not True:
+            labware_identifier = task_data.validated_data['labware_identifier']
+            labware_item = self._get_from_inventory(labware_identifier)
+            labware_required = task_data.validated_data['labware_amount']
+            labware_barcode = task_data.validated_data.get('labware_barcode', None)
+            labware_symbol = None
+            if labware_item.amount_measure is not None:
+                labware_symbol = labware_item.amount_measure.symbol
+            sum_item_amounts[labware_item] = {
+                    'amount': self._as_measured_value(labware_required, labware_symbol),
+                    'barcode': labware_barcode,
+            }
 
         # Get task input field amounts
         for key, item in data_items.items():
