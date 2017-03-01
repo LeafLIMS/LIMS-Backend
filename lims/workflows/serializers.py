@@ -52,6 +52,7 @@ class InputFieldValueSerializer(serializers.Serializer):
     measure = serializers.CharField()
     inventory_identifier = serializers.CharField()
     from_input_file = serializers.NullBooleanField()
+    calculation_used = serializers.IntegerField(required=False, allow_null=True)
 
     destination_barcode = serializers.CharField(required=False, allow_null=True)
     destination_coordinates = serializers.CharField(required=False, allow_null=True)
@@ -77,6 +78,7 @@ class VariableFieldValueSerializer(serializers.Serializer):
     label = serializers.CharField()
     amount = serializers.FloatField()
     measure = serializers.CharField(required=False, allow_null=True)
+    calculation_used = serializers.IntegerField(required=False, allow_null=True)
 
 
 class OutputFieldTemplateSerializer(serializers.ModelSerializer):
@@ -102,6 +104,7 @@ class OutputFieldValueSerializer(serializers.Serializer):
     amount = serializers.FloatField()
     measure = serializers.CharField()
     lookup_type = serializers.CharField()
+    calculation_used = serializers.IntegerField(required=False, allow_null=True)
 
 
 class CalculationFieldTemplateSerializer(serializers.ModelSerializer):
@@ -122,6 +125,7 @@ class CalculationFieldValueSerializer(serializers.Serializer):
     """
     Serializes the values from an input field
     """
+    id = serializers.IntegerField()
     label = serializers.CharField()
     calculation = serializers.CharField()
 
@@ -147,6 +151,7 @@ class StepFieldPropertyValueSerializer(serializers.Serializer):
     label = serializers.CharField()
     amount = serializers.FloatField()
     measure = serializers.CharField()
+    calculation_used = serializers.IntegerField(required=False, allow_null=True)
 
 
 class StepFieldTemplateSerializer(serializers.ModelSerializer):

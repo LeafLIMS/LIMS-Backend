@@ -2,8 +2,11 @@ from io import TextIOWrapper
 import json
 import copy
 import uuid
+import re
 
 from pint import UnitRegistry, UndefinedUnitError
+from pyparsing import ParseException
+
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.utils import timezone
@@ -56,6 +59,7 @@ from .serializers import (WorkflowSerializer, SimpleTaskTemplateSerializer,  # n
 from lims.datastore.models import DataEntry
 from lims.datastore.serializers import DataEntrySerializer
 from lims.equipment.models import Equipment
+from .calculation import NumericStringParser
 
 
 class WorkflowViewSet(AuditTrailViewMixin, ViewPermissionsMixin, viewsets.ModelViewSet):
@@ -152,6 +156,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         """
         run = self.get_object()
         task_input_items = {}
+        # TODO: Allow excludes
         for p in run.products.all():
             input_type_mdl = ItemType.objects.get(name=input_type)
             # Get all decendents of the item type
@@ -184,6 +189,74 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 }
                 data_items[key]['product_inputs'][itm.identifier] = itm_data
         return data_items
+
+    def _replace_fields(self, values):
+        """
+        Replace field names with their correct values
+        """
+        def match_value(match):
+            mtch = match.group(1)
+            if mtch in values:
+                return str(values[mtch])
+            return str(0)
+        return match_value
+
+    def _calculate_value(self, calculation, values):
+        """
+        Parse and perform a calculation using a dict of fields
+
+        Using either a dict of values to field names
+
+        Returns a NaN if the calculation cannot be performed, e.g.
+        incorrect field names.
+        """
+        nsp = NumericStringParser()
+        field_regex = r'\{(.+?)\}'
+        interpolated_calculation = re.sub(field_regex, self._replace_fields(values), calculation)
+        try:
+            result = nsp.eval(interpolated_calculation)
+        except ParseException:
+            return None
+        return result
+
+    def _flatten_values(self, rep):
+        """
+        Take a dict of task data and reduce to field label: value
+        """
+        flat_values = {}
+        for field_type in ['input_fields', 'step_fields', 'variable_fields', 'output_fields']:
+            if field_type in rep:
+                for field in rep[field_type]:
+                    if field_type == 'step_fields':
+                        for prop in field['properties']:
+                            flat_values[prop['label']] = prop['amount']
+                    else:
+                        flat_values[field['label']] = field['amount']
+        if 'product_input_amount' in rep:
+            flat_values['product_input_amount'] = rep['product_input_amount']
+        return flat_values
+
+    def _perform_calculations(self, task_data):
+        """
+        Alter fields based on calculations.
+        """
+        # Operate on each product entry and values for the fields
+        for pid, product_data in task_data.items():
+            # First, index any calculations to refer to later
+            calculations = {c['id']: c for c in product_data['calculation_fields']}
+            # Flatten data to a dict
+            to_values = self._flatten_values(product_data)
+            # Look through each field for calculations
+            for field_type in ['input_fields', 'step_fields', 'variable_fields', 'output_fields']:
+                if field_type in product_data:
+                    for field in product_data[field_type]:
+                        if 'calculation_used' in field and field['calculation_used'] is not None:
+                            # Look up calculations from list
+                            calc = calculations[field['calculation_used']]['calculation']
+                            # Return the calculated value
+                            result = self._calculate_value(calc, to_values)
+                            field['amount'] = result
+        return task_data
 
     def _update_data_items_from_file(self, file_data, data_items):
         """
@@ -373,6 +446,9 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             # Process input files against task data
             data_items = self._update_data_items_from_file(file_data,
                                                            data_items)
+            # Perform calculations here!
+            data_items = self._perform_calculations(data_items)
+
             product_item_amounts, sum_item_amounts = self._get_item_amounts(data_items,
                                                                             serialized_task)
             valid_amounts, errors = self._check_input_amounts(sum_item_amounts)
@@ -410,6 +486,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 task_run_identifier = uuid.uuid4()
                 # driver_output = self._do_driver_actions(data_items)
                 # Generate DataItem for inputs
+                # TODO: Allow excludes
                 for product in run.products.all():
                     prod_amounts = product_item_amounts[product.product_identifier]
                     data_items[product.product_identifier]['product_input_amounts'] = \
