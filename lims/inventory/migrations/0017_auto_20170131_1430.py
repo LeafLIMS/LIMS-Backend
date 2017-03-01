@@ -37,6 +37,8 @@ def make_measures(apps, schema_editor):
         ('Minute', 'min'),
         ('Second', 's'),
         ('Millisecond', 'ms'),
+        ('Kelvin', 'K'),
+        ('Celsius', '°C'),
         ('Microsecond', 'us'),
         ('Nanosecond', 'ns'),
         ('Microgram/microlitre', 'ug/ul'),
