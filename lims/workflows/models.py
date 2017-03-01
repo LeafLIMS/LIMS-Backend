@@ -164,7 +164,8 @@ class TaskTemplate(models.Model):
     product_input_amount = models.IntegerField()
     product_input_measure = models.ForeignKey(AmountMeasure)
 
-    labware = models.ForeignKey(ItemType, related_name='labware')
+    labware_not_required = models.BooleanField(default=False)
+    labware = models.ForeignKey(ItemType, related_name='labware', blank=True, null=True)
     labware_amount = models.IntegerField(default=1)
     multiple_products_on_labware = models.BooleanField(default=False)
 
