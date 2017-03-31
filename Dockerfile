@@ -33,6 +33,9 @@ RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSI
     && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
     && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
 
+# Grab libxml2 and libxslt for snekbol
+RUN apt-get update && apt-get -q -y install libxml2-dev libxslt-dev
+
 WORKDIR /usr/src/app
 RUN mkdir lims
 COPY . lims

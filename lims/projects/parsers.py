@@ -1,13 +1,13 @@
 import os
-from io import StringIO
+from io import StringIO, BytesIO
 import csv
 import uuid
-import xml.etree.ElementTree as ET
 
 from django.db.models import Q
 
 from Bio import SeqIO
-import sbol
+# import sbol
+from snekbol import snekbol
 
 from lims.inventory.models import Item
 
@@ -25,28 +25,26 @@ class DesignFileParser:
         'structual',  # Support EGF imports
     )
 
-    # SBOL file namespaces
-    SN = {
-        'dcterms': 'http://purl.org/dc/terms/',
-        'prov': 'http://www.w3.org/ns/prov#',
-        'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-        'sbol': 'http://sbols.org/v2#',
-    }
-
-    SO_OPERATOR = sbol.SO + '0000057'
-    SO_INSULATOR = sbol.SO + '0000627'
-    SO_RIBONUCLEASE_SITE = sbol.SO + '0001977'
-    SO_RNA_STABILITY_ELEMENT = sbol.SO + '0001979'
-    SO_PROTEASE_SITE = sbol.SO + '0001956'
-    SO_PROTEIN_STABILITY_ELEMENT = sbol.SO + '0001955'
-    SO_ORIGIN_OF_REPLICATION = sbol.SO + '0000296'
-    SO_RESTRICTION_ENZYME_CUT_SITE = sbol.SO + '0000168'
+    SO_URI = 'http://identifiers.org/so/SO:'
+    SO_MISC = SO_URI + '0000001'
+    SO_PROMOTER = SO_URI + '0000167'
+    SO_CDS = SO_URI + '0000316'
+    SO_RBS = SO_URI + '0000139'
+    SO_TERMINATOR = SO_URI + '0000141'
+    SO_OPERATOR = SO_URI + '0000057'
+    SO_INSULATOR = SO_URI + '0000627'
+    SO_RIBONUCLEASE_SITE = SO_URI + '0001977'
+    SO_RNA_STABILITY_ELEMENT = SO_URI + '0001979'
+    SO_PROTEASE_SITE = SO_URI + '0001956'
+    SO_PROTEIN_STABILITY_ELEMENT = SO_URI + '0001955'
+    SO_ORIGIN_OF_REPLICATION = SO_URI + '0000296'
+    SO_RESTRICTION_ENZYME_CUT_SITE = SO_URI + '0000168'
 
     ROLES = {
-        'promoter': sbol.SO_PROMOTER,
-        'cds': sbol.SO_CDS,
-        'ribosome entry site': sbol.SO_RBS,
-        'terminator': sbol.SO_TERMINATOR,
+        'promoter': SO_PROMOTER,
+        'cds': SO_CDS,
+        'ribosome entry site': SO_RBS,
+        'terminator': SO_TERMINATOR,
         'operator': SO_OPERATOR,
         'insulator': SO_INSULATOR,
         'ribonuclease site': SO_RIBONUCLEASE_SITE,
@@ -55,23 +53,20 @@ class DesignFileParser:
         'protein stability element': SO_PROTEIN_STABILITY_ELEMENT,
         'origin of replication': SO_ORIGIN_OF_REPLICATION,
         'restriction site': SO_RESTRICTION_ENZYME_CUT_SITE,
-        'user defined': sbol.SO_MISC,
+        'user defined': SO_MISC,
     }
-
     INVERT_ROLES = {v: k for k, v in ROLES.items()}
 
     def __init__(self, data):
         self.file_data = StringIO(initial_value=data)
 
         # This may need to be set as a setting
-        self.homespace_uri = 'http://leaflims.github.io'
+        self.default_uri = 'http://leaflims.github.io'
 
         # SBOL specific stuff
-        sbol.setHomespace(self.homespace_uri)
-        self.document = sbol.Document()
-        self.construct = sbol.ComponentDefinition('Construct')
-        self.construct_seq = sbol.Sequence('Construct')
-        self.document.addComponentDefinition(self.construct)
+        self.document = snekbol.Document(self.default_uri)
+        self.construct = snekbol.ComponentDefinition('Construct')
+        self.document.add_component_definition(self.construct)
 
     def get_inventory_item(self, name):
         """
@@ -87,41 +82,37 @@ class DesignFileParser:
         """
         Take a CSV element and convert to an SBOL component
         """
-        # Sequences currently cause a segfault when added to document
-        # component_seq = sbol.Sequence(element['Name'], element['Sequence'])
-        # self.document.addSequence(component_seq)
-
-        component = sbol.ComponentDefinition(element['Name'])
-        component.roles.set(self.ROLES.get(element['Role'], sbol.SO_MISC))
-        # component.sequences.set(component_seq.identity.get())
-        self.document.addComponentDefinition(component)
+        component_seq = snekbol.Sequence(element['Name'], element['Sequence'])
+        component = snekbol.ComponentDefinition(element['Name'],
+                                                roles=[self.ROLES.get(element['Role'],
+                                                                      self.SO_MISC)],
+                                                sequences=[component_seq])
+        self.document.add_component_definition(component)
         return component
 
     def genbank_to_sbol_component(self, element):
         """
         Create an SBOL component from a genbank element
         """
-        component = sbol.ComponentDefinition(element)
-        component.roles.set(sbol.SO_MISC)
-        self.document.addComponentDefinition(component)
+        component = snekbol.ComponentDefinition(element,
+                                                roles=[self.SO_MISC])
+        self.document.add_component_definition(component)
         return component
 
     def make_sbol_construct(self, elements):
         """
         Take all elements and sequences and make an SBOL construct from them
         """
-        self.construct.assemble(elements)
-        # Again, enable when doesn't cause segfault
-        # self.construct_seq.assemble()
+        self.document.assemble_component(self.construct, elements)
 
     def make_sbol_xml(self):
         """
         Take an SBOL definition and turn into RDF/XML
         """
-        filename = '/tmp/' + str(uuid.uuid4()) + '.xml'
-        self.document.write(filename)
-        with open(filename) as sf:
-            return sf.read()
+        xml_file = BytesIO()
+        self.document.write(xml_file)
+        xml_file.seek(0)
+        return xml_file.read()
 
     def get_sbol_from_xml(self, source_data):
         """
@@ -133,50 +124,38 @@ class DesignFileParser:
         self.document.read(filename)
         os.remove(filename)
 
-    def _ns_attr(self, namespace, attribute):
-        return '{'+self.SN[namespace]+'}'+attribute
-
     def sbol_to_list(self):
         """
         Take an sbol file and return a linear list of components
         """
-        construct_uri = self.homespace_uri + '/ComponentDefinition/Construct/1.0.0'
-        """
-        # Oh look, MORE segfaults! Wait until SWIG wrapper is wrapped!
-        self.get_sbol_from_xml(self.file_data)
-        construct = self.document.getComponentDefinition(construct_uri)
-        print(construct)
-        """
+        # Read in SBOL file
+        # Look for component def with components
+        # Build a list of SBOL componetns from this
+        # If multiple do something fancy?
+        self.document.read(self.file_data)
         elements = []
-        construct_lookup = {}
-        construct = None
-        root = ET.fromstring(self.file_data.read())
-        for cd in root:
-            # Look for the "Construct" uri
-            if cd.attrib[self._ns_attr('rdf', 'about')] == construct_uri:
-                construct = cd
-            else:
-                uri = cd.attrib[self._ns_attr('rdf', 'about')]
-                name = cd.find('sbol:displayId', self.SN).text
-                role = cd.find('sbol:role', self.SN)
-                role_uri = role.attrib[self._ns_attr('rdf', 'resource')]
-                construct_lookup[uri] = {
-                    'name': name,
-                    'role': self.INVERT_ROLES[role_uri].replace(' ', '-')
-                    }
-        for c in construct.findall('sbol:component', self.SN):
-            component = c.find('sbol:Component', self.SN)
-            # Elements: {name:, role:}
-            component_uri = component.find('sbol:definition', self.SN).attrib[
-                    self._ns_attr('rdf', 'resource')]
-            elements.append(construct_lookup[component_uri])
+        for c in self.document.list_components():
+            if len(c.components) > 0:
+                comp_elems = []
+                for cl in c.components:
+                    role_uri = cl.definition.roles[0]
+                    comp_elems.append({'name': cl.display_id,
+                                       'role': self.INVERT_ROLES[role_uri].replace(' ', '-')})
+                elements.append(comp_elems)
         return elements
 
     def parse_sbol(self):
         """
         Take an SBOL XML file and parse to items/sbol
         """
-        self.get_sbol_from_xml(self.file_data)
+        elements = self.sbol_to_list()
+        items = []
+        for e in elements:
+            for c in e:
+                item = self.get_inventory_item(c['name'])
+                if item:
+                    items.append(item)
+        return items, elements
 
     def parse_gb(self):
         """

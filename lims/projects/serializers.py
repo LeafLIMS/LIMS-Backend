@@ -75,12 +75,13 @@ class DetailedProductSerializer(ProductSerializer):
             parser = DesignFileParser(obj.sbol)
             elements = parser.sbol_to_list()
             for e in elements:
-                try:
-                    item = Item.objects.get(name=e['name'])
-                except Item.DoesNotExist:
-                    pass
-                else:
-                    e['item'] = item.id
+                for sub in e:
+                    try:
+                        item = Item.objects.get(name=sub['name'])
+                    except Item.DoesNotExist:
+                        pass
+                    else:
+                        sub['item'] = item.id
             return elements
         return []
 
