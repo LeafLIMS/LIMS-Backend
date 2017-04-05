@@ -75,6 +75,8 @@ class Run(models.Model):
     task_in_progress = models.BooleanField(default=False)
     # Created/updated at the start of every task.
     task_run_identifier = models.UUIDField(null=True, blank=True)
+    # Exclude certain items from use
+    exclude = models.CommaSeparatedIntegerField(max_length=400, blank=True, null=True)
 
     equipment_used = models.ForeignKey(Equipment, blank=True, null=True)
     products = models.ManyToManyField(Product, blank=True,
@@ -129,7 +131,8 @@ class Run(models.Model):
         valid = {}
         if task:
             for p in self.products.all():
-                if p.linked_inventory.filter(item_type=task.product_input).count() > 0:
+                input_types = task.product_input.get_descendants(include_self=True)
+                if p.linked_inventory.filter(item_type__in=input_types).count() > 0:
                     valid[p.id] = True
                 else:
                     valid[p.id] = False
@@ -188,6 +191,9 @@ class TaskTemplate(models.Model):
 
     def store_labware_as(self):
         return 'labware_identifier'
+
+    def valid_product_input_types(self):
+        return [v.name for v in self.product_input.get_descendants(include_self=True)]
 
     def _flatten_to_values(self, the_dict):
         flat = {}

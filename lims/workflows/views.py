@@ -155,6 +155,9 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         Get input items from products in the run
         """
         run = self.get_object()
+        excludes = []
+        if run.exclude:
+            excludes = [v for v in run.exclude.split(',') if v != '']
         task_input_items = {}
         # TODO: Allow excludes
         for p in run.products.all():
@@ -163,7 +166,9 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             with_children = input_type_mdl.get_descendants(include_self=True)
             # Get list of names of types
             itn = [t.name for t in with_children]
-            task_input_items[p] = list(p.linked_inventory.filter(item_type__name__in=itn))
+            items_picked = p.linked_inventory.filter(item_type__name__in=itn) \
+                .exclude(id__in=excludes)
+            task_input_items[p] = list(items_picked)
         return task_input_items
 
     def _generate_data_dict(self, input_items, task_data):
@@ -331,7 +336,6 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         data_item_amounts = {}
 
         # Get labware amounts
-        print(task_data.validated_data.get('labware_not_required', False))
         if task_data.validated_data.get('labware_not_required', False) is not True:
             labware_identifier = task_data.validated_data['labware_identifier']
             labware_item = self._get_from_inventory(labware_identifier)

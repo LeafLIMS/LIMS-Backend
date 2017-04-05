@@ -325,10 +325,11 @@ class RecalculateTaskTemplateSerializer(TaskTemplateSerializer):
 
 
 class SimpleTaskTemplateSerializer(TaskTemplateSerializer):
+    valid_product_input_types = serializers.ListField(read_only=True)
 
     class Meta:
         model = TaskTemplate
-        fields = ('id', 'name', 'description', 'product_input',
+        fields = ('id', 'name', 'description', 'product_input', 'valid_product_input_types',
                   'capable_equipment', 'created_by', 'date_created',)
 
 
