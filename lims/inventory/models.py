@@ -280,7 +280,7 @@ class ItemTransfer(models.Model):
                     return False
             self.item.amount_available = new_amount.magnitude
             self.item.save()
-            self.amount_available = new_amount.magnitude
+            self.amount_available = self.amount_available - to_take.magnitude
         else:
             # We take from the transfer not the actual item since we've
             # already got it from the item
@@ -320,6 +320,7 @@ def initItemTransfer(**kwargs):
     """
     instance = kwargs.get('instance')
     # Convience, these are identical values at creation
-    instance.amount_available = instance.amount_taken
-    instance.amount_to_take = instance.amount_taken
+    if instance.pk is None:
+        instance.amount_available = instance.amount_taken
+        instance.amount_to_take = instance.amount_taken
 post_init.connect(initItemTransfer, ItemTransfer)
