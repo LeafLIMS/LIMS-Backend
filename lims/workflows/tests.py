@@ -2375,6 +2375,7 @@ class RunTestCase(LoggedInTestCase):
             "product_input_amount": product_input_amount,
             "product_input_measure": self._millilitre.symbol,
             "equipment_choice": self._equipmentSequencer.name,
+            "labware_not_required": False,
             "input_fields": [
                 {"id:": self._inputField1.id, "measure": self._millilitre.symbol,
                  "lookup_type": self._prodinput.name, "label": "input1",

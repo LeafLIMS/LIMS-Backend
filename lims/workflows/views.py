@@ -7,7 +7,7 @@ import re
 from pint import UnitRegistry, UndefinedUnitError
 from pyparsing import ParseException
 
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from django.utils import timezone
 from guardian.shortcuts import get_group_perms
@@ -367,7 +367,20 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         errors = []
         valid_amounts = True
         for item, required in sum_item_amounts.items():
-            available = self._as_measured_value(item.amount_available, item.amount_measure.symbol)
+            available = self._as_measured_value(item.amount_available,
+                                                item.amount_measure.symbol)
+            # Lookup transfers to see if one make sense for this
+            # Only if a barcode is supplied, as this inidcates a plate may already exist
+            if required.get('barcode', None):
+                try:
+                    transfer = ItemTransfer.objects.get(item=item,
+                                                        barcode=required.get('barcode', None),
+                                                        coordinates=required.get('coordinates',
+                                                                                 None))
+                    available = self._as_measured_value(transfer.amount_taken,
+                                                        transfer.amount_measure.symbol)
+                except ItemTransfer.DoesNotExist:
+                    pass
             if available < required['amount']:
                 missing = (available - required['amount']) * -1
                 message = 'Inventory item {0} ({1}) is short of amount by {2:.2f}'.format(
@@ -388,12 +401,25 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 amount['amount'] = amount['amount'].magnitude
             except:
                 measure = AmountMeasure.objects.get(symbol='item')
-            transfers.append(ItemTransfer(
-                item=item,
-                barcode=amount.get('barcode', None),
-                coordinates=amount.get('coordinates', None),
-                amount_taken=amount['amount'],
-                amount_measure=measure))
+
+            # Look up to see if there is a matching ItemTransfer already and then
+            # use this instead
+            try:
+                transfer = ItemTransfer.objects.get(item=item,
+                                                    barcode=amount.get('barcode', None),
+                                                    coordinates=amount.get('coordinates', None))
+                # At this point need to subtract amount from available in existing
+                # transfer! Need to mark in some way not completed though so can put
+                # back if the trasnfer is cancelled
+                transfer.amount_to_take = amount['amount']
+            except (ObjectDoesNotExist, MultipleObjectsReturned):
+                transfer = ItemTransfer(
+                    item=item,
+                    barcode=amount.get('barcode', None),
+                    coordinates=amount.get('coordinates', None),
+                    amount_taken=amount['amount'],
+                    amount_measure=measure)
+            transfers.append(transfer)
         return transfers
 
     def _serialize_item_amounts(self, dict_of_amounts):
@@ -459,6 +485,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                                                                             serialized_task)
             valid_amounts, errors = self._check_input_amounts(sum_item_amounts)
 
+            # Check if a transfer already exists with given barcode/well??
             transfers = self._create_item_transfers(sum_item_amounts)
 
             # Check if you can actually use the equipment
@@ -492,7 +519,6 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 task_run_identifier = uuid.uuid4()
                 # driver_output = self._do_driver_actions(data_items)
                 # Generate DataItem for inputs
-                # TODO: Allow excludes
                 for product in run.products.all():
                     prod_amounts = product_item_amounts[product.product_identifier]
                     data_items[product.product_identifier]['product_input_amounts'] = \
@@ -547,6 +573,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 t.is_addition = True
                 t.do_transfer(ureg)
             # Once transfers made delete them
+            # TODO: DO NOT delete transfers marked as has_taken!!
             transfers_for_this_task.delete()
             # Trash the data entries now as they're irrelevant
             data_entries.delete()
@@ -670,8 +697,9 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             # Now the task is complete any transfers can be marked as complete
             transfers = run.transfers.filter(run_identifier=run.task_run_identifier)
             for t in transfers:
-                t.transfer_complete = True
-                t.save()
+                # We've finished so you can't put it back now
+                # At this point it may or may not have everthing taken
+                t.do_complete()
 
             all_entries = DataEntry.objects.filter(
                 task_run_identifier=run.task_run_identifier,

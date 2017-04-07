@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.signals import post_init
 import reversion
 from django.contrib.auth.models import User
 
@@ -183,7 +184,12 @@ class ItemTransfer(models.Model):
     Represents an amount of item in transfer for task
     """
     item = models.ForeignKey(Item, related_name='transfers')
+    # The amount originally taken from the inventory
     amount_taken = models.IntegerField(default=0)
+    # The amount now available in this transfer
+    amount_available = models.IntegerField(default=0)
+    # The amount to take from this transfer (set initially as amount_taken)
+    amount_to_take = models.IntegerField(default=0)
     amount_measure = models.ForeignKey(AmountMeasure)
     run_identifier = models.UUIDField(blank=True, null=True, db_index=True)
     barcode = models.CharField(max_length=20, blank=True, null=True, db_index=True)
@@ -201,6 +207,12 @@ class ItemTransfer(models.Model):
     # You're adding not taking away
     is_addition = models.BooleanField(default=False)
 
+    # The transfer has taken out from the inventory; It might not yet be finished
+    # so we need a way of knowing if we should take stuff out or not
+    has_taken = models.BooleanField(default=False, db_index=True)
+
+    # The transfer has completed and there is nothing left, this is now just
+    # a history entry
     transfer_complete = models.BooleanField(default=False, db_index=True)
 
     class Meta:
@@ -249,22 +261,65 @@ class ItemTransfer(models.Model):
         """
         if not ureg:
             ureg = UnitRegistry()
-        existing = self._as_measured_value(self.item.amount_available,
-                                           self.item.amount_measure.symbol,
-                                           ureg)
-        to_take = self._as_measured_value(self.amount_taken,
-                                          self.amount_measure.symbol,
-                                          ureg)
-        if self.is_addition:
-            new_amount = existing + to_take
-        else:
-            if existing > to_take:
-                new_amount = existing - to_take
+        # Check if it is taking stuff from inventory or not
+        # Note: if something has been taken you cannot put it
+        # back
+        if not self.has_taken:
+            existing = self._as_measured_value(self.item.amount_available,
+                                               self.item.amount_measure.symbol,
+                                               ureg)
+            to_take = self._as_measured_value(self.amount_taken,
+                                              self.amount_measure.symbol,
+                                              ureg)
+            if self.is_addition:
+                new_amount = existing + to_take
             else:
-                return False
-        self.item.amount_available = new_amount.magnitude
-        self.item.save()
+                if existing > to_take:
+                    new_amount = existing - to_take
+                else:
+                    return False
+            self.item.amount_available = new_amount.magnitude
+            self.item.save()
+            self.amount_available = new_amount.magnitude
+        else:
+            # We take from the transfer not the actual item since we've
+            # already got it from the item
+            existing = self._as_measured_value(self.amount_available,
+                                               self.amount_measure.symbol,
+                                               ureg)
+            to_take = self._as_measured_value(self.amount_to_take,
+                                              self.amount_measure.symbol,
+                                              ureg)
+            if self.is_addition:
+                new_amount = existing + to_take
+            else:
+                if existing > to_take:
+                    new_amount = existing - to_take
+                else:
+                    return False
+            self.amount_available = new_amount.magnitude
+        self.save()
         return True
+
+    def do_complete(self, ureg=False):
+        """
+        Check if there is anything left available, if not complete.
+        """
+        if self.amount_available == 0:
+            self.transfer_complete = True
+        self.has_taken = True
+        self.save()
 
     def __str__(self):
         return '{} {}/{}'.format(self.item.name, self.barcode, self.coordinates)
+
+
+def initItemTransfer(**kwargs):
+    """
+    Extra init stuff for creating ItemTransfers
+    """
+    instance = kwargs.get('instance')
+    # Convience, these are identical values at creation
+    instance.amount_available = instance.amount_taken
+    instance.amount_to_take = instance.amount_taken
+post_init.connect(initItemTransfer, ItemTransfer)
