@@ -185,8 +185,9 @@ class DesignFileParser:
         except:
             pass
         else:
-            self.make_sbol_construct(list(elements.values()))
-            sbol = self.make_sbol_xml()
+            if len(elements.values()) > 0:
+                self.make_sbol_construct(list(elements.values()))
+                sbol = self.make_sbol_xml()
         return items, sbol
 
     def parse_csv(self):
