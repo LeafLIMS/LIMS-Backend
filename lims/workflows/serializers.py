@@ -8,6 +8,7 @@ from lims.permissions.permissions import SerializerPermissionsMixin
 from lims.equipment.models import Equipment
 from lims.filetemplate.models import FileTemplate
 from lims.inventory.models import ItemType, AmountMeasure
+from lims.inventory.serializers import ItemTransferPreviewSerializer
 from lims.projects.serializers import DetailedProductSerializer
 from .models import (Workflow,
                      Run,
@@ -367,6 +368,7 @@ class DetailedRunSerializer(serializers.ModelSerializer):
     products = DetailedProductSerializer(read_only=True, many=True)
     tasks = SimpleTaskTemplateSerializer(read_only=True, many=True,
                                          source='get_tasks')
+    transfers = ItemTransferPreviewSerializer(read_only=True, many=True)
 
     class Meta:
         model = Run
