@@ -44,6 +44,8 @@ class DataEntry(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User)
     state = models.CharField(max_length=20, choices=STATE)
+    # Any information on things such as reasons for failure etc.
+    notes = models.TextField(blank=True, null=True)
     data = JSONField()
     data_files = models.ManyToManyField(DataFile, blank=True)
 

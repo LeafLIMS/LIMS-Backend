@@ -624,6 +624,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     'id': ft.id,
                 })
             output_data = {
+                'tasks': run.tasks,
                 'current_task': run.current_task,
                 'transfers': serialized_transfers.data,
                 'data': serialized_data_entries.data,
@@ -688,6 +689,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         # is_manual_finish = request.query_params.get('manual', False)
         # A comma seperated list of product ID's that failed the task
         product_failures = request.data.get('failures', None)
+        notes = request.data.get('notes', None)
         restart_task_at = request.data.get('restart_task_at', None)
 
         run = self.get_object()
@@ -719,7 +721,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 # Set the task to a different task if needs to be earlier
                 # Tasks are zero indexed but labelled as 1 indexed so subtract 1
                 if restart_task_at is not None:
-                    set_task_as = int(restart_task_at) - 1
+                    set_task_as = int(restart_task_at)
                 else:
                     set_task_as = run.current_task
 
@@ -737,7 +739,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 rtri = run.task_run_identifier
                 failed_entries = DataEntry.objects.filter(task_run_identifier=rtri,
                                                           product__in=failed_products)
-                failed_entries.update(state='failed')
+                failed_entries.update(state='failed', notes=notes)
 
                 # Remove the failed products from the current run
                 run.products.remove(*failed_products)
