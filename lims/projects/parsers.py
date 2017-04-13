@@ -2,6 +2,8 @@ import os
 from io import StringIO, BytesIO
 import csv
 import uuid
+from operator import attrgetter
+from collections import OrderedDict
 
 from django.db.models import Q
 
@@ -90,12 +92,13 @@ class DesignFileParser:
         self.document.add_component_definition(component)
         return component
 
-    def genbank_to_sbol_component(self, element):
+    def genbank_to_sbol_component(self, element, feature_type):
         """
         Create an SBOL component from a genbank element
         """
         component = snekbol.ComponentDefinition(element,
-                                                roles=[self.SO_MISC])
+                                                roles=[self.ROLES.get(feature_type,
+                                                                      self.SO_MISC)])
         self.document.add_component_definition(component)
         return component
 
@@ -162,11 +165,14 @@ class DesignFileParser:
         Take a genbank file and parse to items/SBOL
         """
         items = []
-        elements = {}
+        elements = OrderedDict()
         sbol = None
         try:
             record = SeqIO.read(self.file_data, 'genbank')
-            for feat in record.features:
+            features = sorted(record.features, key=attrgetter('location.start'))
+            print(features)
+            for feat in features:
+                print(feat.location.start, feat.qualifiers)
                 # The file sometimes has lowercase and sometimes uppercase
                 # types so normalise to lowercase.
                 if feat.type.lower() in self.GENBANK_FEATURE_TYPES:
@@ -178,11 +184,13 @@ class DesignFileParser:
                         if key == 'label':
                             name = value[0]
                     if name:
-                        elements[name] = self.genbank_to_sbol_component(name)
+                        feature_type = feat.type.lower()
+                        elements[name] = self.genbank_to_sbol_component(name, feature_type)
                         item = self.get_inventory_item(name)
                         if item:
                             items.append(item)
-        except:
+        except Exception as e:
+            print(e)
             pass
         else:
             if len(elements.values()) > 0:
