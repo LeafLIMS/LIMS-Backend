@@ -115,15 +115,25 @@ class Trigger(models.Model):
     operator = models.CharField(blank=False, null=False, max_length=2, choices=OPERATOR_CHOICES,
                                 default=EQ)
     value = models.CharField(max_length=255, blank=False, null=False, default='1')
-    fire_on_create = False
+    # fire_on_create = False
+    fire_on_create = models.BooleanField(default=False)
 
     def trigger_fires(self, instance=None, created=False):
         if not instance:
             return False
+        # Don't fire if created but you don't want to know that happened
+        # Looking for changes and this is all new
         if created and not self.fire_on_create:
             return False
         if not hasattr(instance, self.field):
             return False
+        # If you've not created it but you want to know when created
+        # ignore if any other conditions are true
+        if not created and self.fire_on_create:
+            return False
+        # Else return true no matter what other conditions are set
+        if created and self.fire_on_create:
+            return True
         test_value = self.value
         instance_value = getattr(instance, self.field)
         if isinstance(instance_value, object):
