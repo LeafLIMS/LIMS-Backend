@@ -277,8 +277,9 @@ class ItemTypeTestCase(LoggedInTestCase):
 
     def test_itemtype_display_name(self):
         self.assertEqual(self._top.display_name(), '%s' % self._top.name)
-        self.assertEqual(self._middle.display_name(), '-- %s' % self._middle.name)
-        self.assertEqual(self._bottom.display_name(), '---- %s' % self._bottom.name)
+        self.assertEqual(self._middle.display_name(), '\xa0\xa0\xa0 %s' % self._middle.name)
+        self.assertEqual(self._bottom.display_name(),
+                         '\xa0\xa0\xa0\xa0\xa0\xa0 %s' % self._bottom.name)
 
     def test_itemtype_root(self):
         self.assertEqual(self._top.root(), self._top.name)
@@ -352,14 +353,14 @@ class AmountMeasureTestCase(LoggedInTestCase):
         response = self._client.post("/measures/", new_amt, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         # The DB should still only have 2 measures
-        self.assertEqual(AmountMeasure.objects.count(), 26)
+        self.assertEqual(AmountMeasure.objects.count(), 28)
 
     def test_admin_create(self):
         self._asAdmin()
         new_amt = {"name": "Blob", "symbol": "b"}
         response = self._client.post("/measures/", new_amt, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(AmountMeasure.objects.count(), 27)
+        self.assertEqual(AmountMeasure.objects.count(), 29)
         self.assertIs(AmountMeasure.objects.filter(name="Blob").exists(), True)
         b = AmountMeasure.objects.get(name="Blob")
         self.assertEqual(b.symbol, "b")
