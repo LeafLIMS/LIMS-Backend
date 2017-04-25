@@ -320,54 +320,56 @@ class CRMLinkView(APIView):
                                          "o.Project_Status__c,a.name,"
                                          "(SELECT Id,ContactId,c.name,c.email "
                                          "FROM OpportunityContactRoles cr, "
-                                         "cr.Contact c) FROM Opportunity o, o.Account a "
+                                         "cr.Contact c WHERE IsPrimary=True) "
+                                         "FROM Opportunity o, o.Account a "
                                          "WHERE o.Id = '{}'").format(crm_identifier)
                     crm_project_data = sf.query(crm_project_query)
                     if crm_project_data['totalSize'] > 0:
                         record = crm_project_data['records'][0]
 
                         try:
-                            crm_account = CRMAccount.objects.get(
-                                user__email=record['OpportunityContactRoles'][
-                                    'records'][0]['Contact']['Email'],
-                                account_identifier=record['Account']['Id'])
-                        except ObjectDoesNotExist:
+                            contact_identifier = record['OpportunityContactRoles'][
+                                'records'][0]['ContactId']
+                        except:
+                            return Response(
+                                {'message':
+                                 'CRM Project does not have an associated contact role'},
+                                status=400)
+                        else:
                             try:
-                                contact_identifier = record['OpportunityContactRoles'][
-                                    'records'][0]['ContactId']
-                            except:
-                                return Response(
-                                    {'message':
-                                     'CRM Project does not have an associated contact role'},
-                                    status=400)
+                                crm_account = CRMAccount.objects.get(
+                                    user__email=record['OpportunityContactRoles'][
+                                        'records'][0]['Contact']['Email'],
+                                    account_identifier=record['Account']['Id'])
+                            except ObjectDoesNotExist:
 
-                            contact_name = record['OpportunityContactRoles'][
-                                'records'][0]['Contact']['Name']
-                            contact_email = record['OpportunityContactRoles'][
-                                'records'][0]['Contact']['Email']
+                                contact_name = record['OpportunityContactRoles'][
+                                    'records'][0]['Contact']['Name']
+                                contact_email = record['OpportunityContactRoles'][
+                                    'records'][0]['Contact']['Email']
 
-                            first_name, last_name = contact_name.rsplit(' ', 1)
-                            username = first_name[0] + last_name
+                                first_name, last_name = contact_name.rsplit(' ', 1)
+                                username = first_name[0] + last_name
 
-                            try:
-                                u = User.objects.get(email=contact_email)
-                            except User.DoesNotExist:
-                                u = User.objects.create_user(
-                                    username,
-                                    email=contact_email
+                                try:
+                                    u = User.objects.get(email=contact_email)
+                                except User.DoesNotExist:
+                                    u = User.objects.create_user(
+                                        username,
+                                        email=contact_email
+                                    )
+
+                                    u.first_name = first_name
+                                    u.last_name = last_name
+                                    u.save()
+
+                                crm_account = CRMAccount(
+                                    contact_identifier=contact_identifier,
+                                    account_identifier=record['Account']['Id'],
+                                    account_name=record['Account']['Name'],
+                                    user=u
                                 )
-
-                                u.first_name = first_name
-                                u.last_name = last_name
-                                u.save()
-
-                            crm_account = CRMAccount(
-                                contact_identifier=contact_identifier,
-                                account_identifier=record['Account']['Id'],
-                                account_name=record['Account']['Name'],
-                                user=u
-                            )
-                            crm_account.save()
+                                crm_account.save()
 
                         crm_project = CRMProject(
                             project_identifier=crm_identifier,
