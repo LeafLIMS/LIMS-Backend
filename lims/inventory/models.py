@@ -82,7 +82,7 @@ class Location(MPTTModel):
 
     def display_name(self):
         if self.level > 0:
-            return '{} {}'.format('--' * self.level, self.name)
+            return '{} {}'.format('\u00a0\u00a0\u00a0' * self.level, self.name)
         return self.name
 
     def __str__(self):
