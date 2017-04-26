@@ -2,7 +2,6 @@ import os
 from io import StringIO, BytesIO
 import csv
 import uuid
-from operator import attrgetter
 from collections import OrderedDict
 
 from django.db.models import Q
@@ -19,6 +18,7 @@ class DesignFileParser:
     GENBANK_FEATURE_TYPES = (
         'primer_bind',
         'cds',
+        'rbs',
         '5\'_utr',
         'promoter',
         '3\'_utr',
@@ -42,10 +42,13 @@ class DesignFileParser:
     SO_ORIGIN_OF_REPLICATION = SO_URI + '0000296'
     SO_RESTRICTION_ENZYME_CUT_SITE = SO_URI + '0000168'
 
+    SO_PRIMER_BINDING_SITE = SO_URI + '0005850'
+
     ROLES = {
         'promoter': SO_PROMOTER,
         'cds': SO_CDS,
         'ribosome entry site': SO_RBS,
+        'rbs': SO_RBS,
         'terminator': SO_TERMINATOR,
         'operator': SO_OPERATOR,
         'insulator': SO_INSULATOR,
@@ -55,6 +58,7 @@ class DesignFileParser:
         'protein stability element': SO_PROTEIN_STABILITY_ELEMENT,
         'origin of replication': SO_ORIGIN_OF_REPLICATION,
         'restriction site': SO_RESTRICTION_ENZYME_CUT_SITE,
+        'primer binding site': SO_PRIMER_BINDING_SITE,
         'user defined': SO_MISC,
     }
     INVERT_ROLES = {v: k for k, v in ROLES.items()}
@@ -63,12 +67,15 @@ class DesignFileParser:
         self.file_data = StringIO(initial_value=data)
 
         # This may need to be set as a setting
-        self.default_uri = 'http://leaflims.github.io'
+        self.default_uri = 'http://leaflims.github.io/'
 
         # SBOL specific stuff
         self.document = snekbol.Document(self.default_uri)
         self.construct = snekbol.ComponentDefinition('Construct')
         self.document.add_component_definition(self.construct)
+
+    def name_to_identity(self, name):
+        return name.replace(' ', '_')
 
     def get_inventory_item(self, name):
         """
@@ -84,21 +91,25 @@ class DesignFileParser:
         """
         Take a CSV element and convert to an SBOL component
         """
-        component_seq = snekbol.Sequence(element['Name'], element['Sequence'])
-        component = snekbol.ComponentDefinition(element['Name'],
+        component_seq = snekbol.Sequence(self.name_to_identity(element['Name']),
+                                         element['Sequence'])
+        component = snekbol.ComponentDefinition(self.name_to_identity(element['Name']),
                                                 roles=[self.ROLES.get(element['Role'],
                                                                       self.SO_MISC)],
                                                 sequences=[component_seq])
         self.document.add_component_definition(component)
         return component
 
-    def genbank_to_sbol_component(self, element, feature_type):
+    def genbank_to_sbol_component(self, element, sequence, feature_type):
         """
         Create an SBOL component from a genbank element
         """
-        component = snekbol.ComponentDefinition(element,
+        component_seq = snekbol.Sequence(self.name_to_identity(element),
+                                         sequence)
+        component = snekbol.ComponentDefinition(self.name_to_identity(element),
                                                 roles=[self.ROLES.get(feature_type,
-                                                                      self.SO_MISC)])
+                                                                      self.SO_MISC)],
+                                                sequences=[component_seq])
         self.document.add_component_definition(component)
         return component
 
@@ -135,12 +146,12 @@ class DesignFileParser:
         # Look for component def with components
         # Build a list of SBOL componetns from this
         # If multiple do something fancy?
-        self.document.read(self.file_data)
         elements = []
+        self.document.read(self.file_data)
         for c in self.document.list_components():
             if len(c.components) > 0:
                 comp_elems = []
-                for cl in c.components:
+                for cl in self.document.get_components(c.identity):
                     role_uri = cl.definition.roles[0]
                     comp_elems.append({'name': cl.display_id,
                                        'role': self.INVERT_ROLES[role_uri].replace(' ', '-')})
@@ -169,10 +180,8 @@ class DesignFileParser:
         sbol = None
         try:
             record = SeqIO.read(self.file_data, 'genbank')
-            features = sorted(record.features, key=attrgetter('location.start'))
-            print(features)
+            features = record.features  # sorted(record.features, key=attrgetter('location.start'))
             for feat in features:
-                print(feat.location.start, feat.qualifiers)
                 # The file sometimes has lowercase and sometimes uppercase
                 # types so normalise to lowercase.
                 if feat.type.lower() in self.GENBANK_FEATURE_TYPES:
@@ -185,7 +194,12 @@ class DesignFileParser:
                             name = value[0]
                     if name:
                         feature_type = feat.type.lower()
-                        elements[name] = self.genbank_to_sbol_component(name, feature_type)
+                        if feature_type == 'rbs':
+                            feature_type = 'ribosome entry site'
+                        elif feature_type == 'primer_bind':
+                            feature_type = 'primer binding site'
+                        seq = str(feat.extract(record.seq))
+                        elements[name] = self.genbank_to_sbol_component(name, seq, feature_type)
                         item = self.get_inventory_item(name)
                         if item:
                             items.append(item)
