@@ -1,5 +1,4 @@
 import io
-import ast
 import json
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -141,8 +140,12 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
                     # item_data['assign_groups'] = permissions
                     if 'properties' not in item_data:
                         item_data['properties'] = []
+                    '''
+                    I'm not actually sure what this was supposed to do!
+                    Properties are already list so this shouldn't be required.
                     else:
                         item_data['properties'] = ast.literal_eval(item_data['properties'])
+                    '''
                     item = DetailedItemSerializer(data=item_data)
                     if item.is_valid():
                         saved.append(item_data)
