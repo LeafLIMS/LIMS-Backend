@@ -69,6 +69,7 @@ class DetailedProductSerializer(ProductSerializer):
     data = CompactDataEntrySerializer(many=True, read_only=True)
     attachments = AttachmentSerializer(read_only=True, many=True)
     sbol_diagram = serializers.SerializerMethodField()
+    has_design_file = serializers.SerializerMethodField()
 
     def get_sbol_diagram(self, obj):
         if obj.sbol:
@@ -84,6 +85,11 @@ class DetailedProductSerializer(ProductSerializer):
                         sub['item'] = item.id
             return elements
         return []
+
+    def get_has_design_file(self, obj):
+        if obj.design:
+            return True
+        return False
 
 
 class ProductStatusSerializer(serializers.ModelSerializer):
