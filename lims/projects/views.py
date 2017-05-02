@@ -194,6 +194,12 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
         return Response({'message': 'Please supply a design file'}, status=400)
 
     @detail_route(methods=['POST'])
+    def refresh_design(self, request, pk=None):
+        instance = self.get_object()
+        self._parse_design(instance)
+        return Response({'message': 'Design refreshed'})
+
+    @detail_route(methods=['POST'])
     def add_attachment(self, request, pk=None):
         request.data['created_by'] = request.user.username
         serializer = AttachmentSerializer(data=request.data)
