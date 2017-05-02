@@ -2,6 +2,8 @@
 from __future__ import unicode_literals
 
 from django.db import models, migrations
+import mptt
+import mptt.managers
 
 def make_locations(apps, schema_editor):
     Location = apps.get_model('inventory', 'Location')
@@ -55,6 +57,15 @@ def make_itemtypes(apps, schema_editor):
     for item in default_itemtypes:
          itm = ItemType(name=item[0], lft=0, rght=0, level=0, tree_id=0)
          itm.save()
+
+def rebuild_trees(apps, schema_editor):
+    for tree in ['Location', 'ItemType']:
+        manager = mptt.managers.TreeManager()
+        Object = apps.get_model('inventory', tree)
+        manager.model = Object
+        mptt.register(Object, order_insertion_by=['display_order', 'id'])
+        manager.contribute_to_class(Object, 'objects')
+        manager.rebuild()
 
 
 class Migration(migrations.Migration):
