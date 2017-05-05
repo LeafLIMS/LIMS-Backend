@@ -1,8 +1,11 @@
+import csv
+import json
 from lims.shared.loggedintestcase import LoggedInTestCase
 from lims.filetemplate.models import FileTemplate, FileTemplateField
 from rest_framework import status
 from .models import Location, ItemType, AmountMeasure, Set, Item, Tag
 from django.contrib.auth.models import Permission, Group
+from django.core.files.uploadedfile import SimpleUploadedFile
 from .views import ViewPermissionsMixin
 import os
 
@@ -140,8 +143,10 @@ class LocationTestCase(LoggedInTestCase):
 
     def test_location_display_name(self):
         self.assertEqual(self._top.display_name(), '%s' % self._top.name)
-        self.assertEqual(self._middle.display_name(), '-- %s' % self._middle.name)
-        self.assertEqual(self._bottom.display_name(), '---- %s' % self._bottom.name)
+        self.assertEqual(self._middle.display_name(),
+                         '\xa0\xa0\xa0 %s' % self._middle.name)
+        self.assertEqual(self._bottom.display_name(),
+                         '\xa0\xa0\xa0\xa0\xa0\xa0 %s' % self._bottom.name)
 
     def test_location_str(self):
         self.assertEqual(self._top.__str__(), '%s' % self._top.name)
@@ -1854,14 +1859,19 @@ class ItemTestCase(LoggedInTestCase):
                                          required=True,
                                          is_identifier=False,
                                          template=templ)
-        FileTemplateField.objects.create(name="properties",
+        FileTemplateField.objects.create(name="person",
                                          required=True,
                                          is_identifier=False,
+                                         is_property=True,
                                          template=templ)
 
         filename = 'test.csv'
         file = open(filename, 'w')
-        templ.write(file, [
+        field_names = ['name', 'identifier', 'description', 'item_type', 'amount_available',
+                       'amount_measure', 'location', 'person']
+        writer = csv.DictWriter(file, fieldnames=field_names)
+        writer.writeheader()
+        values = [
             {
                 "name": "Item5",
                 "identifier": "I5",
@@ -1870,8 +1880,8 @@ class ItemTestCase(LoggedInTestCase):
                 "amount_available": 5,
                 "amount_measure": self._measure.symbol,
                 "location": self._location.code,
-                "properties": [{"name": "joe", "value": "bloggs"},
-                               {"name": "jane", "value": "doe"}]},
+                "person": "bloggs",
+            },
             {
                 "name": "Item6",
                 "identifier": "I6",
@@ -1880,20 +1890,25 @@ class ItemTestCase(LoggedInTestCase):
                 "amount_available": 15,
                 "amount_measure": self._measure.symbol,
                 "location": self._location.code,
-                "properties": [{"name": "jim", "value": "beam"}]
+                "person": "beam",
             },
             {
                 "name": "Item7",
                 "identifier": "I7",
                 "description": "INVALID",
-            }], "name")
+            }
+        ]
+        writer.writerows(values)
         file.close()
-        with open(filename) as fp:
+
+        with open(filename, 'rb') as fp:
+            upl = SimpleUploadedFile('test.csv', fp.read())
             response = self._client.post(
                 "/inventory/importitems/", {"filetemplate": templ.id,
-                                            "items_file": fp,
-                                            "permissions": {"joe_group": "rw", "jane_group": "r"}},
-                format='json')
+                                            "items_file": upl,
+                                            "permissions": json.dumps({"joe_group": "rw",
+                                                                       "jane_group": "r"})},
+                format='multipart')
         os.remove(filename)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1910,10 +1925,8 @@ class ItemTestCase(LoggedInTestCase):
         self.assertIs(Item.objects.filter(name="Item5").exists(), True)
         i = Item.objects.get(identifier="I5")
         self.assertEqual(i.added_by, self._joeBloggs)
-        self.assertIs(i.properties.filter(name="joe").exists(), True)
-        self.assertEqual(i.properties.get(name="joe").value, "bloggs")
-        self.assertIs(i.properties.filter(name="jane").exists(), True)
-        self.assertEqual(i.properties.get(name="jane").value, "doe")
+        self.assertIs(i.properties.filter(name="person").exists(), True)
+        self.assertEqual(i.properties.get(name="person").value, "bloggs")
         self.assertEqual(i.description, "Extremely complicated")
         self.assertEqual(
             ViewPermissionsMixin().current_permissions(instance=i,
@@ -1926,8 +1939,8 @@ class ItemTestCase(LoggedInTestCase):
         self.assertIs(Item.objects.filter(name="Item6").exists(), True)
         i = Item.objects.get(identifier="I6")
         self.assertEqual(i.added_by, self._joeBloggs)
-        self.assertIs(i.properties.filter(name="jim").exists(), True)
-        self.assertEqual(i.properties.get(name="jim").value, "beam")
+        self.assertIs(i.properties.filter(name="person").exists(), True)
+        self.assertEqual(i.properties.get(name="person").value, "beam")
         self.assertEqual(i.description, "Moderately complicated")
         self.assertEqual(
             ViewPermissionsMixin().current_permissions(instance=i,
@@ -1984,12 +1997,14 @@ class ItemTestCase(LoggedInTestCase):
         file = open(filename, "w")
         file.write("All rubbish\nShould never work\nBut, it might!")
         file.close()
-        with open(filename) as fp:
+        with open(filename, 'rb') as fp:
+            upl = SimpleUploadedFile('test.csv', fp.read())
             response = self._client.post(
                 "/inventory/importitems/", {"filetemplate": templ.id,
-                                            "items_file": fp,
-                                            "permissions": {"joe_group": "rw", "jane_group": "r"}},
-                format='json')
+                                            "items_file": upl,
+                                            "permissions": json.dumps({"joe_group": "rw",
+                                                                       "jane_group": "r"})},
+                format='multipart')
         os.remove(filename)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
