@@ -24,7 +24,8 @@ class StatsViewMixin(viewsets.ViewSet):
         field = request.query_params.get('field', None)
 
         if field:
-            qs = self.get_queryset()
+            # qs = self.get_queryset()
+            qs = self.filter_queryset(self.get_queryset())
             try:
                 counts = qs.values(field).annotate(Count(field)).order_by()
             except FieldError:

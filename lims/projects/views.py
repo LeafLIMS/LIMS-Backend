@@ -127,6 +127,7 @@ class ProductFilter(django_filters.FilterSet):
             'project': ['exact'],
             'status': ['exact'],
             'on_run': ['exact'],
+            'project__archive': ['exact'],
         }
 
 
