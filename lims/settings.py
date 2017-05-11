@@ -150,7 +150,8 @@ STATICFILES_DIRS = (
 )
 
 # Media location (for quotes etc.)
-MEDIA_ROOT = BASE_DIR + '/files/'
+FILES_DIR = os.environ.get('FILES_DIR', BASE_DIR)
+MEDIA_ROOT = FILES_DIR + '/files/'
 MEDIA_URL = '/files/'
 
 #

@@ -1,3 +1,5 @@
+import random
+import string
 from django.db import models
 import reversion
 from django.contrib.auth.models import User
@@ -61,15 +63,20 @@ class DataEntry(models.Model):
         ordering = ['-date_created']
 
 
+def as_unique_filename(instance, filename):
+    prefix = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(6))
+    return '{}_{}'.format(prefix, filename)
+
+
 @reversion.register()
 class Attachment(models.Model):
     """
     A file stored on the system and linked to one or more items
     """
-    attachment = models.FileField()
+    attachment = models.FileField(upload_to=as_unique_filename)
     date_created = models.DateTimeField(auto_now_add=True)
     date_modified = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User)
 
     def attachment_name(self):
-        return self.attachment.name.split('/')[-1]
+        return self.attachment.name.split('/')[-1][7:]
