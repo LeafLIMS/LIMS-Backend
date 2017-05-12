@@ -1,5 +1,6 @@
 
 from rest_framework import viewsets
+from rest_framework.decorators import list_route
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 
@@ -19,6 +20,12 @@ class EquipmentViewSet(AuditTrailViewMixin, viewsets.ModelViewSet, StatsViewMixi
     filter_fields = ('can_reserve', 'status',)
     search_fields = ('name',)
     permission_classes = (IsInStaffGroupOrRO,)
+
+    @list_route()
+    def not_idle(self, request):
+        qs = Equipment.objects.exclude(status='idle')
+        serializer = EquipmentSerializer(qs, many=True)
+        return Response(serializer.data)
 
 
 class EquipmentReservationFilter(django_filters.FilterSet):
