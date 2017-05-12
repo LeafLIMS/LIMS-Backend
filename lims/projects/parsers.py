@@ -104,13 +104,16 @@ class DesignFileParser:
         """
         Create an SBOL component from a genbank element
         """
-        component_seq = snekbol.Sequence(self.name_to_identity(element),
-                                         sequence)
-        component = snekbol.ComponentDefinition(self.name_to_identity(element),
-                                                roles=[self.ROLES.get(feature_type,
-                                                                      self.SO_MISC)],
-                                                sequences=[component_seq])
-        self.document.add_component_definition(component)
+        identity = self.name_to_identity(element)
+        if identity not in self.document._components:
+            component_seq = snekbol.Sequence(identity, sequence)
+            component = snekbol.ComponentDefinition(identity,
+                                                    roles=[self.ROLES.get(feature_type,
+                                                                          self.SO_MISC)],
+                                                    sequences=[component_seq])
+            self.document.add_component_definition(component)
+        else:
+            component = self.document._components[identity]
         return component
 
     def make_sbol_construct(self, elements):
