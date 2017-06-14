@@ -2,6 +2,8 @@ import csv
 import zipfile
 import codecs
 
+from django.http import HttpResponse
+
 import django_filters
 
 from rest_framework import viewsets
@@ -199,6 +201,13 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
         instance = self.get_object()
         self._parse_design(instance)
         return Response({'message': 'Design refreshed'})
+
+    @detail_route(methods=['GET'])
+    def download_design(self, request, pk=None):
+        instance = self.get_object()
+        is_sbol = request.query_params.get('file_format', False) == 'sbol'
+        file_data = instance.sbol if is_sbol else instance.design
+        return HttpResponse(file_data, content_type='text/plain')
 
     @detail_route(methods=['POST'])
     def add_attachment(self, request, pk=None):
