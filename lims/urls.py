@@ -5,6 +5,8 @@ from django.conf import settings
 
 from rest_framework import routers
 
+from rest_framework_jwt.views import obtain_jwt_token
+
 from channels.routing import route
 
 from lims.users.views import ObtainAuthToken, UserViewSet, GroupViewSet
@@ -72,7 +74,7 @@ router.register(r'alerts', TriggerAlertStatusViewSet, base_name='alerts')
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^users/token/', ObtainAuthToken.as_view()),
+    url(r'^users/token/', obtain_jwt_token),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     url(r'^crm/user/', CRMUserView.as_view()),
     url(r'^crm/project/update/', CRMUpdateProjectView.as_view()),

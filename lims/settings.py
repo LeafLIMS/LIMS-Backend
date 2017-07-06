@@ -14,6 +14,7 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 import os
 import sys
 from ast import literal_eval
+import datetime
 
 TESTMODE = sys.argv[1:2] == ['test']
 
@@ -233,7 +234,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_FILTER_BACKENDS': (
@@ -254,6 +255,13 @@ CORS_ALLOW_HEADERS = (
     'x-csrftoken',
     'Identifier'
 )
+
+#
+# Token settings
+#
+JWT_AUTH = {
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(hours=12),
+}
 
 #
 # App configuration
