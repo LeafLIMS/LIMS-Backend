@@ -199,3 +199,9 @@ class GroupViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = (IsInAdminGroupOrRO,)
+
+    def get_queryset(self):
+        if self.request.user.groups.filter(name='admin').exists():
+            return Group.objects.exclude(name='admin')
+        else:
+            return self.request.user.groups.all()
