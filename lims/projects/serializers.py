@@ -30,6 +30,7 @@ class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer)
 
     class Meta:
         model = Project
+        fields = '__all__'
         read_only_fields = ('date_started',)
 
 
@@ -62,6 +63,7 @@ class ProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSer
 
     class Meta:
         model = Product
+        fields = '__all__'
 
 
 class DetailedProductSerializer(ProductSerializer):
@@ -96,15 +98,18 @@ class ProductStatusSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductStatus
+        fields = '__all__'
 
 
 class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
+        fields = '__all__'
 
 
 class WorkLogSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WorkLog
+        fields = '__all__'

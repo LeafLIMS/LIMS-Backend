@@ -9,11 +9,13 @@ from .models import Organism, Trigger, TriggerSet, TriggerAlert, TriggerAlertSta
 class OrganismSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organism
+        fields = '__all__'
 
 
 class TriggerSetSerializer(serializers.ModelSerializer):
     class Meta:
         model = TriggerSet
+        fields = '__all__'
 
 
 class TriggerSerializer(serializers.ModelSerializer):
@@ -23,6 +25,7 @@ class TriggerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Trigger
+        fields = '__all__'
 
 
 class TriggerAlertSerializer(serializers.ModelSerializer):
@@ -30,6 +33,7 @@ class TriggerAlertSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TriggerAlert
+        fields = '__all__'
 
 
 class TriggerAlertStatusSerializer(serializers.ModelSerializer):
@@ -37,6 +41,7 @@ class TriggerAlertStatusSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TriggerAlertStatus
+        fields = '__all__'
 
 
 class TriggerSubscriptionSerializer(serializers.ModelSerializer):
@@ -47,3 +52,4 @@ class TriggerSubscriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TriggerSubscription
+        fields = '__all__'

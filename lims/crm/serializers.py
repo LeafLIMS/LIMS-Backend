@@ -21,6 +21,7 @@ class CRMAccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CRMAccount
+        fields = '__all__'
         depth = 1
 
 
@@ -29,6 +30,7 @@ class CRMQuoteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CRMQuote
+        fields = '__all__'
 
 
 class CRMProjectSerializer(serializers.ModelSerializer):
@@ -38,3 +40,4 @@ class CRMProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CRMProject
+        fields = '__all__'

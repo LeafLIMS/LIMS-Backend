@@ -8,6 +8,7 @@ class CodonUsageTableSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CodonUsageTable
+        fields = '__all__'
 
 
 class CodonUsageSerializer(serializers.ModelSerializer):

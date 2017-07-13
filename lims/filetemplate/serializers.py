@@ -21,6 +21,7 @@ class FileTemplateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FileTemplate
+        fields = '__all__'
 
     def create(self, validated_data):
         file_fields = validated_data.pop('fields')

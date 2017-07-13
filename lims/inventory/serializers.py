@@ -11,6 +11,7 @@ class SetSerializer(serializers.ModelSerializer, SerializerPermissionsMixin):
 
     class Meta:
         model = Set
+        fields = '__all__'
 
 
 class ItemTypeSerializer(serializers.ModelSerializer):
@@ -86,6 +87,7 @@ class ItemTransferPreviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = ItemTransfer
         depth = 1
+        fields = '__all__'
 
 
 class ItemSerializer(serializers.ModelSerializer, SerializerPermissionsMixin):
@@ -108,6 +110,7 @@ class ItemSerializer(serializers.ModelSerializer, SerializerPermissionsMixin):
     class Meta:
         model = Item
         read_only_fields = ('transfers', 'created_from',)
+        fields = '__all__'
 
 
 class LinkedItemSerializer(serializers.ModelSerializer):
@@ -176,3 +179,4 @@ class AmountMeasureSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AmountMeasure
+        fields = '__all__'

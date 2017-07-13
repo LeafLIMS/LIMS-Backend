@@ -26,6 +26,7 @@ class WorkflowSerializer(SerializerPermissionsMixin, serializers.ModelSerializer
 
     class Meta:
         model = Workflow
+        fields = '__all__'
 
 
 class InputFieldTemplateSerializer(serializers.ModelSerializer):
@@ -42,6 +43,7 @@ class InputFieldTemplateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = InputFieldTemplate
+        fields = '__all__'
 
 
 class InputFieldValueSerializer(serializers.Serializer):
@@ -70,6 +72,7 @@ class VariableFieldTemplateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VariableFieldTemplate
+        fields = '__all__'
 
 
 class VariableFieldValueSerializer(serializers.Serializer):
@@ -95,6 +98,8 @@ class OutputFieldTemplateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OutputFieldTemplate
+        fields = '__all__'
+        fields = '__all__'
 
 
 class OutputFieldValueSerializer(serializers.Serializer):
@@ -113,6 +118,8 @@ class CalculationFieldTemplateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CalculationFieldTemplate
+        fields = '__all__'
+        fields = '__all__'
 
 
 class CalculationFieldIDTemplateSerializer(CalculationFieldTemplateSerializer):
@@ -162,6 +169,7 @@ class StepFieldTemplateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StepFieldTemplate
+        fields = '__all__'
 
     def create(self, validated_data):
         property_fields = validated_data.pop('properties')
@@ -243,6 +251,7 @@ class TaskTemplateSerializer(SerializerPermissionsMixin, serializers.ModelSerial
 
     class Meta:
         model = TaskTemplate
+        fields = '__all__'
 
     def to_representation(self, obj):
         rep = super(TaskTemplateSerializer, self).to_representation(obj)
@@ -361,6 +370,7 @@ class RunSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
 
     class Meta:
         model = Run
+        fields = '__all__'
 
 
 class DetailedRunSerializer(serializers.ModelSerializer):
@@ -372,3 +382,4 @@ class DetailedRunSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Run
+        fields = '__all__'
