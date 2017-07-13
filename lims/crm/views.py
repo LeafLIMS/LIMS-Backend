@@ -129,7 +129,8 @@ class CRMProjectView(APIView):
             projects_query = ("SELECT Id,Name,Description,Project_Status__c, CreatedDate "
                               "FROM Opportunity WHERE Name LIKE '%{}%'").format(search)
             projects = sf.query(projects_query)
-            return Response(projects['records'])
+            return Response({'results': projects['records'],
+                             'meta': {'count': len(projects['records'])}})
         return Response({'message': 'CRM is currently disabled'}, status=501)
 
     def post(self, request, format=None):
