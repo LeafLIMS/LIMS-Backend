@@ -51,7 +51,7 @@ class ObtainAuthToken(APIView):
 
 
 class UserFilter(django_filters.FilterSet):
-    has_crm_details = django_filters.MethodFilter()
+    has_crm_details = django_filters.CharFilter(method='filter_has_crm_details')
 
     def filter_has_crm_details(self, queryset, value):
         if value == 'False':

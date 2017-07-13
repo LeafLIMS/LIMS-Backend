@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
         # These two are required to ensure the necessary
         # prerequisites are present and we can use their
         # models.
-        ('auth', '__latest__'),
+        # ('auth', '__latest__'),
         ('contenttypes', '__latest__'),
         # Kinda a cheat but workflows is the last app
         # so it'll only run after all the others!

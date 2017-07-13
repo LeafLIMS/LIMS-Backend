@@ -111,7 +111,7 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
 
 class ProductFilter(django_filters.FilterSet):
     id__in = ListFilter(name='id')
-    on_run = django_filters.MethodFilter()
+    on_run = django_filters.CharFilter(method='filter_on_run')
 
     def filter_on_run(self, queryset, value):
         if value == 'False':

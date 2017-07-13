@@ -47,7 +47,6 @@ INSTALLED_APPS = (
     'rest_framework_docs',
     'corsheaders',
     'gm2m',
-    'longerusernameandemail',
     'django_countries',
     'ordered_model',
     'django_extensions',

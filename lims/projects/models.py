@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 
-from jsonfield import JSONField
+from django.contrib.postgres.fields import JSONField
 
 
 from lims.shared.models import Organism
@@ -108,6 +108,9 @@ class Product(models.Model):
 
     project = models.ForeignKey(Project)
 
+    ##
+    ## DEPRECIATION WARNING: THESE ARE TO BE MOVED TO PROPERTIES JSON1G
+    ##
     # One design per product as it should only be making (ultimately) one thing
     design = models.TextField(blank=True, null=True)
     design_format = models.CharField(choices=DESIGN_FORMATS,
@@ -121,6 +124,11 @@ class Product(models.Model):
                                               related_name='products')
 
     attachments = models.ManyToManyField(Attachment, blank=True)
+
+    # Why JSON? This way we can have primitive properties e.g. number, string
+    # rather than just have everything as a string. It also simplifies the use of
+    # properties for plugins.
+    properties = JSONField(null=True, blank=True)
 
     class Meta:
         permissions = (
