@@ -18,7 +18,7 @@ class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer)
     project_identifier = serializers.CharField(read_only=True)
     identifier = serializers.IntegerField(read_only=True)
     primary_lab_contact = serializers.SlugRelatedField(
-        queryset=User.objects.filter(groups__name='staff'),
+        queryset=User.objects.all(),
         slug_field='username',
     )
     created_by = serializers.SlugRelatedField(
