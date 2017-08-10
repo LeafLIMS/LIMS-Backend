@@ -38,7 +38,7 @@ class CRMProject(models.Model):
     name = models.CharField(max_length=300)
     description = models.TextField(blank=True, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(blank=True, default='', max_length=100)
+    status = models.CharField(blank=True, null=True, default='', max_length=100)
 
     account = models.ForeignKey(CRMAccount)
 

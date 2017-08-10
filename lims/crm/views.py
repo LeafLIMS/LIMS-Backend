@@ -284,7 +284,7 @@ class CRMUpdateProjectView(APIView):
                         else:
                             proj.name = record['Name']
                             proj.description = record['Description']
-                            proj.status = record['Project_Status__c']
+                            proj.status = record.get('Project_Status__c', '')
                             proj.save()
                     return Response({'message': 'Projects updated'})
                 return Response({'message': 'No projects found on CRM system'}, status=404)
@@ -377,7 +377,7 @@ class CRMLinkView(APIView):
                             name=record['Name'],
                             description=record['Description'],
                             date_created=record['CreatedDate'],
-                            status=record['Project_Status__c'],
+                            status=record.get('Project_Status__c', ''),
                             account=crm_account
                         )
                         crm_project.save()
