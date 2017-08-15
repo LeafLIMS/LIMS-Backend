@@ -5,6 +5,8 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from pint import UnitRegistry
 
+import django_filters
+
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route
@@ -89,14 +91,41 @@ class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
         return Response(status=204)
 
 
+class InventoryFilterSet(django_filters.FilterSet):
+    """
+    Filter for inventory items
+    """
+    class Meta:
+        model = Item
+        fields = {
+            'id': ['exact'],
+            'name': ['exact', 'icontains'],
+            'added_by__username': ['exact'],
+            'identifier': ['exact'],
+            'barcode': ['exact'],
+            'description': ['icontains'],
+            'item_type__name': ['exact'],
+            'location__name': ['exact'],
+            'in_inventory': ['exact'],
+            'amount_measure__symbol': ['exact'],
+            'amount_available': ['exact', 'lt', 'lte', 'gt', 'gte'],
+            'concentration_measure__symbol': ['exact'],
+            'concentration': ['exact', 'lt', 'lte', 'gt', 'gte'],
+            'added_on': ['exact', 'lt', 'lte', 'gt', 'gte'],
+            'last_updated_on': ['exact', 'lt', 'lte', 'gt', 'gte'],
+            'properties__name': ['exact', 'icontains'],
+            'properties__value': ['exact', 'icontains'],
+        }
+
+
 class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, viewsets.ModelViewSet):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
     permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
-    filter_fields = ('in_inventory', 'item_type__name', 'identifier', 'name')
     search_fields = ('name', 'identifier', 'item_type__name', 'location__name',)
+    filter_class = InventoryFilterSet
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -185,7 +214,7 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
         elif transfer_details:
             item = self.get_object()
 
-            raw_amount = transfer_details.get('amount', 0)
+            raw_amount = float(transfer_details.get('amount', 0))
             raw_measure = transfer_details.get('measure', item.amount_measure.symbol)
 
             addition = transfer_details.get('is_addition', False)
@@ -307,9 +336,31 @@ class ItemTransferViewSet(AuditTrailViewMixin, viewsets.ReadOnlyModelViewSet, Vi
     queryset = ItemTransfer.objects.all()
     serializer_class = ItemTransferSerializer
     search_fields = ('item__name', 'item__identifier', 'barcode',)
-    filter_fields = ('transfer_complete',)
+    filter_fields = ('transfer_complete', 'barcode',)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter,)
 
     def get_queryset(self):
         return ItemTransfer.objects.filter(transfer_complete=False)
+
+    @list_route(methods=['GET'])
+    def grouped(self, request):
+        """
+        Group transfers under the same barcode e.g. as if they where in plates.
+
+        Limit allows to set how many barcodes are fetched.
+        """
+        limit = int(request.query_params.get('limit', 10))
+        qs = (ItemTransfer.objects.filter(transfer_complete=False)
+                                  .distinct('barcode')
+                                  .order_by('barcode', '-date_created')[:limit])
+        barcodes = [i.barcode for i in qs]
+        transfers = (ItemTransfer.objects.filter(transfer_complete=False, barcode__in=barcodes)
+                                         .order_by('barcode', 'coordinates'))
+        serializer = ItemTransferSerializer(transfers, many=True)
+        groups = {}
+        for t in serializer.data:
+            if t['barcode'] not in groups:
+                groups[t['barcode']] = []
+            groups[t['barcode']].append(t)
+        return Response(groups)
