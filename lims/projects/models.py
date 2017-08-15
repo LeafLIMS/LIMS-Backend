@@ -44,6 +44,7 @@ class Project(models.Model):
     crm_project = models.ForeignKey(CRMProject, blank=True, null=True)
 
     class Meta:
+        ordering = ['identifier']
         permissions = (
             ('view_project', 'View project',),
         )
