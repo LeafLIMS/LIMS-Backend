@@ -71,7 +71,11 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
         if products_file:
             # Read the CSV file of products into a list
             decoded_file = codecs.iterdecode(products_file, 'utf-8-sig')
-            products = [line for line in csv.DictReader(decoded_file, skipinitialspace=True)]
+            try:
+                products = [line for line in csv.DictReader(decoded_file, skipinitialspace=True)]
+            except UnicodeDecodeError:
+                return Response({'message': 'Please supply file in UTF-8 CSV format.'},
+                                status=400)
             # Open the zip file for reading, assign the files within to a dict with filenames
             designs = {}
             if designs_file:
@@ -201,7 +205,7 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
             serializer.save(created_by=request.user)
             product = self.get_object()
             product.attachments.add(serializer.instance)
-            return Response({'message': 'File attachment added'})
+            return Response(serializer.data)
         return Response({'message': 'Please supply a file to upload'}, status=400)
 
     @detail_route(methods=['DELETE'])
