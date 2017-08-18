@@ -286,6 +286,17 @@ class CRMUpdateProjectView(APIView):
                             proj.description = record['Description']
                             proj.status = record.get('Project_Status__c', '')
                             proj.save()
+                            # Get project and update status
+                            projects = proj.project_set.all()
+                            for p in projects:
+                                if record.get('Project_Status__c', '') != '':
+                                    ps = record.get('Project_Status__c')
+                                    try:
+                                        project_status = ProjectStatus.objects.get(name=ps)
+                                    except ObjectDoesNotExist:
+                                        project_status = ProjectStatus.objects.create(name=ps)
+                                    p.status = project_status
+                                    p.save()
                     return Response({'message': 'Projects updated'})
                 return Response({'message': 'No projects found on CRM system'}, status=404)
             return Response({'message': 'Please provide a list of CRM project IDs'}, status=400)
@@ -393,6 +404,15 @@ class CRMLinkView(APIView):
                         status=404)
 
                 project.crm_project = crm_project
+
+                if record.get('Project_Status__c', '') != '':
+                    ps = record.get('Project_Status__c')
+                    try:
+                        project_status = ProjectStatus.objects.get(name=ps)
+                    except ObjectDoesNotExist:
+                        project_status = ProjectStatus.objects.create(name=ps)
+                    project.status = project_status
+
                 project.save()
             return Response({'message': 'CRM Project linked to Project {}'.format(project_id)})
         return Response({'message': 'CRM is currently disabled'}, status=501)

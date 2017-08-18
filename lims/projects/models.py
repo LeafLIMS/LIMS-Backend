@@ -15,6 +15,23 @@ from lims.datastore.models import Attachment
 
 
 @reversion.register()
+class ProjectStatus(models.Model):
+    """
+    The status of a product as it moves through workflows
+    """
+    name = models.CharField(max_length=100, unique=True, db_index=True)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        permissions = (
+            ('view_projectstatus', 'View project status',),
+        )
+
+    def __str__(self):
+        return self.name
+
+
+@reversion.register()
 class Project(models.Model):
     """
     A project is a container for products and contains key identifiying information
@@ -31,7 +48,7 @@ class Project(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, null=True)
     identifier = models.IntegerField(default=create_identifier)
-    order = models.ForeignKey(Order, related_name='associated_projects', blank=True, null=True)
+    status = models.ForeignKey(ProjectStatus, null=True, blank=True)
     date_started = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, related_name='created_by')
     archive = models.BooleanField(default=False)
@@ -42,6 +59,7 @@ class Project(models.Model):
     primary_lab_contact = models.ForeignKey(User)
 
     crm_project = models.ForeignKey(CRMProject, blank=True, null=True)
+    order = models.ForeignKey(Order, related_name='associated_projects', blank=True, null=True)
 
     class Meta:
         ordering = ['identifier']

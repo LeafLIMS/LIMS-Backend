@@ -22,9 +22,10 @@ from lims.permissions.permissions import (IsInAdminGroupOrRO,
 
 from lims.shared.mixins import StatsViewMixin, AuditTrailViewMixin
 from lims.datastore.serializers import AttachmentSerializer
-from .models import (Product, ProductStatus, Project)
+from .models import (Product, ProductStatus, Project, ProjectStatus)
 from .serializers import (ProjectSerializer, ProductSerializer,
-                          DetailedProductSerializer, ProductStatusSerializer)
+                          DetailedProductSerializer, ProductStatusSerializer,
+                          ProjectStatusSerializer)
 from .parsers import DesignFileParser
 
 
@@ -227,4 +228,10 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
 class ProductStatusViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = ProductStatus.objects.all()
     serializer_class = ProductStatusSerializer
+    permission_classes = (IsInAdminGroupOrRO,)
+
+
+class ProjectStatusViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
+    queryset = ProjectStatus.objects.all()
+    serializer_class = ProjectStatusSerializer
     permission_classes = (IsInAdminGroupOrRO,)

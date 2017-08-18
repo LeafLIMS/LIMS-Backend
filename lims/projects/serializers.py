@@ -8,7 +8,7 @@ from lims.crm.serializers import CRMProjectSerializer
 from lims.permissions.permissions import (SerializerPermissionsMixin,
                                           SerializerReadOnlyPermissionsMixin)
 from lims.shared.models import Organism
-from .models import (Project, Product, ProductStatus, Comment, WorkLog)
+from .models import (Project, ProjectStatus, Product, ProductStatus, Comment, WorkLog)
 from lims.datastore.serializers import CompactDataEntrySerializer, AttachmentSerializer
 from .parsers import DesignFileParser
 from lims.inventory.models import Item
@@ -32,6 +32,22 @@ class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer)
         model = Project
         fields = '__all__'
         read_only_fields = ('date_started',)
+
+
+class SimpleProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSerializer):
+    product_identifier = serializers.CharField(read_only=True)
+    runs = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    on_run = serializers.BooleanField(read_only=True)
+    product_type = serializers.SlugRelatedField(
+        queryset=ItemType.objects.all(),
+        slug_field='name',
+    )
+    linked_inventory = LinkedItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Product
+        fields = ['product_identifier', 'runs', 'on_run', 'product_type', 'name',
+                  'linked_inventory']
 
 
 class ProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.ModelSerializer):
@@ -98,6 +114,13 @@ class ProductStatusSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductStatus
+        fields = '__all__'
+
+
+class ProjectStatusSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProjectStatus
         fields = '__all__'
 
 
