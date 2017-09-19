@@ -46,7 +46,7 @@ class SimpleProductSerializer(SerializerReadOnlyPermissionsMixin, serializers.Mo
 
     class Meta:
         model = Product
-        fields = ['product_identifier', 'runs', 'on_run', 'product_type', 'name',
+        fields = ['id', 'product_identifier', 'runs', 'on_run', 'product_type', 'name',
                   'linked_inventory']
 
 
