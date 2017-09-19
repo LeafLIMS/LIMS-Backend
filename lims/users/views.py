@@ -98,6 +98,12 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
         raise ValidationError({'message': 'You must supply a new password'})
 
     @list_route(permission_classes=[IsAuthenticated])
+    def me(self, request):
+        print(request.user)
+        serializer = SimpleUserSerializer(request.user)
+        return Response(serializer.data)
+
+    @list_route(permission_classes=[IsAuthenticated])
     def staff(self, request):
         results = User.objects.filter(groups__name='staff')
         serializer = SimpleUserSerializer(results, many=True)
