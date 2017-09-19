@@ -117,12 +117,19 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
 class ProductFilter(django_filters.FilterSet):
     id__in = ListFilter(name='id')
     on_run = django_filters.CharFilter(method='filter_on_run')
+    exclude = django_filters.CharFilter(method='filter_exclude')
 
     def filter_on_run(self, queryset, value):
         if value == 'False':
             return queryset.exclude(runs__is_active=True)
         elif value == 'True':
             return queryset.filter(runs__is_active=True)
+        return queryset
+
+    def filter_exclude(self, queryset, name, value):
+        if value:
+            exclude_ids = value.split(',')
+            return queryset.exclude(id__in=exclude_ids)
         return queryset
 
     class Meta:
