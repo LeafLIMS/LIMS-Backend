@@ -13,7 +13,7 @@ from django_countries import countries
 from lims.users.serializers import UserSerializer
 from lims.orders.models import Order
 from lims.pricebook.models import Price, PriceBook
-from lims.projects.models import Project
+from lims.projects.models import Project, ProjectStatus
 from lims.permissions.permissions import ExtendedObjectPermissions
 from .models import CRMAccount, CRMProject, CRMQuote
 
@@ -120,7 +120,6 @@ class CRMProjectView(APIView):
 
         if settings.ENABLE_CRM:
             search = request.query_params.get('search', '')
-
             sf = Salesforce(instance_url=settings.SALESFORCE_URL,
                             username=settings.SALESFORCE_USERNAME,
                             password=settings.SALESFORCE_PASSWORD,
