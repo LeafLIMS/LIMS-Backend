@@ -39,11 +39,13 @@ class LocationSerializer(serializers.ModelSerializer):
     )
     has_children = serializers.BooleanField(read_only=True)
     display_name = serializers.CharField(read_only=True)
+    parent_name = serializers.CharField(read_only=True, source='parent.name')
     code = serializers.CharField(required=True)
 
     class Meta:
         model = Location
-        fields = ('id', 'name', 'code', 'display_name', 'parent', 'level', 'has_children',)
+        fields = ('id', 'name', 'code', 'display_name', 'parent',
+                  'parent_name', 'level', 'has_children',)
 
 
 class ItemPropertySerializer(serializers.ModelSerializer):
@@ -75,7 +77,7 @@ class ItemPreviewSerializer(serializers.ModelSerializer):
         depth = 1
         fields = ('id', 'name', 'identifier', 'in_inventory', 'amount_available',
                   'item_type', 'amount_measure', 'concentration', 'concentration_measure',
-                  'location',)
+                  'location', 'location_path',)
 
 
 class ItemTransferPreviewSerializer(serializers.ModelSerializer):
@@ -83,6 +85,7 @@ class ItemTransferPreviewSerializer(serializers.ModelSerializer):
     Provide a limited set of fields for previewing ItemTransfers
     """
     item = ItemPreviewSerializer()
+    is_valid = serializers.BooleanField(read_only=True, required=False, default=True)
 
     class Meta:
         model = ItemTransfer
