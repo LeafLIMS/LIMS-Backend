@@ -22,12 +22,17 @@ class EquipmentViewSet(AuditTrailViewMixin, viewsets.ModelViewSet, StatsViewMixi
 
 
 class EquipmentReservationFilter(django_filters.FilterSet):
+    start = django_filters.IsoDateTimeFilter()
+    start__gte = django_filters.IsoDateTimeFilter(name='start', lookup_expr='gte')
+    start__lte = django_filters.IsoDateTimeFilter(name='start', lookup_expr='lte')
+    end = django_filters.IsoDateTimeFilter()
+    end__lte = django_filters.IsoDateTimeFilter(name='end', lookup_expr='lte')
 
     class Meta:
         model = EquipmentReservation
         fields = {
             'id': ['exact'],
-            'start': ['exact', 'gte'],
+            'start': ['exact', 'gte', 'lte'],
             'end': ['exact', 'lte'],
             'equipment_reserved': ['exact'],
             'checked_in': ['exact'],

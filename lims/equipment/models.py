@@ -83,4 +83,4 @@ class EquipmentReservation(models.Model):
         super(EquipmentReservation, self).save(*args, **kwargs)
 
     def title(self):
-        return self.full_user_name()
+        return self.full_user_name() if self.reserved_by.first_name else self.reserved_by.username
