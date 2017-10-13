@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
         ('contenttypes', '__latest__'),
         # Kinda a cheat but workflows is the last app
         # so it'll only run after all the others!
-        ('workflows', '__latest__'),
+        # ('workflows', '__latest__'),
     ]
 
     operations = [

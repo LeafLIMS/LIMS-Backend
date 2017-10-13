@@ -9,7 +9,7 @@ from lims.equipment.models import Equipment
 from lims.filetemplate.models import FileTemplate
 from lims.inventory.models import ItemType, AmountMeasure
 from lims.inventory.serializers import ItemTransferPreviewSerializer
-from lims.projects.serializers import DetailedProductSerializer
+from lims.projects.serializers import DetailedProductSerializer, SimpleProductSerializer
 from .models import (Workflow,
                      Run,
                      TaskTemplate, InputFieldTemplate, VariableFieldTemplate,
@@ -164,7 +164,7 @@ class StepFieldPropertyValueSerializer(serializers.Serializer):
 
 
 class StepFieldTemplateSerializer(serializers.ModelSerializer):
-    properties = StepFieldPropertySerializer(many=True)
+    properties = StepFieldPropertySerializer(many=True, required=False)
     field_name = serializers.CharField(read_only=True)
 
     class Meta:
@@ -172,7 +172,10 @@ class StepFieldTemplateSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def create(self, validated_data):
-        property_fields = validated_data.pop('properties')
+        try:
+            property_fields = validated_data.pop('properties')
+        except:
+            property_fields = []
         step = StepFieldTemplate.objects.create(**validated_data)
         for field in property_fields:
             StepFieldProperty.objects.create(step=step, **field)
@@ -219,25 +222,30 @@ class TaskTemplateSerializer(SerializerPermissionsMixin, serializers.ModelSerial
         slug_field='symbol'
     )
     labware = serializers.SlugRelatedField(
+        required=False,
         queryset=ItemType.objects.all(),
         slug_field='name'
     )
     capable_equipment = serializers.SlugRelatedField(
+        required=False,
         many=True,
         queryset=Equipment.objects.all(),
         slug_field='name'
     )
     input_files = serializers.SlugRelatedField(
+        required=False,
         many=True,
         queryset=FileTemplate.objects.all(),
         slug_field='name'
     )
     output_files = serializers.SlugRelatedField(
+        required=False,
         many=True,
         queryset=FileTemplate.objects.all(),
         slug_field='name'
     )
     equipment_files = serializers.SlugRelatedField(
+        required=False,
         many=True,
         queryset=FileTemplate.objects.all(),
         slug_field='name'
@@ -367,6 +375,10 @@ class RunSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
         slug_field='username',
         read_only=True
     )
+    tasks_list = SimpleTaskTemplateSerializer(read_only=True, many=True,
+                                              source='get_tasks')
+    validate_inputs = serializers.DictField(source='has_valid_inputs', read_only=True)
+    products_list = SimpleProductSerializer(read_only=True, many=True, source='products')
 
     class Meta:
         model = Run

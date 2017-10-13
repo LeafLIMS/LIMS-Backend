@@ -27,6 +27,8 @@ from rest_framework.reverse import reverse
 from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework_csv.renderers import CSVRenderer
 
+import django_filters
+
 from lims.shared.filters import ListFilter
 from lims.permissions.permissions import (ViewPermissionsMixin,
                                           ExtendedObjectPermissions,
@@ -120,6 +122,19 @@ class WorkflowViewSet(AuditTrailViewMixin, ViewPermissionsMixin, viewsets.ModelV
         return Response({'message': 'Please provide a task position'}, status=400)
 
 
+class RunFilterSet(django_filters.FilterSet):
+    run_active = django_filters.BooleanFilter(name='date_finished', lookup_expr='isnull')
+
+    class Meta:
+        model = Run
+        fields = {
+            'id': ['exact'],
+            'is_active': ['exact'],
+            'task_in_progress': ['exact'],
+            'has_started': ['exact'],
+        }
+
+
 class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, viewsets.ModelViewSet):
     """
     List all runs, active only be default
@@ -129,7 +144,8 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
     permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
-    filter_fields = ('is_active', 'task_in_progress', 'has_started',)
+    # filter_fields = ('is_active', 'task_in_progress', 'has_started', 'date_finished')
+    filter_class = RunFilterSet
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -192,7 +208,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     'barcode': '',
                     'coordinates': '',
                 }
-                data_items[key]['product_inputs'][itm.identifier] = itm_data
+                data_items[key]['product_inputs'][itm.id] = itm_data
         return data_items
 
     def _replace_fields(self, values):
@@ -302,7 +318,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         Get an item from the inventory based on identifier
         """
         try:
-            item = Item.objects.get(identifier=identifier)
+            item = Item.objects.get(id=identifier)
         except Item.DoesNotExist:
             message = {'message': 'Item {} does not exist !'.format(identifier)}
             raise serializers.ValidationError(message)
@@ -365,6 +381,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         Check there is enough for each item available
         """
         errors = []
+        error_items = []
         valid_amounts = True
         for item, required in sum_item_amounts.items():
             available = self._as_measured_value(item.amount_available,
@@ -383,13 +400,16 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     pass
             if available < required['amount']:
                 missing = (available - required['amount']) * -1
+                # Needs changing to reflext identifier is no longer a required field
+                # as may just be name/barcode now
                 message = 'Inventory item {0} ({1}) is short of amount by {2:.2f}'.format(
                     item.identifier, item.name, missing)
                 errors.append(message)
+                error_items.append(item)
                 valid_amounts = False
-        return (valid_amounts, errors)
+        return (valid_amounts, errors, error_items)
 
-    def _create_item_transfers(self, sum_item_amounts):
+    def _create_item_transfers(self, sum_item_amounts, error_items=[]):
         """
         Create ItemTransfers to alter inventory amounts
         """
@@ -419,6 +439,8 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     coordinates=amount.get('coordinates', None),
                     amount_taken=amount['amount'],
                     amount_measure=measure)
+            if item in error_items:
+                transfer.is_valid = False
             transfers.append(transfer)
         return transfers
 
@@ -427,7 +449,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         for item, amount in dict_of_amounts.items():
             output.append({
                 'name': item.name,
-                'identifier': item.identifier,
+                'identifier': item.id, #item.identifier,
                 'amount': amount.magnitude,
                 'measure': '{:~}'.format(amount).split(' ')[1],
             })
@@ -436,9 +458,8 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
     def _do_driver_actions(self, task_data):
         pass
 
-    @detail_route(methods=['POST'])
     # Do not accept JSON as cannot send files this way
-    @parser_classes((FormParser, MultiPartParser,))
+    @detail_route(methods=['POST'], parser_classes=(FormParser, MultiPartParser,))
     def start_task(self, request, pk=None):
         """
         Check input values and start or preview a task
@@ -483,10 +504,10 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
 
             product_item_amounts, sum_item_amounts = self._get_item_amounts(data_items,
                                                                             serialized_task)
-            valid_amounts, errors = self._check_input_amounts(sum_item_amounts)
+            valid_amounts, errors, error_items = self._check_input_amounts(sum_item_amounts)
 
             # Check if a transfer already exists with given barcode/well??
-            transfers = self._create_item_transfers(sum_item_amounts)
+            transfers = self._create_item_transfers(sum_item_amounts, error_items)
 
             # Check if you can actually use the equipment
             equipment_name = serialized_task.validated_data['equipment_choice']
@@ -716,6 +737,8 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 # and move failed products to it
                 failure_ids = str(product_failures).split(',')
                 failed_products = run.products.filter(id__in=failure_ids)
+                if failed_products.count() != len(failed_products):
+                    return Response({'message': 'Invalid Id\'s for failed products!'}, status=400)
                 new_name = '{} (failed)'.format(run.name)
 
                 # Set the task to a different task if needs to be earlier
@@ -779,7 +802,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     new_item.save()
 
                     product_input_ids = [p for p in e.data['product_inputs']]
-                    product_items = Item.objects.filter(identifier__in=product_input_ids)
+                    product_items = Item.objects.filter(id__in=product_input_ids)
                     new_item.created_from.add(*product_items)
 
                     e.product.linked_inventory.add(new_item)
