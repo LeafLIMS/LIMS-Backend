@@ -73,11 +73,13 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsInAdminGroupOrTheUser,)
+    search_fields = ('username', 'email')
     filter_class = UserFilter
 
     def get_queryset(self):
         if self.request.user.groups.filter(name='admin').exists():
-            return User.objects.all()
+            # Exclude the system specific AnonymousUser from results as deleting could cause issues
+            return User.objects.exclude(username='AnonymousUser')
         else:
             return User.objects.filter(username=self.request.user.username)
 
@@ -99,7 +101,6 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
 
     @list_route(permission_classes=[IsAuthenticated])
     def me(self, request):
-        print(request.user)
         serializer = SimpleUserSerializer(request.user)
         return Response(serializer.data)
 
@@ -205,6 +206,7 @@ class GroupViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = (IsInAdminGroupOrRO,)
+    search_fields = ('name',)
 
     def get_queryset(self):
         if self.request.user.groups.filter(name='admin').exists():
