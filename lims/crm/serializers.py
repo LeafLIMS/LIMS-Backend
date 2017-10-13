@@ -18,6 +18,7 @@ class CreateCRMAccountSerializer(serializers.Serializer):
 class CRMAccountSerializer(serializers.ModelSerializer):
     account_url = serializers.CharField(read_only=True)
     contact_url = serializers.CharField(read_only=True)
+    account_details = serializers.CharField(read_only=True)
 
     class Meta:
         model = CRMAccount

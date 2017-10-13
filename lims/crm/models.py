@@ -28,6 +28,9 @@ class CRMAccount(models.Model):
             return settings.SALESFORCE_URL + '/' + self.account_identifier
         return ''
 
+    def account_details(self):
+        return '{} {}: {}'.format(self.user.first_name, self.user.last_name, self.account_name)
+
     def __str__(self):
         return self.user.username
 
