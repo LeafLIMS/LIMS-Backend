@@ -45,7 +45,7 @@ class TriggerSet(models.Model):
                                 default=LOW)
     name = models.TextField(blank=False, null=False, default="My Trigger")
     email_title = models.CharField(max_length=255, blank=False, null=False,
-                                   default='Alert from GET LIMS')
+                                   default='Alert from Leaf LIMS')
     email_template = \
         models.TextField(blank=False, null=False,
                          default='{name}: {model} instance {instance} triggered on {date}.')
