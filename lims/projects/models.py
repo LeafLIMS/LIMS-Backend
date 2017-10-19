@@ -61,6 +61,9 @@ class Project(models.Model):
     crm_project = models.ForeignKey(CRMProject, blank=True, null=True)
     order = models.ForeignKey(Order, related_name='associated_projects', blank=True, null=True)
 
+    # Generic property support for use by plugins
+    properties = JSONField(null=True, blank=True)
+
     class Meta:
         ordering = ['identifier']
         permissions = (
