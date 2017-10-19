@@ -55,6 +55,7 @@ class InputFieldValueSerializer(serializers.Serializer):
     measure = serializers.CharField()
     inventory_identifier = serializers.CharField()
     from_input_file = serializers.NullBooleanField()
+    from_calculation = serializers.BooleanField(required=False, default=False)
     calculation_used = serializers.IntegerField(required=False, allow_null=True)
 
     destination_barcode = serializers.CharField(required=False, allow_null=True)
