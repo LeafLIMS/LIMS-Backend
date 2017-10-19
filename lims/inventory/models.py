@@ -222,6 +222,11 @@ class ItemTransfer(models.Model):
         return self.item.name
 
     def save(self, *args, **kwargs):
+        # Match some fields
+        if self.pk is None:
+            if self.amount_available == 0:
+                self.amount_available = self.amount_taken
+            self.amount_to_take = self.amount_taken
         # Link to an existing ItemTransfer with the given barcode
         if self.barcode:
             try:
