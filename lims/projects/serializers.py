@@ -25,6 +25,10 @@ class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer)
         read_only=True,
         slug_field='username',
     )
+    status = serializers.SlugRelatedField(
+        queryset=ProjectStatus.objects.all(),
+        slug_field='name',
+    )
     crm_project = CRMProjectSerializer(read_only=True)
     links = serializers.JSONField(required=False, allow_null=True)
 
