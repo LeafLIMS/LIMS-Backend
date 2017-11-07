@@ -99,9 +99,9 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
                                   'You do not have permissions to change this users password'})
         raise ValidationError({'message': 'You must supply a new password'})
 
-    @list_route(permission_classes=[IsAuthenticated])
+    @list_route(methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
-        serializer = SimpleUserSerializer(request.user)
+        serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
     @list_route(permission_classes=[IsAuthenticated])
