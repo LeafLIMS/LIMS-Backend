@@ -67,6 +67,7 @@ INSTALLED_APPS = (
     'lims.filetemplate',
     'lims.datastore',
     'lims.drivers',
+    'lims.plugins.apps.PluginsConfig',
 )
 
 MIDDLEWARE_CLASSES = (

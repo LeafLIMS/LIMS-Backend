@@ -90,28 +90,6 @@ class DetailedProductSerializer(ProductSerializer):
     linked_inventory = LinkedItemSerializer(many=True, read_only=True)
     data = CompactDataEntrySerializer(many=True, read_only=True)
     attachments = AttachmentSerializer(read_only=True, many=True)
-    sbol_diagram = serializers.SerializerMethodField()
-    has_design_file = serializers.SerializerMethodField()
-
-    def get_sbol_diagram(self, obj):
-        if obj.sbol:
-            parser = DesignFileParser(obj.sbol)
-            elements = parser.sbol_to_list()
-            for e in elements:
-                for sub in e:
-                    try:
-                        item = Item.objects.get(name=sub['name'])
-                    except Item.DoesNotExist:
-                        pass
-                    else:
-                        sub['item'] = item.id
-            return elements
-        return []
-
-    def get_has_design_file(self, obj):
-        if obj.design:
-            return True
-        return False
 
 
 class ProductStatusSerializer(serializers.ModelSerializer):

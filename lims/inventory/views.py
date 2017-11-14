@@ -24,6 +24,7 @@ from .models import Set, Item, ItemTransfer, ItemType, Location, AmountMeasure
 from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationSerializer,
                           ItemSerializer, DetailedItemSerializer, SetSerializer,
                           ItemTransferSerializer)
+from .providers import InventoryItemPluginProvider
 
 
 # Define as module level due to issues with file locking
@@ -132,10 +133,26 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
             return self.serializer_class
         return DetailedItemSerializer
 
+    def get_object(self):
+        instance = super().get_object()
+        plugins = [p(instance) for  p in InventoryItemPluginProvider.plugins]
+        for p in plugins:
+            p.view()
+        return instance
+
     def perform_create(self, serializer):
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
         instance = serializer.save(added_by=self.request.user)
         self.assign_permissions(instance, permissions)
+        plugins = [p(instance) for  p in InventoryItemPluginProvider.plugins]
+        for p in plugins:
+            p.create()
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        plugins = [p(instance) for  p in InventoryItemPluginProvider.plugins]
+        for p in plugins:
+            p.update()
 
     @list_route(methods=['POST'])
     def importitems(self, request):

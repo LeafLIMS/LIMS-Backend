@@ -28,6 +28,8 @@ from .serializers import (ProjectSerializer, ProductSerializer,
                           ProjectStatusSerializer)
 from .parsers import DesignFileParser
 
+from .providers import ProjectPluginProvider, ProductPluginProvider
+
 
 class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
                      viewsets.ModelViewSet):
@@ -155,29 +157,19 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
     search_fields = ('product_identifier', 'name', 'product_type__name', 'status__name',)
     filter_class = ProductFilter
 
-    def _parse_design(self, instance):
-        """
-        Takes a design file and extracts the necessary info
-        out to add inventory items or other things.
-        """
-        if instance.design is not None:
-            items = []
-            parser = DesignFileParser(instance.design)
-            if instance.design_format == 'csv':
-                items, sbol = parser.parse_csv()
-            elif instance.design_format == 'gb':
-                items, sbol = parser.parse_gb()
-            for i in items:
-                instance.linked_inventory.add(i)
-            instance.sbol = sbol
-            instance.save()
-
     def get_serializer_class(self):
         # Use a more compact serializer when listing.
         # This makes things run more efficiantly.
         if self.action == 'retrieve':
             return DetailedProductSerializer
         return ProductSerializer
+
+    def get_object(self):
+        instance = super().get_object()
+        plugins = [p(instance) for  p in ProductPluginProvider.plugins]
+        for p in plugins:
+            p.view()
+        return instance
 
     def perform_create(self, serializer):
         # Ensure the user has the correct permissions on the Project
@@ -189,21 +181,15 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
             self.clone_group_permissions(instance.project, instance)
         else:
             raise ValidationError('You do not have permission to create this')
-        # Does it have a design?
-        # If so, parse the design to extract info to get parts from
-        # inventory.
-        self._parse_design(instance)
+        plugins = [p(instance) for  p in ProductPluginProvider.plugins]
+        for p in plugins:
+            p.create()
 
-    @detail_route(methods=['POST'])
-    def replace_design(self, request, pk=None):
-        new_design = request.data.get('design_file', None)
-        if new_design:
-            instance = self.get_object()
-            instance.design = new_design
-            instance.save()
-            self._parse_design(instance)
-            return Response({'message': 'Design file changed'})
-        return Response({'message': 'Please supply a design file'}, status=400)
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        plugins = [p(instance) for  p in ProductPluginProvider.plugins]
+        for p in plugins:
+            p.update()
 
     @detail_route(methods=['POST'])
     def add_attachment(self, request, pk=None):
