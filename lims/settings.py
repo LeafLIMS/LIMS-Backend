@@ -68,6 +68,8 @@ INSTALLED_APPS = (
     'lims.datastore',
     'lims.drivers',
     'lims.plugins.apps.PluginsConfig',
+    # This is for post-migration data only
+    'lims.zonks',
 )
 
 MIDDLEWARE_CLASSES = (
