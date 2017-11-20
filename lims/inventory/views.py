@@ -135,7 +135,7 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
 
     def get_object(self):
         instance = super().get_object()
-        plugins = [p(instance) for  p in InventoryItemPluginProvider.plugins]
+        plugins = [p(instance) for p in InventoryItemPluginProvider.plugins]
         for p in plugins:
             p.view()
         return instance
@@ -144,13 +144,13 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
         instance = serializer.save(added_by=self.request.user)
         self.assign_permissions(instance, permissions)
-        plugins = [p(instance) for  p in InventoryItemPluginProvider.plugins]
+        plugins = [p(instance) for p in InventoryItemPluginProvider.plugins]
         for p in plugins:
             p.create()
 
     def perform_update(self, serializer):
         instance = serializer.save()
-        plugins = [p(instance) for  p in InventoryItemPluginProvider.plugins]
+        plugins = [p(instance) for p in InventoryItemPluginProvider.plugins]
         for p in plugins:
             p.update()
 

@@ -15,7 +15,7 @@ class OrganismSerializer(serializers.ModelSerializer):
 class TriggerSerializer(serializers.ModelSerializer):
     triggerset_id = serializers.PrimaryKeyRelatedField(
         queryset=TriggerSet.objects.all(), source='triggerset', write_only=True)
-    triggerset = serializers.CharField(read_only=True)#TriggerSetSerializer(read_only=True)
+    triggerset = serializers.CharField(read_only=True)
 
     class Meta:
         model = Trigger
@@ -37,6 +37,7 @@ class TriggerSubscriptionSerializer(serializers.ModelSerializer):
 class TriggerSetSerializer(serializers.ModelSerializer):
     triggers = TriggerSerializer(many=True, read_only=True)
     subscriptions = TriggerSubscriptionSerializer(many=True, read_only=True)
+
     class Meta:
         model = TriggerSet
         fields = '__all__'

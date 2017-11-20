@@ -1,5 +1,6 @@
 from lims.plugins.mounts import PluginMountPoint
 
+
 class InventoryItemPluginProvider(object, metaclass=PluginMountPoint):
 
     def __init__(self, item, *args, **kwargs):

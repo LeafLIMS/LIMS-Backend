@@ -130,9 +130,9 @@ class Product(models.Model):
 
     project = models.ForeignKey(Project)
 
-    ##
-    ## DEPRECIATION WARNING: THESE ARE TO BE MOVED TO PROPERTIES JSON1G
-    ##
+    #
+    # DEPRECIATION WARNING: THESE ARE TO BE MOVED TO PROPERTIES JSON1G
+    #
     # One design per product as it should only be making (ultimately) one thing
     design = models.TextField(blank=True, null=True)
     design_format = models.CharField(choices=DESIGN_FORMATS,

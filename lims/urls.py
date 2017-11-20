@@ -9,7 +9,7 @@ from rest_framework_jwt.views import obtain_jwt_token
 
 from channels.routing import route
 
-from lims.users.views import ObtainAuthToken, UserViewSet, GroupViewSet
+from lims.users.views import UserViewSet, GroupViewSet
 from lims.permissions.views import PermissionViewSet
 
 from lims.shared.views import OrganismViewSet, TriggerAlertStatusViewSet, TriggerSetViewSet, \

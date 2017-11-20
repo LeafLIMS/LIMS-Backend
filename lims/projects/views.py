@@ -28,7 +28,7 @@ from .serializers import (ProjectSerializer, ProductSerializer,
                           ProjectStatusSerializer)
 from .parsers import DesignFileParser
 
-from .providers import ProjectPluginProvider, ProductPluginProvider
+from .providers import ProductPluginProvider
 
 
 class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
@@ -166,7 +166,7 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
 
     def get_object(self):
         instance = super().get_object()
-        plugins = [p(instance) for  p in ProductPluginProvider.plugins]
+        plugins = [p(instance) for p in ProductPluginProvider.plugins]
         for p in plugins:
             p.view()
         return instance
@@ -181,13 +181,13 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
             self.clone_group_permissions(instance.project, instance)
         else:
             raise ValidationError('You do not have permission to create this')
-        plugins = [p(instance) for  p in ProductPluginProvider.plugins]
+        plugins = [p(instance) for p in ProductPluginProvider.plugins]
         for p in plugins:
             p.create()
 
     def perform_update(self, serializer):
         instance = serializer.save()
-        plugins = [p(instance) for  p in ProductPluginProvider.plugins]
+        plugins = [p(instance) for p in ProductPluginProvider.plugins]
         for p in plugins:
             p.update()
 

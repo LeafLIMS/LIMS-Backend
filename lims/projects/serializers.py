@@ -10,8 +10,6 @@ from lims.permissions.permissions import (SerializerPermissionsMixin,
 from lims.shared.models import Organism
 from .models import (Project, ProjectStatus, Product, ProductStatus, Comment, WorkLog)
 from lims.datastore.serializers import CompactDataEntrySerializer, AttachmentSerializer
-from .parsers import DesignFileParser
-from lims.inventory.models import Item
 
 
 class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):

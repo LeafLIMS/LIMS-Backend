@@ -43,7 +43,7 @@ def load_plugins(**kwargs):
     plugins_to_load = list_plugins()
     for plugin in plugins_to_load:
         path = plugin_path.format(dir=plugin[0], module=plugin[1])
-        result = importlib.import_module(path)
+        importlib.import_module(path)
 
 
 class ExamplePluginProvider:

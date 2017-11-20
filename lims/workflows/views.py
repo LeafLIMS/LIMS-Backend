@@ -17,7 +17,7 @@ import django_filters
 from rest_framework import viewsets
 from rest_framework import serializers
 from rest_framework.response import Response
-from rest_framework.decorators import detail_route, parser_classes
+from rest_framework.decorators import detail_route
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.validators import ValidationError
 from rest_framework.filters import (OrderingFilter,
@@ -26,8 +26,6 @@ from rest_framework.filters import (OrderingFilter,
 from rest_framework.reverse import reverse
 from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework_csv.renderers import CSVRenderer
-
-import django_filters
 
 from lims.shared.filters import ListFilter
 from lims.permissions.permissions import (ViewPermissionsMixin,
@@ -449,7 +447,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         for item, amount in dict_of_amounts.items():
             output.append({
                 'name': item.name,
-                'identifier': item.id, #item.identifier,
+                'identifier': item.id,
                 'amount': amount.magnitude,
                 'measure': '{:~}'.format(amount).split(' ')[1],
             })
