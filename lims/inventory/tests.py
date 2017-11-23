@@ -140,8 +140,9 @@ class LocationTestCase(LoggedInTestCase):
 
     def test_location_display_name(self):
         self.assertEqual(self._top.display_name(), '%s' % self._top.name)
-        self.assertEqual(self._middle.display_name(), '-- %s' % self._middle.name)
-        self.assertEqual(self._bottom.display_name(), '---- %s' % self._bottom.name)
+        self.assertEqual(self._middle.display_name(), '\u00a0\u00a0\u00a0 %s' % self._middle.name)
+        self.assertEqual(self._bottom.display_name(),
+                         '\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 %s' % self._bottom.name)
 
     def test_location_str(self):
         self.assertEqual(self._top.__str__(), '%s' % self._top.name)
@@ -1243,7 +1244,7 @@ class ItemTestCase(LoggedInTestCase):
         items = response.data
         self.assertEqual(len(items["results"]), 3)
         i = items["results"][0]
-        self.assertEqual(i["name"], "Item1")
+        self.assertEqual(i["name"], "Item3")
 
     def test_user_list_group(self):
         # Jane can see all four because her group permissions permit this
@@ -1854,7 +1855,18 @@ class ItemTestCase(LoggedInTestCase):
                                          required=True,
                                          is_identifier=False,
                                          template=templ)
-        FileTemplateField.objects.create(name="properties",
+        FileTemplateField.objects.create(name="joe",
+                                         is_property=True,
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="jane",
+                                         is_property=True,
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="jim",
+                                         is_property=True,
                                          required=True,
                                          is_identifier=False,
                                          template=templ)
@@ -1870,8 +1882,9 @@ class ItemTestCase(LoggedInTestCase):
                 "amount_available": 5,
                 "amount_measure": self._measure.symbol,
                 "location": self._location.code,
-                "properties": [{"name": "joe", "value": "bloggs"},
-                               {"name": "jane", "value": "doe"}]},
+                "joe": "bloggs",
+                "jane": "doe",
+            },
             {
                 "name": "Item6",
                 "identifier": "I6",
@@ -1880,7 +1893,7 @@ class ItemTestCase(LoggedInTestCase):
                 "amount_available": 15,
                 "amount_measure": self._measure.symbol,
                 "location": self._location.code,
-                "properties": [{"name": "jim", "value": "beam"}]
+                "jim": "beam",
             },
             {
                 "name": "Item7",
@@ -1892,8 +1905,9 @@ class ItemTestCase(LoggedInTestCase):
             response = self._client.post(
                 "/inventory/importitems/", {"filetemplate": templ.id,
                                             "items_file": fp,
-                                            "permissions": {"joe_group": "rw", "jane_group": "r"}},
-                format='json')
+                                            "permissions":
+                                                '{"joe_group": "rw", "jane_group": "r"}'},
+                format='multipart')
         os.remove(filename)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1963,8 +1977,8 @@ class ItemTestCase(LoggedInTestCase):
                 "/inventory/importitems/",
                 {"filetemplate": 99999,
                  "items_file": fp,
-                 "permissions": {"joe_group": "rw", "jane_group": "r"}},
-                format='json')
+                 "permissions": '{"joe_group": "rw", "jane_group": "r"}'},
+                format='multipart')
         os.remove(filename)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -1988,8 +2002,9 @@ class ItemTestCase(LoggedInTestCase):
             response = self._client.post(
                 "/inventory/importitems/", {"filetemplate": templ.id,
                                             "items_file": fp,
-                                            "permissions": {"joe_group": "rw", "jane_group": "r"}},
-                format='json')
+                                            "permissions":
+                                                '{"joe_group": "rw", "jane_group": "r"}'},
+                format='multipart')
         os.remove(filename)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

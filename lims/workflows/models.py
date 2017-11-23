@@ -16,6 +16,7 @@ class Workflow(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_workflow', 'View workflow',),
         )
@@ -186,6 +187,7 @@ class TaskTemplate(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_tasktemplate', 'View workflow task template',),
         )
@@ -277,6 +279,7 @@ class CalculationFieldTemplate(models.Model):
     result = models.FloatField(null=True, blank=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_calculationfieldtemplate', 'View calculation field template',),
         )
@@ -308,6 +311,7 @@ class InputFieldTemplate(models.Model):
     calculation_used = models.ForeignKey(CalculationFieldTemplate, null=True, blank=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_inputfieldtemplate', 'View input field template',),
         )
@@ -332,6 +336,7 @@ class VariableFieldTemplate(models.Model):
     measure_not_required = models.BooleanField(default=False)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_variablefieldtemplate', 'View variable field template',),
         )
@@ -356,6 +361,7 @@ class OutputFieldTemplate(models.Model):
     calculation_used = models.ForeignKey(CalculationFieldTemplate, null=True, blank=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_outputfieldtemplate', 'View output field template',),
         )
@@ -374,6 +380,7 @@ class StepFieldTemplate(models.Model):
     description = models.CharField(max_length=200, null=True, blank=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_stepfieldtemplate', 'View step field template',),
         )
@@ -394,6 +401,9 @@ class StepFieldProperty(models.Model):
 
     from_calculation = models.BooleanField(default=False)
     calculation_used = models.ForeignKey(CalculationFieldTemplate, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-id']
 
     def field_name(self):
         return self.label.lower().replace(' ', '_')

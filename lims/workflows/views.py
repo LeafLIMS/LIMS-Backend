@@ -656,13 +656,13 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
 
     @detail_route(methods=['GET'], renderer_classes=(CSVRenderer,))
     def get_file(self, request, pk=None):
-        file_id = request.query_params.get('id', None)
+        file_id = request.query_params.get('file_id', None)
 
         run = self.get_object()
         task = run.get_task_at_index(run.current_task)
 
         try:
-            file_template = task.equipment_files.get(id=file_id)
+            file_template = task.equipment_files.get(pk=file_id)
         except ObjectDoesNotExist:
             raise ValidationError({'message': 'Template does not exist'})
 

@@ -11,6 +11,7 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route
 from rest_framework import serializers
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.filters import (OrderingFilter,
                                     SearchFilter,
                                     DjangoFilterBackend)
@@ -154,7 +155,7 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
         for p in plugins:
             p.update()
 
-    @list_route(methods=['POST'])
+    @list_route(methods=['POST'], parser_classes=(FormParser, MultiPartParser,))
     def importitems(self, request):
         """
         Import items from a CSV file

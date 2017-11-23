@@ -210,6 +210,6 @@ class GroupViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.groups.filter(name='admin').exists():
-            return Group.objects.exclude(name='admin')
+            return Group.objects.all()
         else:
             return self.request.user.groups.all()

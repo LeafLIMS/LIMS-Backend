@@ -65,6 +65,9 @@ class CopyFileDriver(models.Model):
 
     is_enabled = models.BooleanField(default=True)
 
+    class Meta:
+        ordering = ['-id']
+
     def fetch(self, interpolate_dict):
         result_paths = []
         for location in self.locations.all():

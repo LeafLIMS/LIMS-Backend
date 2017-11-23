@@ -40,6 +40,10 @@ def make_groups(apps, schema_editor):
                 p = Permission.objects.get(name=perm)
                 g.permissions.add(p)
 
+def make_project_statuses(apps, schema_editor):
+    ProjectStatus = apps.get_model('projects', 'ProjectStatus')
+    ProjectStatus.objects.get_or_create(name='Created')
+
 
 class Migration(migrations.Migration):
 
@@ -47,5 +51,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(make_groups)
+        migrations.RunPython(make_groups),
+        migrations.RunPython(make_project_statuses)
     ]

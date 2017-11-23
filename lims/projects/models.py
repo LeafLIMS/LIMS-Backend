@@ -22,6 +22,7 @@ class ProjectStatus(models.Model):
     description = models.TextField(blank=True, null=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_projectstatus', 'View project status',),
         )
@@ -91,6 +92,7 @@ class ProductStatus(models.Model):
     description = models.TextField(blank=True, null=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_productstatus', 'View product status',),
         )
@@ -151,6 +153,7 @@ class Product(models.Model):
     properties = JSONField(null=True, blank=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_product', 'View product',),
         )

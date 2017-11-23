@@ -54,6 +54,7 @@ class AmountMeasure(models.Model):
     symbol = models.CharField(max_length=10, unique=True, db_index=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_amountmeasure', 'View measure',),
         )
@@ -101,6 +102,7 @@ class Set(models.Model):
     is_partset = models.BooleanField(default=False)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_set', 'View item set',),
         )
@@ -132,7 +134,7 @@ class Item(models.Model):
     concentration_measure = models.ForeignKey(AmountMeasure,
                                               blank=True, null=True,
                                               related_name='concentration_measure')
-    location = TreeForeignKey(Location, null=True, blank=True)
+    location = TreeForeignKey(Location)
 
     # Add an optional "wells" for recording the number of items that can fit on it, if any
     wells = models.IntegerField(default=0)
@@ -146,6 +148,7 @@ class Item(models.Model):
     created_from = models.ManyToManyField('self', blank=True, symmetrical=False)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_item', 'View item',),
         )
