@@ -3,8 +3,6 @@ import reversion
 from django.contrib.auth.models import User
 from django.conf import settings
 
-from lims.orders.models import Order
-
 
 @reversion.register()
 class CRMAccount(models.Model):
@@ -44,9 +42,6 @@ class CRMProject(models.Model):
     status = models.CharField(blank=True, null=True, default='', max_length=100)
 
     account = models.ForeignKey(CRMAccount)
-
-    # This should be on ORDER not CRM Project
-    order = models.OneToOneField(Order, related_name='crm', null=True, blank=True)
 
     class Meta:
         permissions = (

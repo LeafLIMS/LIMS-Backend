@@ -36,9 +36,4 @@ class Migration(migrations.Migration):
             field=models.CharField(default='none', max_length=300),
             preserve_default=False,
         ),
-        migrations.AlterField(
-            model_name='crmproject',
-            name='order',
-            field=models.OneToOneField(blank=True, to='orders.Order', null=True, related_name='crm'),
-        ),
     ]

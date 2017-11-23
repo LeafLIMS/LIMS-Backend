@@ -54,7 +54,6 @@ INSTALLED_APPS = (
     'guardian',
     'lims.shared',
     'lims.users',
-    'lims.orders',
     'lims.addressbook',
     'lims.pricebook',
     'lims.crm',
@@ -311,9 +310,6 @@ DEFAULT_USER_PERMISSIONS = (
     "Can delete trigger subscription",
 )
 DEFAULT_STAFF_PERMISSIONS = (
-    "Can add order",
-    "Can change order",
-    "Can delete order",
     "Can add address",
     "Can change address",
     "Can delete address",

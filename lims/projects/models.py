@@ -9,7 +9,6 @@ from django.contrib.postgres.fields import JSONField
 
 from lims.shared.models import Organism
 from lims.inventory.models import ItemType, Item
-from lims.orders.models import Order
 from lims.crm.models import CRMProject
 from lims.datastore.models import Attachment
 
@@ -59,13 +58,12 @@ class Project(models.Model):
     primary_lab_contact = models.ForeignKey(User)
 
     crm_project = models.ForeignKey(CRMProject, blank=True, null=True)
-    order = models.ForeignKey(Order, related_name='associated_projects', blank=True, null=True)
 
     # Generic property support for use by plugins
     properties = JSONField(null=True, blank=True)
 
     class Meta:
-        ordering = ['identifier']
+        ordering = ['-identifier']
         permissions = (
             ('view_project', 'View project',),
         )

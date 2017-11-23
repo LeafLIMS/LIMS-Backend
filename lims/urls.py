@@ -16,7 +16,6 @@ from lims.shared.views import OrganismViewSet, TriggerAlertStatusViewSet, Trigge
     TriggerViewSet, TriggerSubscriptionViewSet
 from lims.shared.consumers import send_email
 
-from lims.orders.views import OrderViewSet
 from lims.addressbook.views import AddressViewSet
 from lims.pricebook.views import PriceBookViewSet
 
@@ -37,7 +36,6 @@ from lims.crm.views import (CRMUserView, CRMProjectView, CRMUpdateProjectView, C
                             CRMUpdateAccountView)
 
 router = routers.DefaultRouter()
-router.register(r'orders', OrderViewSet, base_name='orders')
 router.register(r'addresses', AddressViewSet, base_name='addresses')
 router.register(r'pricebooks', PriceBookViewSet, base_name='pricebooks')
 router.register(r'codonusage', CodonUsageTableViewSet, base_name='codonusage')

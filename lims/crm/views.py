@@ -11,7 +11,6 @@ from simple_salesforce import Salesforce
 from django_countries import countries
 
 from lims.users.serializers import UserSerializer
-from lims.orders.models import Order
 from lims.pricebook.models import Price, PriceBook
 from lims.projects.models import Project, ProjectStatus
 from lims.permissions.permissions import ExtendedObjectPermissions
@@ -149,7 +148,6 @@ class CRMProjectView(APIView):
             name = request.data['name']
             account = request.data['account_id']
 
-            project = Order.objects.get(pk=request.data['project_id'])
             Price.objects.all()
             prices = {item.code: {'id': item.identifier, 'price': item.price}
                       for item in Price.objects.all()}
@@ -166,7 +164,7 @@ class CRMProjectView(APIView):
                 'Pricebook2Id': pricebook.identifier,
             })
 
-            crm_project = CRMProject(project_identifier=crm_project_data['id'], order=project)
+            crm_project = CRMProject(project_identifier=crm_project_data['id'])
             crm_project.save()
 
             quote_created = sf.Quote.create({
