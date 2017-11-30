@@ -11,9 +11,8 @@ from simple_salesforce import Salesforce
 from django_countries import countries
 
 from lims.users.serializers import UserSerializer
-from lims.orders.models import Order
 from lims.pricebook.models import Price, PriceBook
-from lims.projects.models import Project
+from lims.projects.models import Project, ProjectStatus
 from lims.permissions.permissions import ExtendedObjectPermissions
 from .models import CRMAccount, CRMProject, CRMQuote
 
@@ -120,7 +119,6 @@ class CRMProjectView(APIView):
 
         if settings.ENABLE_CRM:
             search = request.query_params.get('search', '')
-
             sf = Salesforce(instance_url=settings.SALESFORCE_URL,
                             username=settings.SALESFORCE_USERNAME,
                             password=settings.SALESFORCE_PASSWORD,
@@ -129,7 +127,8 @@ class CRMProjectView(APIView):
             projects_query = ("SELECT Id,Name,Description,Project_Status__c, CreatedDate "
                               "FROM Opportunity WHERE Name LIKE '%{}%'").format(search)
             projects = sf.query(projects_query)
-            return Response(projects['records'])
+            return Response({'results': projects['records'],
+                             'meta': {'count': len(projects['records'])}})
         return Response({'message': 'CRM is currently disabled'}, status=501)
 
     def post(self, request, format=None):
@@ -149,7 +148,6 @@ class CRMProjectView(APIView):
             name = request.data['name']
             account = request.data['account_id']
 
-            project = Order.objects.get(pk=request.data['project_id'])
             Price.objects.all()
             prices = {item.code: {'id': item.identifier, 'price': item.price}
                       for item in Price.objects.all()}
@@ -166,7 +164,7 @@ class CRMProjectView(APIView):
                 'Pricebook2Id': pricebook.identifier,
             })
 
-            crm_project = CRMProject(project_identifier=crm_project_data['id'], order=project)
+            crm_project = CRMProject(project_identifier=crm_project_data['id'])
             crm_project.save()
 
             quote_created = sf.Quote.create({
@@ -283,8 +281,19 @@ class CRMUpdateProjectView(APIView):
                         else:
                             proj.name = record['Name']
                             proj.description = record['Description']
-                            proj.status = record['Project_Status__c']
+                            proj.status = record.get('Project_Status__c', '')
                             proj.save()
+                            # Get project and update status
+                            projects = proj.project_set.all()
+                            for p in projects:
+                                if record.get('Project_Status__c', '') != '':
+                                    ps = record.get('Project_Status__c')
+                                    try:
+                                        project_status = ProjectStatus.objects.get(name=ps)
+                                    except ObjectDoesNotExist:
+                                        project_status = ProjectStatus.objects.create(name=ps)
+                                    p.status = project_status
+                                    p.save()
                     return Response({'message': 'Projects updated'})
                 return Response({'message': 'No projects found on CRM system'}, status=404)
             return Response({'message': 'Please provide a list of CRM project IDs'}, status=400)
@@ -376,7 +385,7 @@ class CRMLinkView(APIView):
                             name=record['Name'],
                             description=record['Description'],
                             date_created=record['CreatedDate'],
-                            status=record['Project_Status__c'],
+                            status=record.get('Project_Status__c', ''),
                             account=crm_account
                         )
                         crm_project.save()
@@ -392,6 +401,15 @@ class CRMLinkView(APIView):
                         status=404)
 
                 project.crm_project = crm_project
+
+                if record.get('Project_Status__c', '') != '':
+                    ps = record.get('Project_Status__c')
+                    try:
+                        project_status = ProjectStatus.objects.get(name=ps)
+                    except ObjectDoesNotExist:
+                        project_status = ProjectStatus.objects.create(name=ps)
+                    project.status = project_status
+
                 project.save()
             return Response({'message': 'CRM Project linked to Project {}'.format(project_id)})
         return Response({'message': 'CRM is currently disabled'}, status=501)

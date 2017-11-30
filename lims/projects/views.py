@@ -22,10 +22,13 @@ from lims.permissions.permissions import (IsInAdminGroupOrRO,
 
 from lims.shared.mixins import StatsViewMixin, AuditTrailViewMixin
 from lims.datastore.serializers import AttachmentSerializer
-from .models import (Product, ProductStatus, Project)
+from .models import (Product, ProductStatus, Project, ProjectStatus)
 from .serializers import (ProjectSerializer, ProductSerializer,
-                          DetailedProductSerializer, ProductStatusSerializer)
+                          DetailedProductSerializer, ProductStatusSerializer,
+                          ProjectStatusSerializer)
 from .parsers import DesignFileParser
+
+from .providers import ProductPluginProvider
 
 
 class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
@@ -71,7 +74,11 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
         if products_file:
             # Read the CSV file of products into a list
             decoded_file = codecs.iterdecode(products_file, 'utf-8-sig')
-            products = [line for line in csv.DictReader(decoded_file, skipinitialspace=True)]
+            try:
+                products = [line for line in csv.DictReader(decoded_file, skipinitialspace=True)]
+            except UnicodeDecodeError:
+                return Response({'message': 'Please supply file in UTF-8 CSV format.'},
+                                status=400)
             # Open the zip file for reading, assign the files within to a dict with filenames
             designs = {}
             if designs_file:
@@ -111,13 +118,20 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
 
 class ProductFilter(django_filters.FilterSet):
     id__in = ListFilter(name='id')
-    on_run = django_filters.MethodFilter()
+    on_run = django_filters.CharFilter(method='filter_on_run')
+    exclude = django_filters.CharFilter(method='filter_exclude')
 
     def filter_on_run(self, queryset, value):
         if value == 'False':
             return queryset.exclude(runs__is_active=True)
         elif value == 'True':
             return queryset.filter(runs__is_active=True)
+        return queryset
+
+    def filter_exclude(self, queryset, name, value):
+        if value:
+            exclude_ids = value.split(',')
+            return queryset.exclude(id__in=exclude_ids)
         return queryset
 
     class Meta:
@@ -143,29 +157,19 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
     search_fields = ('product_identifier', 'name', 'product_type__name', 'status__name',)
     filter_class = ProductFilter
 
-    def _parse_design(self, instance):
-        """
-        Takes a design file and extracts the necessary info
-        out to add inventory items or other things.
-        """
-        if instance.design is not None:
-            items = []
-            parser = DesignFileParser(instance.design)
-            if instance.design_format == 'csv':
-                items, sbol = parser.parse_csv()
-            elif instance.design_format == 'gb':
-                items, sbol = parser.parse_gb()
-            for i in items:
-                instance.linked_inventory.add(i)
-            instance.sbol = sbol
-            instance.save()
-
     def get_serializer_class(self):
         # Use a more compact serializer when listing.
         # This makes things run more efficiantly.
         if self.action == 'retrieve':
             return DetailedProductSerializer
         return ProductSerializer
+
+    def get_object(self):
+        instance = super().get_object()
+        plugins = [p(instance) for p in ProductPluginProvider.plugins]
+        for p in plugins:
+            p.view()
+        return instance
 
     def perform_create(self, serializer):
         # Ensure the user has the correct permissions on the Project
@@ -177,21 +181,15 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
             self.clone_group_permissions(instance.project, instance)
         else:
             raise ValidationError('You do not have permission to create this')
-        # Does it have a design?
-        # If so, parse the design to extract info to get parts from
-        # inventory.
-        self._parse_design(instance)
+        plugins = [p(instance) for p in ProductPluginProvider.plugins]
+        for p in plugins:
+            p.create()
 
-    @detail_route(methods=['POST'])
-    def replace_design(self, request, pk=None):
-        new_design = request.data.get('design_file', None)
-        if new_design:
-            instance = self.get_object()
-            instance.design = new_design
-            instance.save()
-            self._parse_design(instance)
-            return Response({'message': 'Design file changed'})
-        return Response({'message': 'Please supply a design file'}, status=400)
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        plugins = [p(instance) for p in ProductPluginProvider.plugins]
+        for p in plugins:
+            p.update()
 
     @detail_route(methods=['POST'])
     def refresh_design(self, request, pk=None):
@@ -207,7 +205,7 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
             serializer.save(created_by=request.user)
             product = self.get_object()
             product.attachments.add(serializer.instance)
-            return Response({'message': 'File attachment added'})
+            return Response(serializer.data)
         return Response({'message': 'Please supply a file to upload'}, status=400)
 
     @detail_route(methods=['DELETE'])
@@ -229,4 +227,10 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
 class ProductStatusViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = ProductStatus.objects.all()
     serializer_class = ProductStatusSerializer
+    permission_classes = (IsInAdminGroupOrRO,)
+
+
+class ProjectStatusViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
+    queryset = ProjectStatus.objects.all()
+    serializer_class = ProjectStatusSerializer
     permission_classes = (IsInAdminGroupOrRO,)

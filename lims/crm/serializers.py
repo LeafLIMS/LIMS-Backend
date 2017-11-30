@@ -18,9 +18,11 @@ class CreateCRMAccountSerializer(serializers.Serializer):
 class CRMAccountSerializer(serializers.ModelSerializer):
     account_url = serializers.CharField(read_only=True)
     contact_url = serializers.CharField(read_only=True)
+    account_details = serializers.CharField(read_only=True)
 
     class Meta:
         model = CRMAccount
+        fields = '__all__'
         depth = 1
 
 
@@ -29,6 +31,7 @@ class CRMQuoteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CRMQuote
+        fields = '__all__'
 
 
 class CRMProjectSerializer(serializers.ModelSerializer):
@@ -38,3 +41,4 @@ class CRMProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CRMProject
+        fields = '__all__'

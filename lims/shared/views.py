@@ -69,6 +69,7 @@ class TriggerSubscriptionViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
 class TriggerAlertStatusViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
                                 viewsets.GenericViewSet):  # NB No create, edit, or delete
     serializer_class = TriggerAlertStatusSerializer
+    filter_fields = ('user', 'status')
     filter_backends = (DjangoFilterBackend,)
 
     def get_queryset(self):

@@ -3,8 +3,6 @@ import reversion
 from django.contrib.auth.models import User
 from django.conf import settings
 
-from lims.orders.models import Order
-
 
 @reversion.register()
 class CRMAccount(models.Model):
@@ -28,6 +26,9 @@ class CRMAccount(models.Model):
             return settings.SALESFORCE_URL + '/' + self.account_identifier
         return ''
 
+    def account_details(self):
+        return '{} {}: {}'.format(self.user.first_name, self.user.last_name, self.account_name)
+
     def __str__(self):
         return self.user.username
 
@@ -38,12 +39,9 @@ class CRMProject(models.Model):
     name = models.CharField(max_length=300)
     description = models.TextField(blank=True, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(blank=True, default='', max_length=100)
+    status = models.CharField(blank=True, null=True, default='', max_length=100)
 
     account = models.ForeignKey(CRMAccount)
-
-    # This should be on ORDER not CRM Project
-    order = models.OneToOneField(Order, related_name='crm', null=True, blank=True)
 
     class Meta:
         permissions = (

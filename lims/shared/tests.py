@@ -45,7 +45,7 @@ class OrganismTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         organisms = response.data
         self.assertEqual(len(organisms["results"]), 2)
-        organism1 = organisms["results"][0]
+        organism1 = organisms["results"][1]
         self.assertEqual(organism1["name"], "Homo sapiens")
         self.assertEqual(organism1["common_name"], "Human")
 

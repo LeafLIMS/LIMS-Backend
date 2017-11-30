@@ -166,7 +166,7 @@ class FileTemplateTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         templates = response.data
         self.assertEqual(len(templates["results"]), 3)
-        templ1 = templates["results"][0]
+        templ1 = templates["results"][2]
         self.assertEqual(templ1["name"], "InputTemplate1")
         self.assertEqual(templ1["file_for"], "input")
         templ1_fields = templ1["fields"]

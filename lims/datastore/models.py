@@ -2,7 +2,7 @@ from django.db import models
 import reversion
 from django.contrib.auth.models import User
 
-from jsonfield import JSONField
+from django.contrib.postgres.fields import JSONField
 
 from lims.equipment.models import Equipment
 

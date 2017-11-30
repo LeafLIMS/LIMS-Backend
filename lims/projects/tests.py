@@ -5,8 +5,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.conf import settings
 from django.contrib.auth.models import Permission, Group
 from lims.datastore.models import Attachment
-from .models import Project, Order, Product, ProductStatus, Item, ItemType, Organism
-from lims.inventory.models import AmountMeasure
+from .models import Project, Product, ProductStatus, Item, ItemType, Organism
+from lims.inventory.models import AmountMeasure, Location
 from .parsers import DesignFileParser
 from .views import ViewPermissionsMixin
 
@@ -17,38 +17,16 @@ class ProjectTestCase(LoggedInTestCase):
     def setUp(self):
         super(ProjectTestCase, self).setUp()
 
-        self._joeBloggsOrder = \
-            Order.objects.create(name="Order1",
-                                 data={},
-                                 user=self._joeBloggs,
-                                 is_quote=False,
-                                 quote_sent=False,
-                                 po_receieved=False,
-                                 po_reference=None,
-                                 invoice_sent=False,
-                                 has_paid=False)
         self._joeBloggsProject = \
             Project.objects.create(name="Joe's Project",
                                    description="Awfully interesting",
-                                   order=self._joeBloggsOrder,
                                    created_by=self._joeBloggs,
                                    archive=False,
                                    primary_lab_contact=self._staffUser)
 
-        self._janeDoeOrder = \
-            Order.objects.create(name="Order2",
-                                 data={},
-                                 user=self._janeDoe,
-                                 is_quote=False,
-                                 quote_sent=False,
-                                 po_receieved=False,
-                                 po_reference=None,
-                                 invoice_sent=False,
-                                 has_paid=False)
         self._janeDoeProject = \
             Project.objects.create(name="Jane's Project",
                                    description="Even more insightful",
-                                   order=self._janeDoeOrder,
                                    created_by=self._janeDoe,
                                    archive=True,
                                    primary_lab_contact=self._staffUser)
@@ -75,7 +53,6 @@ class ProjectTestCase(LoggedInTestCase):
         self.assertIs(Project.objects.filter(name="Joe's Project").exists(), True)
         project1 = Project.objects.get(name="Joe's Project")
         self.assertEqual(project1.description, "Awfully interesting")
-        self.assertEqual(project1.order, self._joeBloggsOrder)
         self.assertEqual(project1.created_by, self._joeBloggs)
         self.assertIs(project1.archive, False)
         self.assertEqual(project1.primary_lab_contact, self._staffUser)
@@ -84,7 +61,6 @@ class ProjectTestCase(LoggedInTestCase):
         self.assertIs(Project.objects.filter(name="Jane's Project").exists(), True)
         project2 = Project.objects.get(name="Jane's Project")
         self.assertEqual(project2.description, "Even more insightful")
-        self.assertEqual(project2.order, self._janeDoeOrder)
         self.assertEqual(project2.created_by, self._janeDoe)
         self.assertIs(project2.archive, True)
         self.assertEqual(project2.primary_lab_contact, self._staffUser)
@@ -165,8 +141,8 @@ class ProjectTestCase(LoggedInTestCase):
         self._asJaneDoe()
         new_project = {"name": "Jane's Second Project",
                        "description": "Nobel prize winning idea",
-                       "order": self._janeDoeOrder.id,
                        "archive": False,
+                       "status": "Created",
                        "created_by": self._janeDoe.id,
                        "primary_lab_contact": self._staffUser.username,
                        "assign_groups": {"jane_group": "r"}}
@@ -174,11 +150,9 @@ class ProjectTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertEqual(Project.objects.count(), 3)
-        self.assertEqual(self._janeDoeOrder.associated_projects.count(), 2)
         self.assertIs(Project.objects.filter(name="Jane's Second Project").exists(), True)
         project = Project.objects.get(name="Jane's Second Project")
         self.assertEqual(project.description, "Nobel prize winning idea")
-        self.assertEqual(project.order, self._janeDoeOrder)
         self.assertEqual(project.created_by, self._janeDoe)
         self.assertIs(project.archive, False)
         self.assertEqual(project.primary_lab_contact, self._staffUser)
@@ -203,8 +177,8 @@ class ProjectTestCase(LoggedInTestCase):
         self._asJoeBloggs()
         new_project = {"name": "Joe's Second Project",
                        "description": "Nobel prize winning idea",
-                       "order": self._joeBloggsOrder.id,
                        "archive": False,
+                       "status": "Created",
                        "primary_lab_contact": self._staffUser.id}
         response = self._client.post("/projects/", new_project, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -217,8 +191,8 @@ class ProjectTestCase(LoggedInTestCase):
         self._asJaneDoe()
         new_project = {"name": "Joe's Second Project",
                        "description": "Nobel prize winning idea",
-                       "order": self._joeBloggsOrder.id,
                        "archive": False,
+                       "status": "Created",
                        "created_by": self._joeBloggs.id,
                        "primary_lab_contact": self._staffUser.id}
         response = self._client.post("/projects/", new_project, format='json')
@@ -230,8 +204,8 @@ class ProjectTestCase(LoggedInTestCase):
         self._asAdmin()
         new_project = {"name": "Jane's Second Project",
                        "description": "Nobel prize winning idea",
-                       "order": self._janeDoeOrder.id,
                        "archive": False,
+                       "status": "Created",
                        "created_by": self._janeDoe.id,
                        "primary_lab_contact": self._staffUser.username,
                        "assign_groups": {"jane_group": "r"}}
@@ -239,11 +213,9 @@ class ProjectTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertEqual(Project.objects.count(), 3)
-        self.assertEqual(self._janeDoeOrder.associated_projects.count(), 2)
         self.assertIs(Project.objects.filter(name="Jane's Second Project").exists(), True)
         project = Project.objects.get(name="Jane's Second Project")
         self.assertEqual(project.description, "Nobel prize winning idea")
-        self.assertEqual(project.order, self._janeDoeOrder)
         self.assertEqual(project.created_by, self._adminUser)
         self.assertIs(project.archive, False)
         self.assertEqual(project.primary_lab_contact, self._staffUser)
@@ -273,7 +245,6 @@ class ProjectTestCase(LoggedInTestCase):
         self.assertIs(Project.objects.filter(name="Jane's Project").exists(), True)
         project = Project.objects.get(name="Jane's Project")
         self.assertEqual(project.description, "What a brilliant new idea I just had")
-        self.assertEqual(project.order, self._janeDoeOrder)
         self.assertEqual(project.created_by, self._janeDoe)
         self.assertIs(project.archive, True)
         self.assertEqual(project.primary_lab_contact, self._staffUser)
@@ -317,7 +288,6 @@ class ProjectTestCase(LoggedInTestCase):
         self.assertIs(Project.objects.filter(name="Joe's Project").exists(), True)
         project = Project.objects.get(name="Joe's Project")
         self.assertEqual(project.description, "What a brilliant new idea I just had")
-        self.assertEqual(project.order, self._joeBloggsOrder)
         self.assertEqual(project.created_by, self._joeBloggs)
         self.assertIs(project.archive, False)
         self.assertEqual(project.primary_lab_contact, self._staffUser)
@@ -334,7 +304,6 @@ class ProjectTestCase(LoggedInTestCase):
         self.assertIs(Project.objects.filter(name="Jane's Project").exists(), True)
         project = Project.objects.get(name="Jane's Project")
         self.assertEqual(project.description, "What a brilliant new idea I just had")
-        self.assertEqual(project.order, self._janeDoeOrder)
         self.assertEqual(project.created_by, self._janeDoe)
         self.assertIs(project.archive, True)
         self.assertEqual(project.primary_lab_contact, self._staffUser)
@@ -645,11 +614,15 @@ class ParserTestCase(LoggedInTestCase):
 
         itemtype = ItemType.objects.create(name="TestType")
         amountmeasure = AmountMeasure.objects.create(name="TestAmount", symbol="TA")
+        location = Location.objects.create(name="Lab", code="LA")
         item1 = Item.objects.create(name="Item_1", item_type=itemtype, amount_measure=amountmeasure,
+                                    location=location,
                                     added_by=self._joeBloggs)
         item2 = Item.objects.create(name="Item_2", item_type=itemtype, amount_measure=amountmeasure,
+                                    location=location,
                                     added_by=self._joeBloggs)
         item3 = Item.objects.create(name="item_3", item_type=itemtype, amount_measure=amountmeasure,
+                                    location=location,
                                     added_by=self._joeBloggs)
         self._expected_items = [item1, item2, item3]
 
@@ -955,49 +928,31 @@ class ProductTestCase(LoggedInTestCase):
         self._mouse = Organism.objects.create(name="Mus musculus", common_name="Mouse")
         self._itemtype = ItemType.objects.create(name="TestType")
         self._amountmeasure = AmountMeasure.objects.create(name="TestAmount", symbol="TA")
+        self._location = Location.objects.create(name="Lab", code="LA")
         item1 = Item.objects.create(name="Item_1", item_type=self._itemtype,
                                     amount_measure=self._amountmeasure,
+                                    location=self._location,
                                     added_by=self._joeBloggs)
         item2 = Item.objects.create(name="Item_2", item_type=self._itemtype,
                                     amount_measure=self._amountmeasure,
+                                    location=self._location,
                                     added_by=self._joeBloggs)
         item3 = Item.objects.create(name="item_3", item_type=self._itemtype,
                                     amount_measure=self._amountmeasure,
+                                    location=self._location,
                                     added_by=self._joeBloggs)
         self._expecteditems = [item1, item2, item3]
 
-        self._joeBloggsOrder = \
-            Order.objects.create(name="Order1",
-                                 data={},
-                                 user=self._joeBloggs,
-                                 is_quote=False,
-                                 quote_sent=False,
-                                 po_receieved=False,
-                                 po_reference=None,
-                                 invoice_sent=False,
-                                 has_paid=False)
         self._joeBloggsProject = \
             Project.objects.create(name="Joe's Project",
                                    description="Awfully interesting",
-                                   order=self._joeBloggsOrder,
                                    created_by=self._joeBloggs,
                                    archive=False,
                                    primary_lab_contact=self._staffUser)
 
-        self._janeDoeOrder = \
-            Order.objects.create(name="Order2",
-                                 data={},
-                                 user=self._janeDoe,
-                                 is_quote=False,
-                                 quote_sent=False,
-                                 po_receieved=False,
-                                 po_reference=None,
-                                 invoice_sent=False,
-                                 has_paid=False)
         self._janeDoeProject = \
             Project.objects.create(name="Jane's Project",
                                    description="Even more insightful",
-                                   order=self._janeDoeOrder,
                                    created_by=self._janeDoe,
                                    archive=True,
                                    primary_lab_contact=self._staffUser)
@@ -1152,24 +1107,18 @@ class ProductTestCase(LoggedInTestCase):
                        "created_by": self._janeDoe.id,
                        "project": self._janeDoeProject.id,
                        "assign_groups": {"jane_group": "r"},
-                       "design_format": "csv",
-                       "design": """Name,Description,Role,Color,Sequence,@metadata
-Item_1,test,test,test,test,test
-Item_2,test,test,test,test,test
-item_3,test,test,test,test,test"""}
+                       }
         response = self._client.post("/products/", new_product, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertEqual(Product.objects.count(), 3)
         self.assertIs(Product.objects.filter(name="Product3").exists(), True)
         product = Product.objects.get(name="Product3")
-        self.assertEqual(set(product.linked_inventory.all()), set(self._expecteditems))
         self.assertEqual(product.status, ProductStatus.objects.get(name="Added"))
         self.assertEqual(product.product_type, self._itemtype)
         self.assertEqual(product.optimised_for, self._human)
         self.assertEqual(product.created_by, self._janeDoe)
         self.assertEqual(product.project, self._janeDoeProject)
-        self.assertEqual(product.design_format, "csv")
         self.assertEqual(product.product_identifier,
                          '{}-{}'.format(product.project.project_identifier, product.identifier))
 
@@ -1195,11 +1144,7 @@ item_3,test,test,test,test,test"""}
                        "created_by": self._joeBloggs.id,
                        "project": self._joeBloggsProject.id,
                        "assign_groups": {"joe_group": "r"},
-                       "design_format": "csv",
-                       "design": """Name,Description,Role,Color,Sequence,@metadata
-Item_1,test,test,test,test,test
-Item_2,test,test,test,test,test
-item_3,test,test,test,test,test"""}
+                       }
         response = self._client.post("/products/", new_product, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIs(Product.objects.filter(name="Product3").exists(), False)
@@ -1216,11 +1161,7 @@ item_3,test,test,test,test,test"""}
                        "created_by": self._joeBloggs.id,
                        "project": self._joeBloggsProject.id,
                        "assign_groups": {"jane_group": "r"},
-                       "design_format": "csv",
-                       "design": """Name,Description,Role,Color,Sequence,@metadata
-Item_1,test,test,test,test,test
-Item_2,test,test,test,test,test
-item_3,test,test,test,test,test"""}
+                       }
         response = self._client.post("/products/", new_product, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIs(Product.objects.filter(name="Product3").exists(), False)
@@ -1237,11 +1178,7 @@ item_3,test,test,test,test,test"""}
                        "created_by": self._janeDoe.id,
                        "project": self._joeBloggsProject.id,
                        "assign_groups": {"jane_group": "r"},
-                       "design_format": "csv",
-                       "design": """Name,Description,Role,Color,Sequence,@metadata
-Item_1,test,test,test,test,test
-Item_2,test,test,test,test,test
-item_3,test,test,test,test,test"""}
+                       }
         response = self._client.post("/products/", new_product, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIs(Product.objects.filter(name="Product3").exists(), False)
@@ -1261,11 +1198,7 @@ item_3,test,test,test,test,test"""}
                        "created_by": self._janeDoe.id,
                        "project": self._joeBloggsProject.id,
                        "assign_groups": {"jane_group": "r"},
-                       "design_format": "csv",
-                       "design": """Name,Description,Role,Color,Sequence,@metadata
-Item_1,test,test,test,test,test
-Item_2,test,test,test,test,test
-item_3,test,test,test,test,test"""}
+                       }
         response = self._client.post("/products/", new_product, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -1273,7 +1206,7 @@ item_3,test,test,test,test,test"""}
         self.assertIs(Product.objects.filter(name="Product3").exists(), True)
 
     def test_admin_create_any(self):
-        # Admin should be able to create a project on behalf of another user
+        # Admin should be able to create a product on behalf of another user
         self._asAdmin()
         new_product = {"name": "Product3",
                        "status": "Added",
@@ -1282,24 +1215,18 @@ item_3,test,test,test,test,test"""}
                        "created_by": self._janeDoe.id,
                        "project": self._janeDoeProject.id,
                        "assign_groups": {"jane_group": "r"},
-                       "design_format": "csv",
-                       "design": """Name,Description,Role,Color,Sequence,@metadata
-Item_1,test,test,test,test,test
-Item_2,test,test,test,test,test
-item_3,test,test,test,test,test"""}
+                       }
         response = self._client.post("/products/", new_product, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertEqual(Product.objects.count(), 3)
         self.assertIs(Product.objects.filter(name="Product3").exists(), True)
         product = Product.objects.get(name="Product3")
-        self.assertEqual(set(product.linked_inventory.all()), set(self._expecteditems))
         self.assertEqual(product.status, ProductStatus.objects.get(name="Added"))
         self.assertEqual(product.product_type, self._itemtype)
         self.assertEqual(product.optimised_for, self._human)
         self.assertEqual(product.created_by, self._adminUser)
         self.assertEqual(product.project, self._janeDoeProject)
-        self.assertEqual(product.design_format, "csv")
         self.assertEqual(product.product_identifier,
                          '{}-{}'.format(product.project.project_identifier, product.identifier))
 

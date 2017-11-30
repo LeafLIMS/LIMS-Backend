@@ -9,7 +9,7 @@ from lims.filetemplate.models import FileTemplate, FileTemplateField
 from lims.inventory.models import Location, Item, ItemType, AmountMeasure, ItemTransfer
 from lims.equipment.models import Equipment
 from .views import ViewPermissionsMixin
-from lims.projects.models import Project, Order, Product, ProductStatus
+from lims.projects.models import Project, Product, ProductStatus
 from lims.shared.models import Organism
 import json
 from lims.inventory.serializers import ItemTransferPreviewSerializer
@@ -170,7 +170,7 @@ class WorkflowTestCase(LoggedInTestCase):
         wflows = response.data
         self.assertEqual(len(wflows["results"]), 2)
         w = wflows["results"][0]
-        self.assertEqual(w["name"], "Workflow1")
+        self.assertEqual(w["name"], "Workflow2")
 
     def test_user_list_group(self):
         # Jane can see all four because her group permissions permit this
@@ -754,7 +754,7 @@ class TaskTestCase(LoggedInTestCase):
         tasks = response.data
         self.assertEqual(len(tasks["results"]), 2)
         t = tasks["results"][0]
-        self.assertEqual(t["name"], "TaskTempl1")
+        self.assertEqual(t["name"], "TaskTempl2")
 
     def test_user_list_group(self):
         # Jane can see all four because her group permissions permit this
@@ -1281,6 +1281,7 @@ class TaskTestCase(LoggedInTestCase):
                                      updated_task, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    """
     def test_user_recalculate_readwrite_task(self):
         self._setup_test_task_fields()
         updated_task = self._setup_test_task_recalculation()
@@ -1298,6 +1299,7 @@ class TaskTestCase(LoggedInTestCase):
                                      updated_task, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["calculation_fields"][0]["result"], 16.267857142857142)
+    """
 
     def test_user_listall_taskfield_readonly(self):
         self._setup_test_task_fields()
@@ -1348,8 +1350,8 @@ class TaskTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         t = response.data["results"]
         self.assertEqual(len(t), 2)
-        self.assertEqual(t[0]["label"], self._inputField1.label)
-        self.assertEqual(t[1]["label"], self._inputField2.label)
+        self.assertEqual(t[0]["label"], self._inputField2.label)
+        self.assertEqual(t[1]["label"], self._inputField1.label)
         response = self._client.get('/taskfields/?type=%s' % "Output")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         t = response.data["results"]
@@ -1700,55 +1702,38 @@ class RunTestCase(LoggedInTestCase):
         ViewPermissionsMixin().assign_permissions(instance=self._task3,
                                                   permissions={"jane_group": "rw"})
         self._human = Organism.objects.create(name="Homo sapiens", common_name="Human")
+        self._location, c = Location.objects.get_or_create(name="Lab", code="L")
         self._itemLW = Item.objects.create(name="Item_LW", item_type=self._prodinput,
                                            amount_measure=self._millilitre,
+                                           location=self._location,
                                            amount_available=10,
                                            added_by=self._joeBloggs, identifier="iLW")
         self._item1 = Item.objects.create(name="Item_1", item_type=self._prodinput,
                                           amount_measure=self._millilitre,
+                                          location=self._location,
                                           amount_available=10,
                                           added_by=self._joeBloggs, identifier="i1")
         self._item2 = Item.objects.create(name="Item_2", item_type=self._prodinput,
                                           amount_measure=self._millilitre,
+                                          location=self._location,
                                           amount_available=20,
                                           added_by=self._joeBloggs, identifier="i2")
         self._item3 = Item.objects.create(name="item_3", item_type=self._prodinput,
                                           amount_measure=self._millilitre,
+                                          location=self._location,
                                           amount_available=30,
                                           added_by=self._joeBloggs, identifier="i3")
 
-        self._joeBloggsOrder = \
-            Order.objects.create(name="Order1",
-                                 data={},
-                                 user=self._joeBloggs,
-                                 is_quote=False,
-                                 quote_sent=False,
-                                 po_receieved=False,
-                                 po_reference=None,
-                                 invoice_sent=False,
-                                 has_paid=False)
         self._joeBloggsProject = \
             Project.objects.create(name="Joe's Project",
                                    description="Awfully interesting",
-                                   order=self._joeBloggsOrder,
                                    created_by=self._joeBloggs,
                                    archive=False,
                                    primary_lab_contact=self._staffUser)
 
-        self._janeDoeOrder = \
-            Order.objects.create(name="Order2",
-                                 data={},
-                                 user=self._janeDoe,
-                                 is_quote=False,
-                                 quote_sent=False,
-                                 po_receieved=False,
-                                 po_reference=None,
-                                 invoice_sent=False,
-                                 has_paid=False)
         self._janeDoeProject = \
             Project.objects.create(name="Jane's Project",
                                    description="Even more insightful",
-                                   order=self._janeDoeOrder,
                                    created_by=self._janeDoe,
                                    archive=True,
                                    primary_lab_contact=self._staffUser)
@@ -2334,6 +2319,8 @@ class RunTestCase(LoggedInTestCase):
                  "template": self._task3.id}],
             "created_by": self._janeDoe.username}
 
+    # We don't use the recalculate API endpoint any more, will be depreciated & removed soon
+    """
     def test_user_recalculate_nonread_task(self):
         updated_task = self._setup_test_task_recalculation()
         self._asJoeBloggs()
@@ -2364,6 +2351,7 @@ class RunTestCase(LoggedInTestCase):
                                      updated_task, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["calculation_fields"][0]["result"], 16.267857142857142)
+    """
 
     def _prepare_start_task(self, product_input_amount=1.0):
         # TODO add some input_files once file handling in Run is working properly
@@ -2381,17 +2369,17 @@ class RunTestCase(LoggedInTestCase):
                  "lookup_type": self._prodinput.name, "label": "input1",
                  "amount": 2.0, "template": self._task3.id,
                  "barcode": "", "coordinates": "",
-                 "inventory_identifier": "i1", "from_input_file": False},
+                 "inventory_identifier": self._item1.id, "from_input_file": False},
                 {"id:": self._inputField2.id, "measure": self._millilitre.symbol,
                  "lookup_type": self._prodinput.name, "label": "input2",
                  "amount": 3.0, "template": self._task3.id,
                  "barcode": "", "coordinates": "",
-                 "inventory_identifier": "i2", "from_input_file": False}],
+                 "inventory_identifier": self._item2.id, "from_input_file": False}],
             'output_fields': [
                 {"id": self._outputField.id, "measure": self._millilitre.symbol,
                  "lookup_type": self._prodinput.name, "label": "output1",
                  "amount": 5.0, "template": self._task3.id}],
-            'labware_identifier': self._itemLW.identifier,
+            'labware_identifier': self._itemLW.id,
             'calculation_fields': [],
             'step_fields': [],
             'variable_fields': [],
@@ -2513,7 +2501,7 @@ class RunTestCase(LoggedInTestCase):
         # Get status and check data response (without starting task first)
         self._asJoeBloggs()
         response = self._client.get(
-            "/runs/%d/get_file/?id=%d" % (self._run1.id, self._equipTempl1.id), format='json')
+            "/runs/%d/get_file/?file_id=%d" % (self._run1.id, self._equipTempl1.id), format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_get_file_invalid(self):
@@ -2526,7 +2514,7 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(response.data["message"], "Task started successfully")
         # Get status and check data response (without starting task first)
         response = self._client.get(
-            "/runs/%d/get_file/?id=%d" % (self._run1.id, 999), format='json')
+            "/runs/%d/get_file/?file_id=%d" % (self._run1.id, 999), format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["message"], "Template does not exist")
 
@@ -2540,22 +2528,22 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(response.data["message"], "Task started successfully")
         # Get status and check data response (without starting task first)
         response = self._client.get(
-            "/runs/%d/get_file/?id=%d" % (self._run1.id, self._equipTempl1.id), format='json')
+            "/runs/%d/get_file/?file_id=%d" % (self._run1.id, self._equipTempl1.id), format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 5)
         data = {(x["product_name"], x["task_input.name"]): x for x in response.data}
         self.assertEqual(data[("P101-2 Product3", "Item_1")],
                          {"labware_amount": 1,
                           "input2.measure": "ml",
-                          "input2.inventory_identifier": "i2",
+                          "input2.inventory_identifier": str(self._item2.id),
                           "input2.amount": 3.0,
                           "product_name": "P101-2 Product3",
                           "equipment_choice": "Sequencer",
                           "input1.measure": "ml",
-                          "input1.inventory_identifier": "i1",
+                          "input1.inventory_identifier": str(self._item1.id),
                           "input1.amount": 2.0,
                           "created_by": "Joe Bloggs",
-                          "labware_identifier": "iLW",
+                          "labware_identifier": str(self._itemLW.id),
                           "output1.lookup_type": "ExampleStuff",
                           "output1.amount": 5.0,
                           "task": "TaskTempl3",
@@ -2566,15 +2554,15 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(data[("P101-2 Product3", "Item_2")],
                          {"labware_amount": 1,
                           "input2.measure": "ml",
-                          "input2.inventory_identifier": "i2",
+                          "input2.inventory_identifier": str(self._item2.id),
                           "input2.amount": 3.0,
                           "product_name": "P101-2 Product3",
                           "equipment_choice": "Sequencer",
                           "input1.measure": "ml",
-                          "input1.inventory_identifier": "i1",
+                          "input1.inventory_identifier": str(self._item1.id),
                           "input1.amount": 2.0,
                           "created_by": "Joe Bloggs",
-                          "labware_identifier": "iLW",
+                          "labware_identifier": str(self._itemLW.id),
                           "output1.lookup_type": "ExampleStuff",
                           "output1.amount": 5.0,
                           "task": "TaskTempl3",
@@ -2585,15 +2573,15 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(data[("P101-2 Product3", "item_3")],
                          {"labware_amount": 1,
                           "input2.measure": "ml",
-                          "input2.inventory_identifier": "i2",
+                          "input2.inventory_identifier": str(self._item2.id),
                           "input2.amount": 3.0,
                           "product_name": "P101-2 Product3",
                           "equipment_choice": "Sequencer",
                           "input1.measure": "ml",
-                          "input1.inventory_identifier": "i1",
+                          "input1.inventory_identifier": str(self._item1.id),
                           "input1.amount": 2.0,
                           "created_by": "Joe Bloggs",
-                          "labware_identifier": "iLW",
+                          "labware_identifier": str(self._itemLW.id),
                           "output1.lookup_type": "ExampleStuff",
                           "output1.amount": 5.0,
                           "task": "TaskTempl3",
@@ -2604,15 +2592,15 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(data[("P100-1 Product1", "Item_1")],
                          {"labware_amount": 1,
                           "input2.measure": "ml",
-                          "input2.inventory_identifier": "i2",
+                          "input2.inventory_identifier": str(self._item2.id),
                           "input2.amount": 3.0,
                           "product_name": "P100-1 Product1",
                           "equipment_choice": "Sequencer",
                           "input1.measure": "ml",
-                          "input1.inventory_identifier": "i1",
+                          "input1.inventory_identifier": str(self._item1.id),
                           "input1.amount": 2.0,
                           "created_by": "Joe Bloggs",
-                          "labware_identifier": "iLW",
+                          "labware_identifier": str(self._itemLW.id),
                           "output1.lookup_type": "ExampleStuff",
                           "output1.amount": 5.0,
                           "task": "TaskTempl3",
@@ -2623,15 +2611,15 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(data[("P100-1 Product1", "Item_2")],
                          {"labware_amount": 1,
                           "input2.measure": "ml",
-                          "input2.inventory_identifier": "i2",
+                          "input2.inventory_identifier": str(self._item2.id),
                           "input2.amount": 3.0,
                           "product_name": "P100-1 Product1",
                           "equipment_choice": "Sequencer",
                           "input1.measure": "ml",
-                          "input1.inventory_identifier": "i1",
+                          "input1.inventory_identifier": str(self._item1.id),
                           "input1.amount": 2.0,
                           "created_by": "Joe Bloggs",
-                          "labware_identifier": "iLW",
+                          "labware_identifier": str(self._itemLW.id),
                           "output1.lookup_type": "ExampleStuff",
                           "output1.amount": 5.0,
                           "task": "TaskTempl3",
@@ -2650,7 +2638,7 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(response.data["message"], "Task started successfully")
         # Get status and check data response (without starting task first)
         response = self._client.get(
-            "/runs/%d/get_file/?id=%d" % (self._run1.id, self._equipTempl2.id), format='json')
+            "/runs/%d/get_file/?file_id=%d" % (self._run1.id, self._equipTempl2.id), format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 4)
         # TODO Need to fix TaskTemplate.data_to_output_file then implement an appropriate test here
@@ -2686,36 +2674,40 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(response.data["message"], "Task started successfully")
         # Get status and check data response (without starting task first)
         response = self._client.get(
-            "/runs/%d/get_file/?id=%d" % (self._run1.id, self._equipTempl3.id), format='json')
+            "/runs/%d/get_file/?file_id=%d" % (self._run1.id, self._equipTempl3.id), format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
         data = {x["product_name"]: x for x in response.data}
         self.assertEqual(data["P101-2 Product3"], {"labware_amount": 1,
                                                    "input2.measure": "ml",
-                                                   "input2.inventory_identifier": "i2",
+                                                   "input2.inventory_identifier":
+                                                   str(self._item2.id),
                                                    "input2.amount": 3.0,
                                                    "product_name": "P101-2 Product3",
                                                    "equipment_choice": "Sequencer",
                                                    "input1.measure": "ml",
-                                                   "input1.inventory_identifier": "i1",
+                                                   "input1.inventory_identifier":
+                                                   str(self._item1.id),
                                                    "input1.amount": 2.0,
                                                    "created_by": "Joe Bloggs",
-                                                   "labware_identifier": "iLW",
+                                                   "labware_identifier": str(self._itemLW.id),
                                                    "output1.lookup_type": "ExampleStuff",
                                                    "output1.amount": 5.0,
                                                    "task": "TaskTempl3",
                                                    "run": "run1"})
         self.assertEqual(data["P100-1 Product1"], {"labware_amount": 1,
                                                    "input2.measure": "ml",
-                                                   "input2.inventory_identifier": "i2",
+                                                   "input2.inventory_identifier":
+                                                   str(self._item2.id),
                                                    "input2.amount": 3.0,
                                                    "product_name": "P100-1 Product1",
                                                    "equipment_choice": "Sequencer",
                                                    "input1.measure": "ml",
-                                                   "input1.inventory_identifier": "i1",
+                                                   "input1.inventory_identifier":
+                                                   str(self._item1.id),
                                                    "input1.amount": 2.0,
                                                    "created_by": "Joe Bloggs",
-                                                   "labware_identifier": "iLW",
+                                                   "labware_identifier": str(self._itemLW.id),
                                                    "output1.lookup_type": "ExampleStuff",
                                                    "output1.amount": 5.0,
                                                    "task": "TaskTempl3",

@@ -13,7 +13,6 @@ class Migration(migrations.Migration):
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('inventory', '0001_initial'),
         ('shared', '0001_initial'),
-        ('orders', '0001_initial'),
         ('contenttypes', '0002_remove_content_type_name'),
     ]
 
@@ -63,7 +62,6 @@ class Migration(migrations.Migration):
                 ('date_started', models.DateTimeField(auto_now_add=True)),
                 ('archive', models.BooleanField(default=False)),
                 ('project_identifier', models.CharField(default='', max_length=20)),
-                ('order', models.ForeignKey(null=True, related_name='associated_projects', to='orders.Order', blank=True)),
                 ('primary_lab_contact', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
             ],
             options={

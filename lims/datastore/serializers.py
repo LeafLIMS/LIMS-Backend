@@ -8,6 +8,7 @@ from .models import DataFile, DataEntry, Attachment
 class DataFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DataFile
+        fields = '__all__'
 
 
 class DataEntrySerializer(serializers.ModelSerializer):
@@ -27,6 +28,7 @@ class DataEntrySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DataEntry
+        fields = '__all__'
 
 
 class CompactDataEntrySerializer(DataEntrySerializer):
@@ -46,3 +48,4 @@ class AttachmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Attachment
+        fields = '__all__'

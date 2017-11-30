@@ -21,5 +21,8 @@ class PriceBook(models.Model):
 
     prices = models.ManyToManyField(Price, blank=True)
 
+    class Meta:
+        ordering = ['-id']
+
     def __str__(self):
         return self.name

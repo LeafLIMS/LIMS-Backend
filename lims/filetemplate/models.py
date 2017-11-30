@@ -23,6 +23,9 @@ class FileTemplate(models.Model):
     # By default each input is broken down per product
     total_inputs_only = models.BooleanField(default=False)
 
+    class Meta:
+        ordering = ['-id']
+
     def field_name(self):
         return self.name.lower().replace(' ', '_')
 

@@ -62,6 +62,9 @@ class EquipmentReservation(models.Model):
 
     reservation_details = models.TextField(null=True, blank=True)
 
+    class Meta:
+        ordering = ['start']
+
     def full_user_name(self):
         return '{} {}'.format(self.reserved_by.first_name,
                               self.reserved_by.last_name)
@@ -83,4 +86,4 @@ class EquipmentReservation(models.Model):
         super(EquipmentReservation, self).save(*args, **kwargs)
 
     def title(self):
-        return self.full_user_name()
+        return self.full_user_name() if self.reserved_by.first_name else self.reserved_by.username

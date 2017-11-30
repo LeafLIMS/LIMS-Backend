@@ -51,7 +51,7 @@ class ObtainAuthToken(APIView):
 
 
 class UserFilter(django_filters.FilterSet):
-    has_crm_details = django_filters.MethodFilter()
+    has_crm_details = django_filters.CharFilter(method='filter_has_crm_details')
 
     def filter_has_crm_details(self, queryset, value):
         if value == 'False':
@@ -73,11 +73,13 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsInAdminGroupOrTheUser,)
+    search_fields = ('username', 'email')
     filter_class = UserFilter
 
     def get_queryset(self):
         if self.request.user.groups.filter(name='admin').exists():
-            return User.objects.all()
+            # Exclude the system specific AnonymousUser from results as deleting could cause issues
+            return User.objects.exclude(username='AnonymousUser')
         else:
             return User.objects.filter(username=self.request.user.username)
 
@@ -96,6 +98,11 @@ class UserViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
             raise ValidationError({'message':
                                   'You do not have permissions to change this users password'})
         raise ValidationError({'message': 'You must supply a new password'})
+
+    @list_route(methods=['get'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
 
     @list_route(permission_classes=[IsAuthenticated])
     def staff(self, request):
@@ -199,3 +206,10 @@ class GroupViewSet(AuditTrailViewMixin, viewsets.ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = (IsInAdminGroupOrRO,)
+    search_fields = ('name',)
+
+    def get_queryset(self):
+        if self.request.user.groups.filter(name='admin').exists():
+            return Group.objects.all()
+        else:
+            return self.request.user.groups.all()

@@ -5,23 +5,25 @@ from django.conf import settings
 
 from rest_framework import routers
 
+from rest_framework_jwt.views import obtain_jwt_token
+
 from channels.routing import route
 
-from lims.users.views import ObtainAuthToken, UserViewSet, GroupViewSet
+from lims.users.views import UserViewSet, GroupViewSet
 from lims.permissions.views import PermissionViewSet
 
 from lims.shared.views import OrganismViewSet, TriggerAlertStatusViewSet, TriggerSetViewSet, \
     TriggerViewSet, TriggerSubscriptionViewSet
 from lims.shared.consumers import send_email
 
-from lims.orders.views import OrderViewSet
 from lims.addressbook.views import AddressViewSet
 from lims.pricebook.views import PriceBookViewSet
 
 from lims.inventory.views import (InventoryViewSet, SetViewSet, MeasureViewSet, ItemTypeViewSet,
                                   LocationViewSet, ItemTransferViewSet)
 from lims.codonusage.views import CodonUsageTableViewSet
-from lims.projects.views import (ProjectViewSet, ProductViewSet, ProductStatusViewSet)
+from lims.projects.views import (ProjectViewSet, ProductViewSet, ProductStatusViewSet,
+                                 ProjectStatusViewSet)
 from lims.workflows.views import (WorkflowViewSet, RunViewSet,
                                   TaskViewSet, TaskFieldViewSet)
 
@@ -34,7 +36,6 @@ from lims.crm.views import (CRMUserView, CRMProjectView, CRMUpdateProjectView, C
                             CRMUpdateAccountView)
 
 router = routers.DefaultRouter()
-router.register(r'orders', OrderViewSet, base_name='orders')
 router.register(r'addresses', AddressViewSet, base_name='addresses')
 router.register(r'pricebooks', PriceBookViewSet, base_name='pricebooks')
 router.register(r'codonusage', CodonUsageTableViewSet, base_name='codonusage')
@@ -56,6 +57,7 @@ router.register(r'equipmentreservation', EquipmentReservationViewSet,
                 base_name='equipmentreservation')
 
 router.register(r'projects', ProjectViewSet, base_name='projects')
+router.register(r'projectstatuses', ProjectStatusViewSet, base_name='projectstatuses')
 router.register(r'products', ProductViewSet, base_name='products')
 router.register(r'productstatuses', ProductStatusViewSet, base_name='productstatuses')
 router.register(r'workflows', WorkflowViewSet, base_name='workflows')
@@ -72,7 +74,7 @@ router.register(r'alerts', TriggerAlertStatusViewSet, base_name='alerts')
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^users/token/', ObtainAuthToken.as_view()),
+    url(r'^users/token/', obtain_jwt_token),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     url(r'^crm/user/', CRMUserView.as_view()),
     url(r'^crm/project/update/', CRMUpdateProjectView.as_view()),

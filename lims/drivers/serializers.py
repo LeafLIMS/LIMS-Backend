@@ -20,6 +20,7 @@ class CopyFileDriverSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CopyFileDriver
+        fields = '__all__'
 
     def create(self, validated_data):
         file_paths = validated_data.pop('locations')

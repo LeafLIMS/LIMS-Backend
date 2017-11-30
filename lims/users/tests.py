@@ -91,7 +91,7 @@ class UserTestCase(LoggedInTestCase):
         response = self._client.get('/users/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         users = response.data
-        self.assertEqual(len(users["results"]), 5)
+        self.assertEqual(len(users["results"]), 4)
 
     def test_admin_view_any(self):
         self._asAdmin()
@@ -148,7 +148,7 @@ class UserTestCase(LoggedInTestCase):
         response = self._client.get('/users/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         users = response.data
-        self.assertEqual(len(users["results"]), 6)
+        self.assertEqual(len(users["results"]), 5)
 
     def test_user_edit_own(self):
         self._asJaneDoe()
@@ -308,14 +308,21 @@ class GroupTestCase(LoggedInTestCase):
         response = self._client.get('/groups/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         groups = response.data
-        self.assertEqual(len(groups["results"]), 5)
+        self.assertEqual(len(groups["results"]), 1)
 
     def test_user_view_any(self):
         self._asJoeBloggs()
         response = self._client.get('/groups/%d/' % self._janeGroup.id)
+        # Not part of the group so shouldn't be able to see it
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_user_view_part_of(self):
+        self._asJoeBloggs()
+        response = self._client.get('/groups/%d/' % self._joeGroup.id)
+        # Not part of the group so shouldn't be able to see it
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         group1 = response.data
-        self.assertEqual(group1["name"], "jane_group")
+        self.assertEqual(group1["name"], "joe_group")
 
     def test_admin_list(self):
         self._asAdmin()
@@ -350,12 +357,12 @@ class GroupTestCase(LoggedInTestCase):
         self.assertEqual(set(group.permissions.all()),
                          set([Permission.objects.get(name="Can change equipment")]))
 
-        # Other user sees the new one too
+        # Other user should not see the new one as it does not have the group associated
         self._asJoeBloggs()
         response = self._client.get('/groups/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         groups = response.data
-        self.assertEqual(len(groups["results"]), 6)
+        self.assertEqual(len(groups["results"]), 1)
 
     def test_user_edit_any(self):
         self._asJaneDoe()

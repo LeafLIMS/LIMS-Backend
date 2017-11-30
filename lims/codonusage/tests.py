@@ -35,20 +35,20 @@ class CodonUsageTestCase(LoggedInTestCase):
         self.assertIs(CodonUsageTable.objects.filter(species=organism1).exists(), True)
         codontable1 = CodonUsageTable.objects.get(species=organism1).codons.all()
         self.assertEqual(len(codontable1), 2)
-        codon1_1 = codontable1[0]
+        codon1_1 = codontable1[1]
         self.assertEqual(codon1_1.name, "GAT")
         self.assertEqual(codon1_1.value, 0.1)
-        codon1_2 = codontable1[1]
+        codon1_2 = codontable1[0]
         self.assertEqual(codon1_2.name, "GCT")
         self.assertEqual(codon1_2.value, 0.02)
         # Check codon table for cow
         self.assertIs(CodonUsageTable.objects.filter(species=organism2).exists(), True)
         codontable2 = CodonUsageTable.objects.get(species=organism2).codons.all()
         self.assertEqual(len(codontable2), 2)
-        codon2_1 = codontable2[0]
+        codon2_1 = codontable2[1]
         self.assertEqual(codon2_1.name, "CAG")
         self.assertEqual(codon2_1.value, 0.03)
-        codon2_2 = codontable2[1]
+        codon2_2 = codontable2[0]
         self.assertEqual(codon2_2.name, "CCA")
         self.assertEqual(codon2_2.value, 0.45)
 
@@ -91,11 +91,11 @@ class CodonUsageTestCase(LoggedInTestCase):
         codons1 = response.data
         self.assertEqual(len(codons1), 2)
         codon1 = codons1[0]
-        self.assertEqual(codon1["name"], self._cow_codon1.name)
-        self.assertEqual(codon1["value"], self._cow_codon1.value)
+        self.assertEqual(codon1["name"], self._cow_codon2.name)
+        self.assertEqual(codon1["value"], self._cow_codon2.value)
         codon2 = codons1[1]
-        self.assertEqual(codon2["name"], self._cow_codon2.name)
-        self.assertEqual(codon2["value"], self._cow_codon2.value)
+        self.assertEqual(codon2["name"], self._cow_codon1.name)
+        self.assertEqual(codon2["value"], self._cow_codon1.value)
 
     def test_user_create(self):
         self._asJaneDoe()

@@ -14,6 +14,9 @@ class Organism(models.Model):
     name = models.CharField(max_length=100)
     common_name = models.CharField(max_length=100, blank=True, null=True)
 
+    class Meta:
+        ordering = ['-id']
+
     def __str__(self):
         return self.name
 
@@ -45,10 +48,13 @@ class TriggerSet(models.Model):
                                 default=LOW)
     name = models.TextField(blank=False, null=False, default="My Trigger")
     email_title = models.CharField(max_length=255, blank=False, null=False,
-                                   default='Alert from GET LIMS')
+                                   default='Alert from Leaf LIMS')
     email_template = \
         models.TextField(blank=False, null=False,
                          default='{name}: {model} instance {instance} triggered on {date}.')
+
+    class Meta:
+        ordering = ['-id']
 
     @staticmethod
     def _fire_triggersets(sender, instance=None, created=False, raw=False, **kwargs):
@@ -118,6 +124,9 @@ class Trigger(models.Model):
     # fire_on_create = False
     fire_on_create = models.BooleanField(default=False)
 
+    class Meta:
+        ordering = ['-id']
+
     def trigger_fires(self, instance=None, created=False):
         if not instance:
             return False
@@ -154,6 +163,9 @@ class TriggerAlert(models.Model):
     fired = models.DateTimeField(auto_now_add=True)
     instance_id = models.IntegerField()
 
+    class Meta:
+        ordering = ['-id']
+
 
 @reversion.register()
 class TriggerAlertStatus(models.Model):
@@ -173,9 +185,15 @@ class TriggerAlertStatus(models.Model):
                                         on_delete=models.SET_NULL)
     triggeralert = models.ForeignKey(TriggerAlert, related_name="statuses")
 
+    class Meta:
+        ordering = ['-id']
+
 
 @reversion.register()
 class TriggerSubscription(models.Model):
     triggerset = models.ForeignKey(TriggerSet, related_name="subscriptions")
     user = models.ForeignKey(User)
     email = models.BooleanField(default=False, blank=False, null=False)
+
+    class Meta:
+        ordering = ['-id']

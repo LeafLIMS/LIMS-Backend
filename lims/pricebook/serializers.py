@@ -7,6 +7,7 @@ class PriceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Price
+        fields = '__all__'
 
 
 class PriceBookSerializer(serializers.ModelSerializer):
@@ -14,3 +15,4 @@ class PriceBookSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PriceBook
+        fields = '__all__'

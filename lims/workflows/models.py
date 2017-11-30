@@ -16,6 +16,7 @@ class Workflow(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_workflow', 'View workflow',),
         )
@@ -68,15 +69,15 @@ class Run(models.Model):
     """
     name = models.CharField(max_length=100, blank=True, null=True)
 
-    tasks = models.CommaSeparatedIntegerField(max_length=400, blank=True)
+    tasks = models.CharField(max_length=400, blank=True)
     # Cannot be at different stages on a run, start a new one if there
     # are issues (e.g. failures) as these need plates changing etc.
-    current_task = models.IntegerField(default=0)
+    current_task = models.PositiveIntegerField(default=0)
     task_in_progress = models.BooleanField(default=False)
     # Created/updated at the start of every task.
     task_run_identifier = models.UUIDField(null=True, blank=True)
     # Exclude certain items from use
-    exclude = models.CommaSeparatedIntegerField(max_length=400, blank=True, null=True)
+    exclude = models.CharField(max_length=400, blank=True, null=True)
 
     equipment_used = models.ForeignKey(Equipment, blank=True, null=True)
     products = models.ManyToManyField(Product, blank=True,
@@ -140,7 +141,7 @@ class Run(models.Model):
         return valid
 
     class Meta:
-        ordering = ['-date_started']
+        ordering = ['-task_in_progress', '-date_started']
         permissions = (
             ('view_run', 'View run',),
         )
@@ -163,6 +164,7 @@ class TaskTemplate(models.Model):
 
     # The main input to take from the Inventory based on what
     # is attached to the Product
+    # product_input_not_required = models.BooleanField(default=False)
     product_input = models.ForeignKey(ItemType, related_name='product_input')
     product_input_amount = models.IntegerField()
     product_input_measure = models.ForeignKey(AmountMeasure)
@@ -185,6 +187,7 @@ class TaskTemplate(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_tasktemplate', 'View workflow task template',),
         )
@@ -276,9 +279,11 @@ class CalculationFieldTemplate(models.Model):
     result = models.FloatField(null=True, blank=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_calculationfieldtemplate', 'View calculation field template',),
         )
+        unique_together = ('template', 'label')
 
     def field_name(self):
         return self.label.lower().replace(' ', '_')
@@ -306,6 +311,7 @@ class InputFieldTemplate(models.Model):
     calculation_used = models.ForeignKey(CalculationFieldTemplate, null=True, blank=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_inputfieldtemplate', 'View input field template',),
         )
@@ -330,6 +336,7 @@ class VariableFieldTemplate(models.Model):
     measure_not_required = models.BooleanField(default=False)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_variablefieldtemplate', 'View variable field template',),
         )
@@ -354,6 +361,7 @@ class OutputFieldTemplate(models.Model):
     calculation_used = models.ForeignKey(CalculationFieldTemplate, null=True, blank=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_outputfieldtemplate', 'View output field template',),
         )
@@ -372,6 +380,7 @@ class StepFieldTemplate(models.Model):
     description = models.CharField(max_length=200, null=True, blank=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_stepfieldtemplate', 'View step field template',),
         )
@@ -392,6 +401,9 @@ class StepFieldProperty(models.Model):
 
     from_calculation = models.BooleanField(default=False)
     calculation_used = models.ForeignKey(CalculationFieldTemplate, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-id']
 
     def field_name(self):
         return self.label.lower().replace(' ', '_')

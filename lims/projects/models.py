@@ -4,14 +4,31 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 
-from jsonfield import JSONField
+from django.contrib.postgres.fields import JSONField
 
 
 from lims.shared.models import Organism
 from lims.inventory.models import ItemType, Item
-from lims.orders.models import Order
 from lims.crm.models import CRMProject
 from lims.datastore.models import Attachment
+
+
+@reversion.register()
+class ProjectStatus(models.Model):
+    """
+    The status of a product as it moves through workflows
+    """
+    name = models.CharField(max_length=100, unique=True, db_index=True)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-id']
+        permissions = (
+            ('view_projectstatus', 'View project status',),
+        )
+
+    def __str__(self):
+        return self.name
 
 
 @reversion.register()
@@ -31,7 +48,7 @@ class Project(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, null=True)
     identifier = models.IntegerField(default=create_identifier)
-    order = models.ForeignKey(Order, related_name='associated_projects', blank=True, null=True)
+    status = models.ForeignKey(ProjectStatus, null=True, blank=True)
     date_started = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, related_name='created_by')
     archive = models.BooleanField(default=False)
@@ -43,7 +60,11 @@ class Project(models.Model):
 
     crm_project = models.ForeignKey(CRMProject, blank=True, null=True)
 
+    # Generic property support for use by plugins
+    properties = JSONField(null=True, blank=True)
+
     class Meta:
+        ordering = ['-identifier']
         permissions = (
             ('view_project', 'View project',),
         )
@@ -71,6 +92,7 @@ class ProductStatus(models.Model):
     description = models.TextField(blank=True, null=True)
 
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_productstatus', 'View product status',),
         )
@@ -108,6 +130,9 @@ class Product(models.Model):
 
     project = models.ForeignKey(Project)
 
+    #
+    # DEPRECIATION WARNING: THESE ARE TO BE MOVED TO PROPERTIES JSON1G
+    #
     # One design per product as it should only be making (ultimately) one thing
     design = models.TextField(blank=True, null=True)
     design_format = models.CharField(choices=DESIGN_FORMATS,
@@ -122,7 +147,13 @@ class Product(models.Model):
 
     attachments = models.ManyToManyField(Attachment, blank=True)
 
+    # Why JSON? This way we can have primitive properties e.g. number, string
+    # rather than just have everything as a string. It also simplifies the use of
+    # properties for plugins.
+    properties = JSONField(null=True, blank=True)
+
     class Meta:
+        ordering = ['-id']
         permissions = (
             ('view_product', 'View product',),
         )

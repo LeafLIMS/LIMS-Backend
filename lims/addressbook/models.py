@@ -14,5 +14,8 @@ class Address(models.Model):
 
     user = models.ForeignKey(User, related_name='addresses')
 
+    class Meta:
+        ordering = ['-id']
+
     def __str__(self):
         return '{}: {}'.format(self.user.username, self.institution_name)

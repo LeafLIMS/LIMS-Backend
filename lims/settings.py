@@ -14,6 +14,7 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 import os
 import sys
 from ast import literal_eval
+import datetime
 
 TESTMODE = sys.argv[1:2] == ['test']
 
@@ -46,7 +47,6 @@ INSTALLED_APPS = (
     'rest_framework_docs',
     'corsheaders',
     'gm2m',
-    'longerusernameandemail',
     'django_countries',
     'ordered_model',
     'django_extensions',
@@ -54,7 +54,6 @@ INSTALLED_APPS = (
     'guardian',
     'lims.shared',
     'lims.users',
-    'lims.orders',
     'lims.addressbook',
     'lims.pricebook',
     'lims.crm',
@@ -67,6 +66,9 @@ INSTALLED_APPS = (
     'lims.filetemplate',
     'lims.datastore',
     'lims.drivers',
+    'lims.plugins.apps.PluginsConfig',
+    # This is for post-migration data only
+    'lims.zonks',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -229,11 +231,14 @@ WEBAPP_STAFF_ONLY = {
 # REST framework settings
 #
 REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_FILTER_BACKENDS': (
@@ -254,6 +259,13 @@ CORS_ALLOW_HEADERS = (
     'x-csrftoken',
     'Identifier'
 )
+
+#
+# Token settings
+#
+JWT_AUTH = {
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(hours=12),
+}
 
 #
 # App configuration
@@ -298,9 +310,6 @@ DEFAULT_USER_PERMISSIONS = (
     "Can delete trigger subscription",
 )
 DEFAULT_STAFF_PERMISSIONS = (
-    "Can add order",
-    "Can change order",
-    "Can delete order",
     "Can add address",
     "Can change address",
     "Can delete address",
