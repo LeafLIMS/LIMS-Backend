@@ -119,13 +119,18 @@ class CRMProjectView(APIView):
 
         if settings.ENABLE_CRM:
             search = request.query_params.get('search', '')
+            pk = request.query_params.get('id', None)
             sf = Salesforce(instance_url=settings.SALESFORCE_URL,
                             username=settings.SALESFORCE_USERNAME,
                             password=settings.SALESFORCE_PASSWORD,
                             security_token=settings.SALESFORCE_TOKEN)
 
-            projects_query = ("SELECT Id,Name,Description,Project_Status__c, CreatedDate "
-                              "FROM Opportunity WHERE Name LIKE '%{}%'").format(search)
+            if pk is not None:
+                projects_query = ("SELECT Id,Name,Description,Project_Status__c, CreatedDate "
+                                  "FROM Opportunity WHERE Id = '{}'").format(pk)
+            else:
+                projects_query = ("SELECT Id,Name,Description,Project_Status__c, CreatedDate "
+                                  "FROM Opportunity WHERE Name LIKE '%{}%'").format(search)
             projects = sf.query(projects_query)
             return Response({'results': projects['records'],
                              'meta': {'count': len(projects['records'])}})
@@ -402,7 +407,8 @@ class CRMLinkView(APIView):
 
                 project.crm_project = crm_project
 
-                if record.get('Project_Status__c', '') != '':
+                if record.get('Project_Status__c', '') != '' and \
+                   record.get('Project_Status__c') is not None:
                     ps = record.get('Project_Status__c')
                     try:
                         project_status = ProjectStatus.objects.get(name=ps)
