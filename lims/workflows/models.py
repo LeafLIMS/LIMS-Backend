@@ -397,7 +397,7 @@ class StepFieldProperty(models.Model):
     step = models.ForeignKey(StepFieldTemplate, related_name='properties')
     label = models.CharField(max_length=50)
     amount = models.FloatField()
-    measure = models.ForeignKey(AmountMeasure)
+    measure = models.ForeignKey(AmountMeasure, null=True, blank=True)
 
     from_calculation = models.BooleanField(default=False)
     calculation_used = models.ForeignKey(CalculationFieldTemplate, null=True, blank=True)
