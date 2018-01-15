@@ -320,6 +320,7 @@ class CRMLinkView(APIView):
         if settings.ENABLE_CRM:
             crm_identifier = request.data.get('identifier', None)
             project_id = request.data.get('id', None)
+            record = None
 
             if crm_identifier and project_id:
 
@@ -407,7 +408,7 @@ class CRMLinkView(APIView):
 
                 project.crm_project = crm_project
 
-                if record.get('Project_Status__c', '') != '' and \
+                if record and record.get('Project_Status__c', '') != '' and \
                    record.get('Project_Status__c') is not None:
                     ps = record.get('Project_Status__c')
                     try:
@@ -418,4 +419,22 @@ class CRMLinkView(APIView):
 
                 project.save()
             return Response({'message': 'CRM Project linked to Project {}'.format(project_id)})
+        return Response({'message': 'CRM is currently disabled'}, status=501)
+
+    def delete(self, request, format=None):
+        """
+        Links a CRMProject (creating it if not exists) to Project
+        """
+
+        if settings.ENABLE_CRM:
+            project_id = request.query_params.get('project_id', None)
+            try:
+                project = Project.objects.get(id=project_id)
+            except ObjectDoesNotExist:
+                return Response(
+                    {'message': 'Project with ID {} does not exist'.format(project_id)},
+                    status=404)
+            project.crm_project = None
+            project.save()
+            return Response({'message': 'Project unlinked from CRM'}, status=200)
         return Response({'message': 'CRM is currently disabled'}, status=501)
