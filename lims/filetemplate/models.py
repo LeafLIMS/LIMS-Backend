@@ -35,6 +35,8 @@ class FileTemplate(models.Model):
         return field.name
 
     def _validate_headers(self, header_list):
+        if header_list is None:
+            return False
         for field in self.fields.all():
             if field.required and field.name not in header_list:
                 return False
