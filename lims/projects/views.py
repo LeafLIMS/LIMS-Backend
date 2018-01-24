@@ -25,7 +25,7 @@ from lims.datastore.serializers import AttachmentSerializer
 from .models import (Product, ProductStatus, Project, ProjectStatus)
 from .serializers import (ProjectSerializer, ProductSerializer,
                           DetailedProductSerializer, ProductStatusSerializer,
-                          ProjectStatusSerializer)
+                          ProjectStatusSerializer, FullProductSerializer)
 from .parsers import DesignFileParser
 
 from .providers import ProductPluginProvider
@@ -162,6 +162,8 @@ class ProductViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
         # This makes things run more efficiantly.
         if self.action == 'retrieve':
             return DetailedProductSerializer
+        elif self.request.query_params.get('with_data', False):
+            return FullProductSerializer
         return ProductSerializer
 
     def get_object(self):
