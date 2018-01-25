@@ -31,10 +31,13 @@ class PluginMountPoint(type):
 def list_plugins():
     modules = []
     for pd in PLUGIN_DIRECTORIES:
-        for d in os.scandir('./lims/plugins/'+pd):
-            if not d.name.startswith('__') and (d.name.endswith('.py') or d.is_dir()):
-                without_ext = d.name.rsplit('.', 1)
-                modules.append((pd, without_ext[0]))
+        try:
+            for d in os.scandir('./lims/plugins/'+pd):
+                if not d.name.startswith('__') and (d.name.endswith('.py') or d.is_dir()):
+                    without_ext = d.name.rsplit('.', 1)
+                    modules.append((pd, without_ext[0]))
+        except:
+            pass
     return modules
 
 
