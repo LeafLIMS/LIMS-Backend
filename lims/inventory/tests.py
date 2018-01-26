@@ -1,5 +1,4 @@
 import csv
-import json
 from lims.shared.loggedintestcase import LoggedInTestCase
 from lims.filetemplate.models import FileTemplate, FileTemplateField
 from rest_framework import status
@@ -2011,7 +2010,7 @@ class ItemTestCase(LoggedInTestCase):
             upl = SimpleUploadedFile('test.csv', fp.read())
             response = self._client.post(
                 "/inventory/importitems/", {"filetemplate": templ.id,
-                                            "items_file": fp,
+                                            "items_file": upl,
                                             "permissions":
                                                 '{"joe_group": "rw", "jane_group": "r"}'},
                 format='multipart')

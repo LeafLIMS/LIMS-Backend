@@ -80,7 +80,7 @@ class SBOLParser(ProductPluginProvider):
     def read_sbol_file(self, instance):
         file_name = '{name}.sbol'.format(name=instance.product_identifier)
         file_path = "{root}designs/{name}".format(root=settings.MEDIA_ROOT,
-                                                       name=file_name)
+                                                  name=file_name)
         try:
             with open(file_path, 'r') as f:
                 design_file = File(f)
