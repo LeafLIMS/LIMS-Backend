@@ -1,5 +1,4 @@
 import csv
-import json
 from lims.shared.loggedintestcase import LoggedInTestCase
 from lims.filetemplate.models import FileTemplate, FileTemplateField
 from rest_framework import status
@@ -1877,7 +1876,7 @@ class ItemTestCase(LoggedInTestCase):
         filename = 'test.csv'
         file = open(filename, 'w')
         field_names = ['name', 'identifier', 'description', 'item_type', 'amount_available',
-                       'amount_measure', 'location', 'person']
+                       'amount_measure', 'location', 'jim', 'jane', 'joe']
         writer = csv.DictWriter(file, fieldnames=field_names)
         writer.writeheader()
         values = [
@@ -1915,7 +1914,7 @@ class ItemTestCase(LoggedInTestCase):
             upl = SimpleUploadedFile('test.csv', fp.read())
             response = self._client.post(
                 "/inventory/importitems/", {"filetemplate": templ.id,
-                                            "items_file": fp,
+                                            "items_file": upl,
                                             "permissions":
                                                 '{"joe_group": "rw", "jane_group": "r"}'},
                 format='multipart')
@@ -1935,8 +1934,8 @@ class ItemTestCase(LoggedInTestCase):
         self.assertIs(Item.objects.filter(name="Item5").exists(), True)
         i = Item.objects.get(identifier="I5")
         self.assertEqual(i.added_by, self._joeBloggs)
-        self.assertIs(i.properties.filter(name="person").exists(), True)
-        self.assertEqual(i.properties.get(name="person").value, "bloggs")
+        self.assertIs(i.properties.filter(name="joe").exists(), True)
+        self.assertEqual(i.properties.get(name="joe").value, "bloggs")
         self.assertEqual(i.description, "Extremely complicated")
         self.assertEqual(
             ViewPermissionsMixin().current_permissions(instance=i,
@@ -1949,8 +1948,8 @@ class ItemTestCase(LoggedInTestCase):
         self.assertIs(Item.objects.filter(name="Item6").exists(), True)
         i = Item.objects.get(identifier="I6")
         self.assertEqual(i.added_by, self._joeBloggs)
-        self.assertIs(i.properties.filter(name="person").exists(), True)
-        self.assertEqual(i.properties.get(name="person").value, "beam")
+        self.assertIs(i.properties.filter(name="jim").exists(), True)
+        self.assertEqual(i.properties.get(name="jim").value, "beam")
         self.assertEqual(i.description, "Moderately complicated")
         self.assertEqual(
             ViewPermissionsMixin().current_permissions(instance=i,
@@ -2011,7 +2010,7 @@ class ItemTestCase(LoggedInTestCase):
             upl = SimpleUploadedFile('test.csv', fp.read())
             response = self._client.post(
                 "/inventory/importitems/", {"filetemplate": templ.id,
-                                            "items_file": fp,
+                                            "items_file": upl,
                                             "permissions":
                                                 '{"joe_group": "rw", "jane_group": "r"}'},
                 format='multipart')

@@ -9,7 +9,8 @@ from lims.permissions.permissions import (SerializerPermissionsMixin,
                                           SerializerReadOnlyPermissionsMixin)
 from lims.shared.models import Organism
 from .models import (Project, ProjectStatus, Product, ProductStatus, Comment, WorkLog)
-from lims.datastore.serializers import CompactDataEntrySerializer, AttachmentSerializer
+from lims.datastore.serializers import (CompactDataEntrySerializer, AttachmentSerializer,
+                                        DataEntrySerializer)
 
 
 class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
@@ -88,6 +89,10 @@ class DetailedProductSerializer(ProductSerializer):
     linked_inventory = LinkedItemSerializer(many=True, read_only=True)
     data = CompactDataEntrySerializer(many=True, read_only=True)
     attachments = AttachmentSerializer(read_only=True, many=True)
+
+
+class FullProductSerializer(ProductSerializer):
+    data = DataEntrySerializer(many=True, read_only=True)
 
 
 class ProductStatusSerializer(serializers.ModelSerializer):

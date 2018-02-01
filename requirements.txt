@@ -14,7 +14,7 @@ Django==1.11.3
 django-cors-headers==1.1.0
 django-countries==4.6.1
 django-environ==0.4.0
-django-extensions==1.6.1
+django-extensions==1.9.9
 django-filter==1.0.4
 django-gm2m==0.4.10
 django-guardian==1.4.4
@@ -43,7 +43,7 @@ oauthlib==2.0.2
 ordereddict==1.1
 Pint==0.7.2
 posix-ipc==1.0.0
-psycopg2==2.6.1
+psycopg2==2.7.3
 pycodestyle==2.0.0
 pyflakes==1.2.3
 PyJWT==1.5.0
