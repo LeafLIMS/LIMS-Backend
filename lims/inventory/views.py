@@ -80,7 +80,7 @@ class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     search_fields = ('name',)
 
     def filter_queryset(self, queryset):
-        super(LocationViewSet, self).filter_queryset(queryset)
+        queryset = super(LocationViewSet, self).filter_queryset(queryset)
         # Set ordering explicitly as django-filter borks the defaults
         return queryset.order_by('tree_id', 'lft')
 
