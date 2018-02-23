@@ -2770,13 +2770,15 @@ class RunTestCase(LoggedInTestCase):
         self.assertIs(run.labware.filter(is_active=True).exists(), False)
         # Check new Items from OutputFields
         e = success_entries[0]
-        output_name = '{} {}/{}'.format(e.product.product_identifier,
+        output_name = '{} {} {}'.format(e.product.product_identifier,
                                         e.product.name,
                                         "output1")
         self.assertIs(Item.objects.filter(name=output_name).exists(), True)
         output = Item.objects.get(name=output_name)
         self.assertEqual(output.amount_measure, self._millilitre)
-        self.assertEqual(output.identifier, '{}/{}/0'.format(rtri, 0, 0))
+        self.assertEqual(output.identifier,
+                         '{}/{}/{}'.format(self._jimBeamProduct.product_identifier,
+                                          run.id, run.name))
         self.assertEqual(output.item_type, self._prodinput)
         self.assertEqual(output.location, Location.objects.get(name="Lab"))
         self.assertEqual(output.amount_available, 5.0)

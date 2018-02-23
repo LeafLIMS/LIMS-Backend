@@ -779,12 +779,12 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             runindex = 0
             for e in entries:
                 for index, output in enumerate(e.data['output_fields']):
-                    output_name = '{} {}/{}'.format(e.product.product_identifier,
+                    output_name = '{} {} {}'.format(e.product.product_identifier,
                                                     e.product.name,
                                                     output['label'])
                     measure = AmountMeasure.objects.get(symbol=output['measure'])
-                    identifier = '{}/{}/{}'.format(run.task_run_identifier,
-                                                   runindex, index)
+                    identifier = '{}/{}/{}'.format(e.product.product_identifier,
+                                                   e.run.id, e.run.name)
                     runindex += 1
                     location = Location.objects.get(name='Lab')
                     item_type = ItemType.objects.get(name=output['lookup_type'])
