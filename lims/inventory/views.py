@@ -62,7 +62,7 @@ class ItemTypeViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = ItemType.objects.all()
     serializer_class = ItemTypeSerializer
     permission_classes = (IsInAdminGroupOrRO,)
-    search_fields = ('name',)
+    search_fields = ('name', 'parent__name',)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -77,7 +77,7 @@ class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
     permission_classes = (IsInAdminGroupOrRO,)
-    search_fields = ('name',)
+    search_fields = ('name', 'parent__name')
 
     def filter_queryset(self, queryset):
         queryset = super(LocationViewSet, self).filter_queryset(queryset)
@@ -126,7 +126,8 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
     permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
-    search_fields = ('name', 'identifier', 'item_type__name', 'location__name',)
+    search_fields = ('name', 'identifier', 'item_type__name', 'location__name',
+                     'location__parent__name')
     filter_class = InventoryFilterSet
 
     def get_serializer_class(self):
