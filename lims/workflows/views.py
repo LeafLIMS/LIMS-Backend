@@ -10,7 +10,8 @@ from pyparsing import ParseException
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from django.utils import timezone
-from guardian.shortcuts import get_group_perms
+from guardian.shortcuts import (get_groups_with_perms, assign_perm, remove_perm,
+                                get_perms, get_group_perms)
 
 import django_filters
 
@@ -798,6 +799,8 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                         added_by=request.user,
                     )
                     new_item.save()
+                    # Get permissions from project for item
+                    self.clone_group_permissions(e.product.project, new_item)
 
                     product_input_ids = [p for p in e.data['product_inputs']]
                     product_items = Item.objects.filter(id__in=product_input_ids)
