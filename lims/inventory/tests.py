@@ -1835,7 +1835,7 @@ class ItemTestCase(LoggedInTestCase):
                                          template=templ)
         FileTemplateField.objects.create(name="identifier",
                                          required=True,
-                                         is_identifier=True,
+                                         is_identifier=False,
                                          template=templ)
         FileTemplateField.objects.create(name="description",
                                          required=True,

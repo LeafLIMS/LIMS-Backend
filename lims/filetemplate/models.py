@@ -63,7 +63,7 @@ class FileTemplate(models.Model):
                         ifn = [i.name for i in identifier_fields]
                         # We don't want to used identifiers if it's a list as they'll be
                         # discarded.
-                        if is_list and len(ifn) > 0:
+                        if as_list and len(ifn) > 0:
                             return False
 
                         generated_line = {}
