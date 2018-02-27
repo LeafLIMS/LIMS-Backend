@@ -21,6 +21,7 @@ from lims.permissions.permissions import (IsInAdminGroupOrRO,
                                           ExtendedObjectPermissionsFilter)
 from lims.shared.mixins import StatsViewMixin, AuditTrailViewMixin
 from lims.filetemplate.models import FileTemplate
+from lims.projects.models import Product
 from .models import Set, Item, ItemTransfer, ItemType, Location, AmountMeasure
 from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationSerializer,
                           ItemSerializer, DetailedItemSerializer, SetSerializer,
@@ -198,6 +199,14 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
                         item.validated_data['added_by'] = request.user
                         instance = item.save()
                         self.assign_permissions(instance, parsed_permissions)
+                        if 'product' in item_data:
+                            try:
+                                product = Product.objects.get(product_identifier=\
+                                                              item_data['product'])
+                            except:
+                                pass
+                            else:
+                                product.linked_inventory.add(instance)
                     else:
                         item_data['errors'] = item.errors
                         rejected.append(item_data)
