@@ -306,6 +306,9 @@ class InputFieldTemplate(models.Model):
     measure = models.ForeignKey(AmountMeasure)
     lookup_type = models.ForeignKey(ItemType)
 
+    # This relies on the item's identifier following the <product_identifier>/<task field label>
+    # pattern.
+    auto_find_in_inventory = models.BooleanField(default=False)
     from_input_file = models.BooleanField(default=False)
     from_calculation = models.BooleanField(default=False)
     calculation_used = models.ForeignKey(CalculationFieldTemplate, null=True, blank=True)

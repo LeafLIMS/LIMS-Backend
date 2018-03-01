@@ -174,8 +174,8 @@ class ItemProperty(models.Model):
     Represents a singular user defined property of an item
     """
     item = models.ForeignKey(Item, related_name='properties')
-    name = models.CharField(max_length=200)
-    value = models.TextField()
+    name = models.CharField(max_length=200, db_index=True)
+    value = models.TextField(db_index=True)
 
     def __str__(self):
         return self.name

@@ -53,10 +53,11 @@ class InputFieldValueSerializer(serializers.Serializer):
     label = serializers.CharField()
     amount = serializers.FloatField()
     measure = serializers.CharField()
-    inventory_identifier = serializers.CharField()
+    inventory_identifier = serializers.CharField(required=False)
     from_input_file = serializers.NullBooleanField()
     from_calculation = serializers.BooleanField(required=False, default=False)
     calculation_used = serializers.IntegerField(required=False, allow_null=True)
+    auto_find_in_inventory = serializers.BooleanField(required=False, default=False)
 
     destination_barcode = serializers.CharField(required=False, allow_null=True)
     destination_coordinates = serializers.CharField(required=False, allow_null=True)

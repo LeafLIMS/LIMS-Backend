@@ -368,6 +368,17 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         for key, item in data_items.items():
             data_item_amounts[key] = {}
             for field in item['input_fields']:
+                if field['auto_find_in_inventory']:
+                    identifier = '{}/{}'.format(key, field['label'])
+                    try:
+                        # lookup_item = Item.objects.get(identifier=identifier)
+                        lookup_item = Item.objects.filter(properties__name='task_input',
+                                                          properties__value=identifier)[0]
+                    except:
+                        raise serializers.ValidationError({'message':
+                                                          'Item does not exist!'})
+                    else:
+                        field['inventory_identifier'] = lookup_item.id
                 self._update_item_amounts(field, key, data_item_amounts, sum_item_amounts)
 
             for identifier, field in item['product_inputs'].items():
