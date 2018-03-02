@@ -1804,19 +1804,18 @@ class RunTestCase(LoggedInTestCase):
                                           amount_available=30,
                                           added_by=self._joeBloggs,
                                           identifier="item4")
-        item4prop = ItemProperty.objects.create(item=self._item4, name='task_input',
-                                                value="{}/input3".format(self._joeBloggsProduct
-                                                                        .product_identifier))
+        ItemProperty.objects.create(item=self._item4, name='task_input',
+                                    value="{}/input3".format(self._joeBloggsProduct
+                                                             .product_identifier))
         self._item5 = Item.objects.create(name="item_5", item_type=self._prodinput,
                                           amount_measure=self._millilitre,
                                           location=self._location,
                                           amount_available=30,
                                           added_by=self._joeBloggs,
                                           identifier="item5")
-        item5prop = ItemProperty.objects.create(item=self._item5, name='task_input',
-                                                value="{}/input3".format(self._jimBeamProduct
-                                                                        .product_identifier))
-        tid = "{}/input3".format(self._joeBloggsProduct.product_identifier)
+        ItemProperty.objects.create(item=self._item5, name='task_input',
+                                    value="{}/input3".format(self._jimBeamProduct
+                                                             .product_identifier))
 
         self._run1 = \
             Run.objects.create(
@@ -2486,7 +2485,6 @@ class RunTestCase(LoggedInTestCase):
         self._asJoeBloggs()
         response = self._client.post(
             "/runs/%d/start_task/" % self._run1.id, data=start_task)
-        print(response.status_code, response.content)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["message"], "Task started successfully")
         # check update WorkflowProduct uuid and active fields for each Product on ActiveWorkflow
@@ -2814,7 +2812,7 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(output.amount_measure, self._millilitre)
         self.assertEqual(output.identifier,
                          '{}/{}/{}'.format(self._jimBeamProduct.product_identifier,
-                                          run.id, run.name))
+                                           run.id, run.name))
         self.assertEqual(output.item_type, self._prodinput)
         self.assertEqual(output.location, Location.objects.get(name="Lab"))
         self.assertEqual(output.amount_available, 5.0)

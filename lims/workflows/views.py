@@ -10,8 +10,7 @@ from pyparsing import ParseException
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from django.utils import timezone
-from guardian.shortcuts import (get_groups_with_perms, assign_perm, remove_perm,
-                                get_perms, get_group_perms)
+from guardian.shortcuts import get_group_perms
 
 import django_filters
 
@@ -371,7 +370,6 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                 if field['auto_find_in_inventory']:
                     identifier = '{}/{}'.format(key, field['label'])
                     try:
-                        # lookup_item = Item.objects.get(identifier=identifier)
                         lookup_item = Item.objects.filter(properties__name='task_input',
                                                           properties__value=identifier)[0]
                     except:

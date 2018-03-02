@@ -201,8 +201,8 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
                         self.assign_permissions(instance, parsed_permissions)
                         if 'product' in item_data:
                             try:
-                                product = Product.objects.get(product_identifier=\
-                                                              item_data['product'])
+                                prod = item_data['product']
+                                product = Product.objects.get(product_identifier=prod)
                             except:
                                 pass
                             else:
