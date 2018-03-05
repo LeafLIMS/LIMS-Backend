@@ -188,11 +188,11 @@ class ItemTransfer(models.Model):
     """
     item = models.ForeignKey(Item, related_name='transfers')
     # The amount originally taken from the inventory
-    amount_taken = models.IntegerField(default=0)
+    amount_taken = models.FloatField(default=0)
     # The amount now available in this transfer
-    amount_available = models.IntegerField(default=0)
+    amount_available = models.FloatField(default=0)
     # The amount to take from this transfer (set initially as amount_taken)
-    amount_to_take = models.IntegerField(default=0)
+    amount_to_take = models.FloatField(default=0)
     amount_measure = models.ForeignKey(AmountMeasure)
     run_identifier = models.UUIDField(blank=True, null=True, db_index=True)
     barcode = models.CharField(max_length=20, blank=True, null=True, db_index=True)
