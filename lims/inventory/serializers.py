@@ -107,6 +107,7 @@ class ItemSerializer(serializers.ModelSerializer, SerializerPermissionsMixin):
     item_type = serializers.SlugRelatedField(queryset=ItemType.objects.all(), slug_field='name')
     location = serializers.SlugRelatedField(queryset=Location.objects.all(), slug_field='code')
     location_path = serializers.CharField(read_only=True)
+    location_name = serializers.CharField(read_only=True, source='location.display_name')
 
     sets = serializers.SlugRelatedField(read_only=True, slug_field='name')
 
