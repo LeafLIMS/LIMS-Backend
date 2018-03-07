@@ -1643,6 +1643,12 @@ class RunTestCase(LoggedInTestCase):
         self._task4.capable_equipment.add(self._equipmentSequencer)
         self._task4.input_files.add(self._inputTempl)
         self._task4.output_files.add(self._outputTempl)
+        self._task5 = TaskTemplate.objects.create(name="TaskTempl5",
+                                                  description="Fifth",
+                                                  product_input_not_required=True,
+                                                  labware_not_required=True,
+                                                  created_by=self._joeBloggs)
+        self._task5.capable_equipment.add(self._equipmentSequencer)
 
         calc = "{input1}+{input2}*{output1]}/{variable1}*{prop1}+{product_input_amount}"
         self._calcField = CalculationFieldTemplate.objects.create(template=self._task3,
@@ -1844,6 +1850,18 @@ class RunTestCase(LoggedInTestCase):
                                                   permissions={"jane_group": "rw"})
         self._run2.save()
 
+        self._runA = \
+            Run.objects.create(
+                name="runA",
+                tasks='%d' % (self._task5.id),
+                started_by=self._janeDoe)
+        self._runA.products.add(self._joeBloggsProduct)
+        self._runA.products.add(self._jimBeamProduct)
+        ViewPermissionsMixin().assign_permissions(instance=self._runA,
+                                                  permissions={"joe_group": "rw",
+                                                               "jane_group": "rw"})
+        self._runA.save()
+
         # We also have to give Joe and Jane permission to view, change and delete runs in
         # general.
         self._joeBloggs.user_permissions.add(
@@ -1863,7 +1881,7 @@ class RunTestCase(LoggedInTestCase):
             Permission.objects.get(codename="delete_run"))
 
     def test_presets(self):
-        self.assertEqual(Run.objects.count(), 2)
+        self.assertEqual(Run.objects.count(), 3)
         self.assertIs(Run.objects.filter(name="run1").exists(), True)
         self.assertIs(Run.objects.filter(name="run2").exists(), True)
 
@@ -1887,9 +1905,9 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 1)
+        self.assertEqual(len(runs["results"]), 2)
         r = runs["results"][0]
-        self.assertEqual(r["name"], "run1")
+        self.assertEqual(r["name"], "runA")
 
     def test_user_list_group(self):
         # Jane can see all because her group permissions permit this
@@ -1897,7 +1915,7 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 2)
+        self.assertEqual(len(runs["results"]), 3)
 
     def test_user_view_own(self):
         self._asJoeBloggs()
@@ -1925,7 +1943,7 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 2)
+        self.assertEqual(len(runs["results"]), 3)
 
     def test_admin_view_any(self):
         self._asAdmin()
@@ -1942,7 +1960,7 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.post("/runs/", new_run, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        self.assertEqual(Run.objects.count(), 3)
+        self.assertEqual(Run.objects.count(), 4)
         self.assertEqual(Run.objects.filter(name="run3").count(), 1)
         r = Run.objects.filter(name="run3").all()[0]
         self.assertEqual(r.started_by, self._janeDoe)
@@ -1953,12 +1971,12 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 1)
+        self.assertEqual(len(runs["results"]), 2)
         self._asJaneDoe()
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 3)
+        self.assertEqual(len(runs["results"]), 4)
 
     def test_admin_create(self):
         # Admin should be able to create a set for someone else
@@ -1969,7 +1987,7 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.post("/runs/", new_run, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        self.assertEqual(Run.objects.count(), 3)
+        self.assertEqual(Run.objects.count(), 4)
         self.assertEqual(Run.objects.filter(name="run3").count(), 1)
         r = Run.objects.filter(name="run3").all()[0]
         self.assertEqual(r.started_by, self._adminUser)
@@ -1980,12 +1998,12 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 1)
+        self.assertEqual(len(runs["results"]), 2)
         self._asJaneDoe()
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 3)
+        self.assertEqual(len(runs["results"]), 4)
 
     def test_user_edit_own(self):
         self._asJoeBloggs()
@@ -2504,6 +2522,37 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(Item.objects.get(id=self._item2.id).amount_available, 13)
         self.assertEqual(Item.objects.get(id=self._item3.id).amount_available, 29)
         self.assertEqual(Item.objects.get(id=self._itemLW.id).amount_available, 9)
+
+    def test_start_task_input_not_required(self):
+        start_task = {"task": json.dumps({
+            "id": self._task4.id,
+            "labware_not_required": True,
+            "product_input_not_required": True,
+            "equipment_choice": self._equipmentSequencer.name,
+            "input_fields": [],
+            'calculation_fields': [],
+            'step_fields': [],
+            'variable_fields': [],
+            'output_fields': [],
+        })}
+        self._asJoeBloggs()
+        response = self._client.post(
+            "/runs/%d/start_task/" % self._runA.id, data=start_task)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["message"], "Task started successfully")
+        # check update WorkflowProduct uuid and active fields for each Product on ActiveWorkflow
+        run = Run.objects.get(id=self._runA.id)
+        # Run me to check tomorrow
+        self.assertEqual(run.data_entries.count(), 2)
+        self.assertIs(run.task_in_progress, True)
+        self.assertIs(run.has_started, True)
+        uuid = run.task_run_identifier
+        # check create ItemTransfers per input item
+        its = ItemTransfer.objects.filter(run_identifier=uuid)
+        self.assertEqual(its.count(), 0)
+        # for it in its.all():
+        #    self.assertIs(it.transfer_complete, True)
+        # check one DataEntry per input product item
 
     def test_monitor_task_inactive(self):
         # Get status and check data response (without starting task first)

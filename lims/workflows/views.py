@@ -26,6 +26,7 @@ from rest_framework.filters import (OrderingFilter,
 from rest_framework.reverse import reverse
 from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework_csv.renderers import CSVRenderer
+from rest_framework.generics import get_object_or_404
 
 from lims.shared.filters import ListFilter
 from lims.permissions.permissions import (ViewPermissionsMixin,
@@ -46,7 +47,9 @@ from .models import (Workflow,  # noqa
                      CalculationFieldTemplate)  # noqa
 from .serializers import (WorkflowSerializer, SimpleTaskTemplateSerializer,  # noqa
                           TaskTemplateSerializer,  # noqa
+                          TaskTemplateNoProductInputSerializer,  # noqa
                           TaskValuesSerializer,  # noqa
+                          TaskValuesNoProductInputSerializer,  # noqa
                           RunSerializer,  # noqa
                           DetailedRunSerializer,  # noqa
                           InputFieldTemplateSerializer,  # noqa
@@ -173,16 +176,18 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         if run.exclude:
             excludes = [v for v in run.exclude.split(',') if v != '']
         task_input_items = {}
-        # TODO: Allow excludes
         for p in run.products.all():
-            input_type_mdl = ItemType.objects.get(name=input_type)
-            # Get all decendents of the item type
-            with_children = input_type_mdl.get_descendants(include_self=True)
-            # Get list of names of types
-            itn = [t.name for t in with_children]
-            items_picked = p.linked_inventory.filter(item_type__name__in=itn) \
-                .exclude(id__in=excludes)
-            task_input_items[p] = list(items_picked)
+            if input_type:
+                input_type_mdl = ItemType.objects.get(name=input_type)
+                # Get all decendents of the item type
+                with_children = input_type_mdl.get_descendants(include_self=True)
+                # Get list of names of types
+                itn = [t.name for t in with_children]
+                items_picked = p.linked_inventory.filter(item_type__name__in=itn) \
+                    .exclude(id__in=excludes)
+                task_input_items[p] = list(items_picked)
+            else:
+                task_input_items[p] = []
         return task_input_items
 
     def _generate_data_dict(self, input_items, task_data):
@@ -479,7 +484,10 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         # Get task data from request as may have been edited to
         # suit current situation.
         task_data = json.loads(self.request.data.get('task', '{}'))
-        serialized_task = TaskValuesSerializer(data=task_data)
+        if task_data.get('product_input_not_required', False):
+            serialized_task = TaskValuesNoProductInputSerializer(data=task_data)
+        else:
+            serialized_task = TaskValuesSerializer(data=task_data)
 
         # Get a list of input file data to be parsed
         file_data = self.request.data.getlist('input_files', [])
@@ -498,7 +506,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             task = run.get_task_at_index(run.current_task)
 
             # Get items from products
-            product_type = serialized_task.validated_data['product_input']
+            product_type = serialized_task.validated_data.get('product_input', None)
             product_input_items = self._get_product_input_items(product_type)
 
             # Process task data against input_items
@@ -882,6 +890,11 @@ class TaskViewSet(AuditTrailViewMixin, ViewPermissionsMixin, viewsets.ModelViewS
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
     search_fields = ('name', 'created_by__username',)
     filter_class = TaskFilterSet
+
+    def get_serializer_class(self):
+        if self.request.data.get('product_input_not_required', False):
+            return TaskTemplateNoProductInputSerializer
+        return TaskTemplateSerializer
 
     def perform_create(self, serializer):
         serializer, permissions = self.clean_serializer_of_permissions(serializer)

@@ -132,11 +132,14 @@ class Run(models.Model):
         valid = {}
         if task:
             for p in self.products.all():
-                input_types = task.product_input.get_descendants(include_self=True)
-                if p.linked_inventory.filter(item_type__in=input_types).count() > 0:
-                    valid[p.id] = True
+                if task.product_input:
+                    input_types = task.product_input.get_descendants(include_self=True)
+                    if p.linked_inventory.filter(item_type__in=input_types).count() > 0:
+                        valid[p.id] = True
+                    else:
+                        valid[p.id] = False
                 else:
-                    valid[p.id] = False
+                    valid[p.id] = True
             return valid
         return valid
 
@@ -164,10 +167,10 @@ class TaskTemplate(models.Model):
 
     # The main input to take from the Inventory based on what
     # is attached to the Product
-    # product_input_not_required = models.BooleanField(default=False)
-    product_input = models.ForeignKey(ItemType, related_name='product_input')
-    product_input_amount = models.IntegerField()
-    product_input_measure = models.ForeignKey(AmountMeasure)
+    product_input_not_required = models.BooleanField(default=False)
+    product_input = models.ForeignKey(ItemType, related_name='product_input', null=True)
+    product_input_amount = models.IntegerField(null=True)
+    product_input_measure = models.ForeignKey(AmountMeasure, null=True)
 
     labware_not_required = models.BooleanField(default=False)
     labware = models.ForeignKey(ItemType, related_name='labware', blank=True, null=True)
@@ -196,7 +199,9 @@ class TaskTemplate(models.Model):
         return 'labware_identifier'
 
     def valid_product_input_types(self):
-        return [v.name for v in self.product_input.get_descendants(include_self=True)]
+        if self.product_input is not None:
+            return [v.name for v in self.product_input.get_descendants(include_self=True)]
+        return []
 
     def _flatten_to_values(self, the_dict):
         flat = {}
