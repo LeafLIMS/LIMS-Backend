@@ -142,10 +142,12 @@ class LocationTestCase(LoggedInTestCase):
         self.assertEqual(m.children.count(), 0)
 
     def test_location_display_name(self):
-        self.assertEqual(self._top.display_name(), '%s' % self._top.name)
-        self.assertEqual(self._middle.display_name(), '\u00a0\u00a0\u00a0 %s' % self._middle.name)
+        self.assertEqual(self._top.display_name(), '{} ({})'.format(self._top.name, self._top.code))
+        self.assertEqual(self._middle.display_name(),
+                         '\u00a0\u00a0\u00a0 {} ({})'.format(self._middle.name, self._middle.code))
         self.assertEqual(self._bottom.display_name(),
-                         '\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 %s' % self._bottom.name)
+                         '\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 {} ({})'.format(self._bottom.name,
+                                                                               self._bottom.code))
 
     def test_location_str(self):
         self.assertEqual(self._top.__str__(), '%s' % self._top.name)

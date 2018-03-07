@@ -84,7 +84,7 @@ class Location(MPTTModel):
     def display_name(self):
         if self.level > 0:
             return '{} {} ({})'.format('\u00a0\u00a0\u00a0' * self.level, self.name, self.code)
-        return self.name
+        return '{} ({})'.format(self.name, self.code)
 
     def __str__(self):
         if self.parent:
