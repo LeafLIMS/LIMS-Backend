@@ -526,16 +526,21 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             transfers = self._create_item_transfers(sum_item_amounts, error_items)
 
             # Check if you can actually use the equipment
-            equipment_name = serialized_task.validated_data['equipment_choice']
-            try:
-                equipment = Equipment.objects.get(name=equipment_name)
-            except Equipment.DoesNotExist:
-                raise serializers.ValidationError({'message':
+            if task.capable_equipment.count() > 0:
+                equipment_name = serialized_task.validated_data['equipment_choice']
+                try:
+                    equipment = Equipment.objects.get(name=equipment_name)
+                except Equipment.DoesNotExist:
+                    raise serializers.ValidationError({'message':
                                                   'Equipment does not exist!'})
+                else:
+                    equipment_status = equipment.status
+            else:
+                equipment_status = 'idle'
 
             if is_check:
                 check_output = {
-                    'equipment_status': equipment.status,
+                    'equipment_status': equipment_status,
                     'errors': errors,
                     'requirements': []
                 }
@@ -544,12 +549,13 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     check_output['requirements'].append(st.data)
                 return Response(check_output)
             else:
-                if equipment.status != 'idle':
-                    raise serializers.ValidationError({'message':
-                                                      'Equipment is currently in use'})
-                equipment.status = 'active'
-                equipment.save()
-                run.equipment_used = equipment
+                if task.capable_equipment.count() > 0:
+                    if equipment.status != 'idle':
+                        raise serializers.ValidationError({'message':
+                                                          'Equipment is currently in use'})
+                    equipment.status = 'active'
+                    equipment.save()
+                    run.equipment_used = equipment
 
                 if not valid_amounts:
                     raise ValidationError({'message': '\n'.join(errors)})
@@ -600,10 +606,11 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             transfers_for_this_task = run.transfers.filter(run_identifier=run.task_run_identifier)
             data_entries = DataEntry.objects.filter(task_run_identifier=run.task_run_identifier)
 
-            equipment = run.equipment_used
-            equipment.status = 'idle'
-            equipment.save()
-            run.equipment_used = None
+            if run.equipment_used:
+                equipment = run.equipment_used
+                equipment.status = 'idle'
+                equipment.save()
+                run.equipment_used = None
 
             # Transfer all the things taken back into the inventory
             for t in transfers_for_this_task:
@@ -827,10 +834,11 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     e.save()
 
             run.task_in_progress = False
-            equipment = run.equipment_used
-            equipment.status = 'idle'
-            equipment.save()
-            run.equipment_used = None
+            if run.equipment_used:
+                equipment = run.equipment_used
+                equipment.status = 'idle'
+                equipment.save()
+                run.equipment_used = None
 
             # advance task by one OR end if no more tasks
             if run.current_task == len(run.get_task_list()) - 1:

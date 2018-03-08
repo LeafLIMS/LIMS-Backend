@@ -84,6 +84,7 @@ class VariableFieldValueSerializer(serializers.Serializer):
     label = serializers.CharField()
     amount = serializers.FloatField()
     measure = serializers.CharField(required=False, allow_null=True)
+    measure_not_required = serializers.NullBooleanField(required=False)
     calculation_used = serializers.IntegerField(required=False, allow_null=True)
 
 
@@ -153,7 +154,7 @@ class StepFieldPropertySerializer(serializers.ModelSerializer):
     class Meta:
         model = StepFieldProperty
         fields = ('id', 'measure', 'amount', 'label',
-                  'from_calculation', 'calculation_used', 'field_name',)
+                  'from_calculation', 'calculation_used', 'measure_not_required', 'field_name',)
 
 
 class StepFieldPropertyValueSerializer(serializers.Serializer):
@@ -164,6 +165,7 @@ class StepFieldPropertyValueSerializer(serializers.Serializer):
     label = serializers.CharField()
     amount = serializers.FloatField()
     measure = serializers.CharField(required=False, allow_null=True)
+    measure_not_required = serializers.NullBooleanField(required=False)
     calculation_used = serializers.IntegerField(required=False, allow_null=True)
 
 
@@ -370,7 +372,7 @@ class SimpleTaskTemplateSerializer(TaskTemplateSerializer):
     class Meta:
         model = TaskTemplate
         fields = ('id', 'name', 'description', 'product_input', 'valid_product_input_types',
-                  'capable_equipment', 'created_by', 'date_created',)
+                  'capable_equipment', 'created_by', 'date_created', 'product_input_not_required')
 
 
 class TaskValuesSerializer(serializers.Serializer):
@@ -382,7 +384,7 @@ class TaskValuesSerializer(serializers.Serializer):
     labware_identifier = serializers.CharField(required=False, allow_null=True)
     labware_amount = serializers.IntegerField(required=False)
     labware_barcode = serializers.CharField(required=False, allow_null=True)
-    equipment_choice = serializers.CharField()
+    equipment_choice = serializers.CharField(required=False, allow_null=True)
     input_fields = InputFieldValueSerializer(many=True)
     variable_fields = VariableFieldValueSerializer(many=True)
     calculation_fields = CalculationFieldValueSerializer(many=True)
@@ -391,9 +393,9 @@ class TaskValuesSerializer(serializers.Serializer):
 
 
 class TaskValuesNoProductInputSerializer(TaskValuesSerializer):
-    product_input = serializers.CharField(required=False)
-    product_input_amount = serializers.FloatField(required=False)
-    product_input_measure = serializers.CharField(required=False)
+    product_input = serializers.CharField(required=False, allow_null=True)
+    product_input_amount = serializers.FloatField(required=False, allow_null=True)
+    product_input_measure = serializers.CharField(required=False, allow_null=True)
 
 
 class RunSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):

@@ -409,6 +409,7 @@ class StepFieldProperty(models.Model):
 
     from_calculation = models.BooleanField(default=False)
     calculation_used = models.ForeignKey(CalculationFieldTemplate, null=True, blank=True)
+    measure_not_required = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-id']
