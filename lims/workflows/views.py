@@ -26,7 +26,6 @@ from rest_framework.filters import (OrderingFilter,
 from rest_framework.reverse import reverse
 from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework_csv.renderers import CSVRenderer
-from rest_framework.generics import get_object_or_404
 
 from lims.shared.filters import ListFilter
 from lims.permissions.permissions import (ViewPermissionsMixin,
@@ -532,7 +531,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     equipment = Equipment.objects.get(name=equipment_name)
                 except Equipment.DoesNotExist:
                     raise serializers.ValidationError({'message':
-                                                  'Equipment does not exist!'})
+                                                       'Equipment does not exist!'})
                 else:
                     equipment_status = equipment.status
             else:
