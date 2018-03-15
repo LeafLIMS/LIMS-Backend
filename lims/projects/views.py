@@ -3,6 +3,8 @@ import zipfile
 import codecs
 
 import django_filters
+from datetime import timedelta
+from django.utils.dateparse import parse_datetime
 
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -22,7 +24,7 @@ from lims.permissions.permissions import (IsInAdminGroupOrRO,
 
 from lims.shared.mixins import StatsViewMixin, AuditTrailViewMixin
 from lims.datastore.serializers import AttachmentSerializer
-from .models import (Product, ProductStatus, Project, ProjectStatus)
+from .models import (Product, ProductStatus, Project, ProjectStatus, DeadlineExtension)
 from .serializers import (ProjectSerializer, ProductSerializer,
                           DetailedProductSerializer, ProductStatusSerializer,
                           ProjectStatusSerializer, FullProductSerializer)
@@ -44,7 +46,8 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
     permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
-    filter_fields = ('archive', 'crm_project__status', 'primary_lab_contact',)
+    filter_fields = ('archive', 'crm_project__status', 'primary_lab_contact', 'status__name',
+                     'deadline', 'deadline_status')
     search_fields = ('project_identifier', 'name', 'primary_lab_contact__username',
                      'crm_project__account__user__first_name',
                      'crm_project__account__user__last_name',)
@@ -53,6 +56,24 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
         serializer, permissions = self.clean_serializer_of_permissions(serializer)
         instance = serializer.save(created_by=self.request.user)
         self.assign_permissions(instance, permissions)
+
+    @detail_route(methods=['PATCH'])
+    def update_deadline(self, request, pk=None):
+        if request.data.get('deadline', False) and request.data.get('reason', False):
+            instance = self.get_object()
+            previous_deadline = instance.deadline
+
+            extension = DeadlineExtension(project=instance,
+                                          previous_deadline=previous_deadline,
+                                          extended_by=request.user,
+                                          reason=request.data.get('reason'))
+            extension.save()
+            instance.deadline = parse_datetime(request.data.get('deadline'))
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        return Response({'message': 'You must supply a new deadline and reason for extension'},
+                        status=400)
 
     @detail_route(methods=['POST'])
     def import_products(self, request, pk=None):
