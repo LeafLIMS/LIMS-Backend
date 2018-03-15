@@ -69,7 +69,7 @@ class Location(MPTTModel):
     Provides a physical location for an item
     """
     name = models.CharField(max_length=100)
-    code = models.CharField(max_length=6, unique=True, null=True)
+    code = models.CharField(max_length=12, unique=True, null=True)
     parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
 
     class Meta:
