@@ -69,6 +69,9 @@ class ProjectViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin,
                                           reason=request.data.get('reason'))
             extension.save()
             instance.deadline = parse_datetime(request.data.get('deadline'))
+            if request.data.get('deadline_warn', False):
+                days = int(request.data.get('deadline_warn'))
+                instance.deadline_warn = days
             instance.save()
             serializer = self.get_serializer(instance)
             return Response(serializer.data)
