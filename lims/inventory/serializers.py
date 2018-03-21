@@ -94,7 +94,7 @@ class ItemTransferPreviewSerializer(serializers.ModelSerializer):
 
 
 class ItemSerializer(serializers.ModelSerializer, SerializerPermissionsMixin):
-    tags = serializers.SlugRelatedField(many=True, read_only=True, slug_field='name')
+    # tags = serializers.SlugRelatedField(many=True, read_only=True, slug_field='name')
     added_by = serializers.SlugRelatedField(
         read_only=True,
         slug_field='username'

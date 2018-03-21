@@ -218,6 +218,31 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
             }
         return Response(response_data)
 
+    @list_route(methods=['POST'])
+    def export_items(self, request):
+        # The ID of the file template
+        file_template_id = request.data.get('filetemplate', None)
+        # The ID's of items to get
+        selected = request.data.get('selected', None)
+        if file_template_id:
+            if selected:
+                ids = selected.strip(',').split(',')
+                items = Item.objects.filter(pk__in=ids)
+            else:
+                # The query used to get the results
+                # Query params in URL used NOT in .data
+                items = self.filter_queryset(self.get_queryset())
+            serializer = DetailedItemSerializer(items, many=True)
+            try:
+                file_template = FileTemplate.objects.get(pk=file_template_id)
+            except:
+                return Response({'message': 'File template does not exist'}, status=404)
+            with io.StringIO() as output_file:
+                output_file = file_template.write(output_file, serializer.data)
+                output_file.seek(0)
+                return Response(output_file.read(), content_type='text/csv')
+        return Response({'Please supply a file template and data to export'}, status=400)
+
     @detail_route(methods=['POST'])
     def transfer(self, request, pk=None):
         """

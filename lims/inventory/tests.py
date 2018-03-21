@@ -2115,6 +2115,72 @@ class ItemTestCase(LoggedInTestCase):
 
         self.assertEqual(prod.linked_inventory.count(), 1)
 
+    def test_export_selected_items(self):
+        self._asJoeBloggs()
+        templ = FileTemplate.objects.create(name="ExportItemTemplate",
+                                            file_for="output")
+        FileTemplateField.objects.create(name="name",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="identifier",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="item_type",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="amount_available",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="amount_measure",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="location",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        selected = ",".join([str(self._item1.id), str(self._item2.id), str(self._item4.id)])
+        data = {"filetemplate": templ.id, "selected": selected}
+        response = self._client.post('/inventory/export_items/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_export_search_items(self):
+        self._asJoeBloggs()
+        templ = FileTemplate.objects.create(name="ExportItemTemplate",
+                                            file_for="output")
+        FileTemplateField.objects.create(name="name",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="identifier",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="item_type",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="amount_available",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="amount_measure",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="location",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        data = {"filetemplate": templ.id}
+        path = '/inventory/export_items/?search=Item1'
+        response = self._client.post(path, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_item_get_tags(self):
         self.assertEqual(self._item1.get_tags(), "hello, world")
 
