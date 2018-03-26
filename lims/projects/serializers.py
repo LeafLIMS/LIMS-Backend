@@ -19,6 +19,7 @@ class DeadlineExtensionSerializer(serializers.ModelSerializer):
         read_only=True,
         slug_field='username',
     )
+
     class Meta:
         model = DeadlineExtension
         fields = '__all__'

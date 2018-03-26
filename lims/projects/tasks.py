@@ -2,6 +2,7 @@ from celery import shared_task
 
 from .models import Project
 
+
 @shared_task
 def process_deadlines():
     with_deadlines = Project.objects.filter(deadline__isnull=False)

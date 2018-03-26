@@ -3,7 +3,6 @@ import zipfile
 import codecs
 
 import django_filters
-from datetime import timedelta
 from django.utils.dateparse import parse_datetime
 
 from rest_framework import viewsets
