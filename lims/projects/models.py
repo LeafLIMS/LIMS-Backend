@@ -2,6 +2,8 @@ from django.db import models
 import reversion
 from django.contrib.auth.models import User
 from django.conf import settings
+from datetime import timedelta
+from django.utils import timezone
 
 
 from django.contrib.postgres.fields import JSONField
@@ -58,6 +60,10 @@ class Project(models.Model):
 
     primary_lab_contact = models.ForeignKey(User)
 
+    deadline = models.DateTimeField(null=True, blank=True)
+    deadline_warn = models.IntegerField(default=7)
+    deadline_status = models.CharField(null=True, blank=True, max_length=15)
+
     crm_project = models.ForeignKey(CRMProject, blank=True, null=True)
 
     # Generic property support for use by plugins
@@ -76,11 +82,46 @@ class Project(models.Model):
         return '{}{}'.format(settings.PROJECT_IDENTIFIER_PREFIX, self.identifier)
 
     def save(self, force_insert=False, force_update=False, **kwargs):
+        if self.deadline:
+            if self.past_deadline():
+                self.deadline_status = 'Past'
+            elif self.warn_deadline():
+                self.deadline_status = 'Warn'
+            else:
+                self.deadline_status = 'On Schedule'
         self.project_identifier = self.create_project_identifier()
         super(Project, self).save(force_insert, force_update, **kwargs)
 
+    def warn_deadline(self):
+        if self.deadline:
+            now = timezone.now()
+            warn_from = self.deadline - timedelta(days=self.deadline_warn)
+            if now > warn_from:
+                return True
+        return False
+
+    def past_deadline(self):
+        if self.deadline:
+            now = timezone.now()
+            diff = self.deadline - now
+            if diff.days <= 0:
+                return True
+        return False
+
     def __str__(self):
         return self.name
+
+
+@reversion.register()
+class DeadlineExtension(models.Model):
+    project = models.ForeignKey(Project, related_name='deadline_extensions')
+    previous_deadline = models.DateTimeField()
+    extended_by = models.ForeignKey(User)
+    extended_on = models.DateTimeField(auto_now_add=True)
+    reason = models.TextField()
+
+    def __str__(self):
+        return self.project.name
 
 
 @reversion.register()

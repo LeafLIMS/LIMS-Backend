@@ -6,6 +6,7 @@ from .models import Location, ItemType, AmountMeasure, Set, Item, Tag
 from django.contrib.auth.models import Permission, Group
 from django.core.files.uploadedfile import SimpleUploadedFile
 from .views import ViewPermissionsMixin
+from lims.projects.models import Project, Product, ProductStatus
 import os
 
 
@@ -141,10 +142,12 @@ class LocationTestCase(LoggedInTestCase):
         self.assertEqual(m.children.count(), 0)
 
     def test_location_display_name(self):
-        self.assertEqual(self._top.display_name(), '%s' % self._top.name)
-        self.assertEqual(self._middle.display_name(), '\u00a0\u00a0\u00a0 %s' % self._middle.name)
+        self.assertEqual(self._top.display_name(), '{} ({})'.format(self._top.name, self._top.code))
+        self.assertEqual(self._middle.display_name(),
+                         '\u00a0\u00a0\u00a0 {} ({})'.format(self._middle.name, self._middle.code))
         self.assertEqual(self._bottom.display_name(),
-                         '\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 %s' % self._bottom.name)
+                         '\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 {} ({})'.format(self._bottom.name,
+                                                                               self._bottom.code))
 
     def test_location_str(self):
         self.assertEqual(self._top.__str__(), '%s' % self._top.name)
@@ -1835,7 +1838,7 @@ class ItemTestCase(LoggedInTestCase):
                                          template=templ)
         FileTemplateField.objects.create(name="identifier",
                                          required=True,
-                                         is_identifier=True,
+                                         is_identifier=False,
                                          template=templ)
         FileTemplateField.objects.create(name="description",
                                          required=True,
@@ -2018,6 +2021,165 @@ class ItemTestCase(LoggedInTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["message"], "File is format is incorrect")
+
+    def test_importitems_linked_products(self):
+        self._asJoeBloggs()
+
+        proj = Project.objects.create(name="Test Project", primary_lab_contact=self._joeBloggs,
+                                      created_by=self._joeBloggs)
+        prod_status = ProductStatus.objects.create(name='Test')
+        prod = Product.objects.create(name="Test product", status=prod_status,
+                                      product_type=self._itemtype1, project=proj)
+
+        templ = FileTemplate.objects.create(name="ItemTemplate",
+                                            file_for="input")
+        FileTemplateField.objects.create(name="name",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="identifier",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="description",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="item_type",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="amount_available",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="amount_measure",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="location",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="product",
+                                         required=False,
+                                         is_identifier=False,
+                                         template=templ)
+
+        filename = "test.csv"
+        file = open(filename, "w")
+        field_names = ['name', 'identifier', 'description', 'item_type', 'amount_available',
+                       'amount_measure', 'location', 'product']
+        writer = csv.DictWriter(file, fieldnames=field_names)
+        writer.writeheader()
+        values = [
+            {
+                "name": "Item5",
+                "identifier": "I5",
+                "description": "Extremely complicated",
+                "item_type": self._itemtype1.name,
+                "amount_available": 5,
+                "amount_measure": self._measure.symbol,
+                "location": self._location.code,
+                "product": prod.product_identifier,
+            },
+            {
+                "name": "Item6",
+                "identifier": "I6",
+                "description": "Moderately complicated",
+                "item_type": self._itemtype2.name,
+                "amount_available": 15,
+                "amount_measure": self._measure.symbol,
+                "location": self._location.code,
+            }
+        ]
+        writer.writerows(values)
+        file.close()
+        with open(filename, 'rb') as fp:
+            upl = SimpleUploadedFile('test.csv', fp.read())
+            response = self._client.post(
+                "/inventory/importitems/", {"filetemplate": templ.id,
+                                            "items_file": upl,
+                                            "permissions":
+                                                '{"joe_group": "rw", "jane_group": "r"}'},
+                format='multipart')
+        os.remove(filename)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIs("saved" in response.data, True)
+        self.assertIs("rejected" in response.data, True)
+        saved = response.data["saved"]
+        rejected = response.data["rejected"]
+        self.assertEqual(len(saved), 2)
+        self.assertEqual(len(rejected), 0)
+
+        self.assertEqual(prod.linked_inventory.count(), 1)
+
+    def test_export_selected_items(self):
+        self._asJoeBloggs()
+        templ = FileTemplate.objects.create(name="ExportItemTemplate",
+                                            file_for="output")
+        FileTemplateField.objects.create(name="name",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="identifier",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="item_type",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="amount_available",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="amount_measure",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="location",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        selected = ",".join([str(self._item1.id), str(self._item2.id), str(self._item4.id)])
+        data = {"filetemplate": templ.id, "selected": selected}
+        response = self._client.post('/inventory/export_items/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_export_search_items(self):
+        self._asJoeBloggs()
+        templ = FileTemplate.objects.create(name="ExportItemTemplate",
+                                            file_for="output")
+        FileTemplateField.objects.create(name="name",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="identifier",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="item_type",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="amount_available",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="amount_measure",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        FileTemplateField.objects.create(name="location",
+                                         required=True,
+                                         is_identifier=False,
+                                         template=templ)
+        data = {"filetemplate": templ.id}
+        path = '/inventory/export_items/?search=Item1'
+        response = self._client.post(path, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_item_get_tags(self):
         self.assertEqual(self._item1.get_tags(), "hello, world")

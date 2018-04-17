@@ -42,14 +42,17 @@ class FileTemplate(models.Model):
                 return False
         return True
 
-    def read(self, input_file):
+    def read(self, input_file, as_list=False):
         csv_file = csv.DictReader(input_file)
         try:
             identifier_fields = self.fields.filter(is_identifier=True)
         except ObjectDoesNotExist:
             return False
         else:
-            indexed = {}
+            if as_list:
+                indexed = []
+            else:
+                indexed = {}
             if self._validate_headers(csv_file.fieldnames):
                 for line in csv_file:
                     line = dict([(k, v) for k, v in line.items() if v.strip()])
@@ -58,6 +61,10 @@ class FileTemplate(models.Model):
                         identifier = frozenset(line[n.name] for n in identifier_fields)
                         # Get a list of identifiers and remove from line
                         ifn = [i.name for i in identifier_fields]
+                        # We don't want to used identifiers if it's a list as they'll be
+                        # discarded.
+                        if as_list and len(ifn) > 0:
+                            return False
 
                         generated_line = {}
                         # TODO: Currently we discard extra fields in CSV that are not in
@@ -79,7 +86,10 @@ class FileTemplate(models.Model):
                                 else:
                                     generated_line[field_key] = field_value
 
-                        indexed[identifier] = generated_line
+                        if as_list:
+                            indexed.append(generated_line)
+                        else:
+                            indexed[identifier] = generated_line
                 return indexed
         return False
 

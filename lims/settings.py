@@ -52,6 +52,7 @@ INSTALLED_APPS = (
     'django_extensions',
     'channels',
     'guardian',
+    'django_celery_beat',
     'lims.shared',
     'lims.users',
     'lims.addressbook',

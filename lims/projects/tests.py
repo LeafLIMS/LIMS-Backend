@@ -1,6 +1,8 @@
 from io import BytesIO
 from lims.shared.loggedintestcase import LoggedInTestCase
 from rest_framework import status
+from datetime import timedelta
+from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.conf import settings
 from django.contrib.auth.models import Permission, Group
@@ -66,6 +68,72 @@ class ProjectTestCase(LoggedInTestCase):
         self.assertEqual(project2.primary_lab_contact, self._staffUser)
         self.assertEqual(project2.project_identifier,
                          "{}{}".format(settings.PROJECT_IDENTIFIER_PREFIX, project2.identifier))
+
+    def test_project_deadline_warn(self):
+        self._asJoeBloggs()
+        response = self._client.get('/projects/%d/' % self._joeBloggsProject.id)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        project1 = response.data
+        self.assertEqual(project1["warn_deadline"], False)
+
+        # Add a deadline 5 days in the future
+        now = timezone.now()
+        later = timedelta(days=5)
+        deadline_date = now + later
+        self._joeBloggsProject.deadline = deadline_date
+        self._joeBloggsProject.save()
+
+        response = self._client.get('/projects/%d/' % self._joeBloggsProject.id)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        project1 = response.data
+        self.assertEqual(project1["warn_deadline"], True)
+
+    def test_project_deadline_past(self):
+        self._asJoeBloggs()
+        self._joeBloggsProject.deadline = None
+        self._joeBloggsProject.save()
+        response = self._client.get('/projects/%d/' % self._joeBloggsProject.id)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        project1 = response.data
+        self.assertEqual(project1["past_deadline"], False)
+
+        # Add a deadline 5 days in the past
+        now = timezone.now()
+        later = timedelta(days=5)
+        deadline_date = now - later
+        self._joeBloggsProject.deadline = deadline_date
+        self._joeBloggsProject.save()
+
+        response = self._client.get('/projects/%d/' % self._joeBloggsProject.id)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        project1 = response.data
+        self.assertEqual(project1["past_deadline"], True)
+
+    def test_project_deadline_update(self):
+        self._asJoeBloggs()
+        # Add a deadline 5 days in the future
+        now = timezone.now()
+        later = timedelta(days=5)
+        much_later = timedelta(days=15)
+        old_deadline_date = now + later
+        self._joeBloggsProject.deadline = old_deadline_date
+        self._joeBloggsProject.save()
+        deadline_date = now + much_later
+
+        same_deadline = {
+            "reason": "For testing purposes",
+        }
+        response = self._client.patch('/projects/%d/update_deadline/' % self._joeBloggsProject.id,
+                                      same_deadline, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        updated_deadline = {
+            "deadline": deadline_date,
+            "reason": "For testing purposes",
+        }
+        response = self._client.patch('/projects/%d/update_deadline/' % self._joeBloggsProject.id,
+                                      updated_deadline, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_access_anonymous(self):
         self._asAnonymous()

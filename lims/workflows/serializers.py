@@ -53,10 +53,11 @@ class InputFieldValueSerializer(serializers.Serializer):
     label = serializers.CharField()
     amount = serializers.FloatField()
     measure = serializers.CharField()
-    inventory_identifier = serializers.CharField()
+    inventory_identifier = serializers.CharField(required=False)
     from_input_file = serializers.NullBooleanField()
     from_calculation = serializers.BooleanField(required=False, default=False)
     calculation_used = serializers.IntegerField(required=False, allow_null=True)
+    auto_find_in_inventory = serializers.BooleanField(required=False, default=False)
 
     destination_barcode = serializers.CharField(required=False, allow_null=True)
     destination_coordinates = serializers.CharField(required=False, allow_null=True)
@@ -83,6 +84,7 @@ class VariableFieldValueSerializer(serializers.Serializer):
     label = serializers.CharField()
     amount = serializers.FloatField()
     measure = serializers.CharField(required=False, allow_null=True)
+    measure_not_required = serializers.NullBooleanField(required=False)
     calculation_used = serializers.IntegerField(required=False, allow_null=True)
 
 
@@ -143,14 +145,16 @@ class StepFieldPropertySerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(allow_null=True, required=False)
     measure = serializers.SlugRelatedField(
         queryset=AmountMeasure.objects.all(),
-        slug_field='symbol'
+        slug_field='symbol',
+        required=False,
+        allow_null=True,
     )
     field_name = serializers.CharField(read_only=True)
 
     class Meta:
         model = StepFieldProperty
         fields = ('id', 'measure', 'amount', 'label',
-                  'from_calculation', 'calculation_used', 'field_name',)
+                  'from_calculation', 'calculation_used', 'measure_not_required', 'field_name',)
 
 
 class StepFieldPropertyValueSerializer(serializers.Serializer):
@@ -160,7 +164,8 @@ class StepFieldPropertyValueSerializer(serializers.Serializer):
     id = serializers.IntegerField(required=False, allow_null=True)
     label = serializers.CharField()
     amount = serializers.FloatField()
-    measure = serializers.CharField()
+    measure = serializers.CharField(required=False, allow_null=True)
+    measure_not_required = serializers.NullBooleanField(required=False)
     calculation_used = serializers.IntegerField(required=False, allow_null=True)
 
 
@@ -191,7 +196,7 @@ class StepFieldTemplateSerializer(serializers.ModelSerializer):
         instance.description = validated_data.get('description', instance.description)
         instance.save()
 
-        property_ids = [item['id'] for item in properties_data]
+        property_ids = [item['id'] for item in properties_data if 'id' in item]
         for field in properties.all():
             if field.id not in property_ids:
                 field.delete()
@@ -224,9 +229,11 @@ class TaskTemplateSerializer(SerializerPermissionsMixin, serializers.ModelSerial
     )
     labware = serializers.SlugRelatedField(
         required=False,
+        allow_null=True,
         queryset=ItemType.objects.all(),
         slug_field='name'
     )
+    labware_amount = serializers.IntegerField(required=False)
     capable_equipment = serializers.SlugRelatedField(
         required=False,
         many=True,
@@ -325,6 +332,22 @@ class TaskTemplateSerializer(SerializerPermissionsMixin, serializers.ModelSerial
         return rep
 
 
+class TaskTemplateNoProductInputSerializer(TaskTemplateSerializer):
+    product_input = serializers.SlugRelatedField(
+        queryset=ItemType.objects.all(),
+        slug_field='name',
+        required=False,
+        allow_null=True,
+    )
+    product_input_measure = serializers.SlugRelatedField(
+        queryset=AmountMeasure.objects.all(),
+        slug_field='symbol',
+        required=False,
+        allow_null=True,
+    )
+    product_input_amount = serializers.FloatField(required=False, allow_null=True)
+
+
 class RecalculateTaskTemplateSerializer(TaskTemplateSerializer):
     """
     Same as TaskTemplateSerializer but with ID's + no save
@@ -349,23 +372,30 @@ class SimpleTaskTemplateSerializer(TaskTemplateSerializer):
     class Meta:
         model = TaskTemplate
         fields = ('id', 'name', 'description', 'product_input', 'valid_product_input_types',
-                  'capable_equipment', 'created_by', 'date_created',)
+                  'capable_equipment', 'created_by', 'date_created', 'product_input_not_required')
 
 
 class TaskValuesSerializer(serializers.Serializer):
+    product_input_not_required = serializers.NullBooleanField(required=False)
     product_input = serializers.CharField()
     product_input_amount = serializers.FloatField()
     product_input_measure = serializers.CharField()
     labware_not_required = serializers.NullBooleanField()
     labware_identifier = serializers.CharField(required=False, allow_null=True)
-    labware_amount = serializers.IntegerField()
+    labware_amount = serializers.IntegerField(required=False)
     labware_barcode = serializers.CharField(required=False, allow_null=True)
-    equipment_choice = serializers.CharField()
+    equipment_choice = serializers.CharField(required=False, allow_null=True)
     input_fields = InputFieldValueSerializer(many=True)
     variable_fields = VariableFieldValueSerializer(many=True)
     calculation_fields = CalculationFieldValueSerializer(many=True)
     output_fields = OutputFieldValueSerializer(many=True)
     step_fields = StepFieldValueSerializer(many=True)
+
+
+class TaskValuesNoProductInputSerializer(TaskValuesSerializer):
+    product_input = serializers.CharField(required=False, allow_null=True)
+    product_input_amount = serializers.FloatField(required=False, allow_null=True)
+    product_input_measure = serializers.CharField(required=False, allow_null=True)
 
 
 class RunSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):

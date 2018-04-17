@@ -69,7 +69,7 @@ class Location(MPTTModel):
     Provides a physical location for an item
     """
     name = models.CharField(max_length=100)
-    code = models.CharField(max_length=6, unique=True, null=True)
+    code = models.CharField(max_length=12, unique=True, null=True)
     parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
 
     class Meta:
@@ -83,8 +83,8 @@ class Location(MPTTModel):
 
     def display_name(self):
         if self.level > 0:
-            return '{} {}'.format('\u00a0\u00a0\u00a0' * self.level, self.name)
-        return self.name
+            return '{} {} ({})'.format('\u00a0\u00a0\u00a0' * self.level, self.name, self.code)
+        return '{} ({})'.format(self.name, self.code)
 
     def __str__(self):
         if self.parent:
@@ -174,8 +174,8 @@ class ItemProperty(models.Model):
     Represents a singular user defined property of an item
     """
     item = models.ForeignKey(Item, related_name='properties')
-    name = models.CharField(max_length=200)
-    value = models.TextField()
+    name = models.CharField(max_length=200, db_index=True)
+    value = models.TextField(db_index=True)
 
     def __str__(self):
         return self.name
@@ -188,11 +188,11 @@ class ItemTransfer(models.Model):
     """
     item = models.ForeignKey(Item, related_name='transfers')
     # The amount originally taken from the inventory
-    amount_taken = models.IntegerField(default=0)
+    amount_taken = models.FloatField(default=0)
     # The amount now available in this transfer
-    amount_available = models.IntegerField(default=0)
+    amount_available = models.FloatField(default=0)
     # The amount to take from this transfer (set initially as amount_taken)
-    amount_to_take = models.IntegerField(default=0)
+    amount_to_take = models.FloatField(default=0)
     amount_measure = models.ForeignKey(AmountMeasure)
     run_identifier = models.UUIDField(blank=True, null=True, db_index=True)
     barcode = models.CharField(max_length=20, blank=True, null=True, db_index=True)

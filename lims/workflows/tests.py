@@ -6,7 +6,8 @@ from .models import Workflow, Run, RunLabware, TaskTemplate, \
     VariableFieldTemplate, OutputFieldTemplate, StepFieldTemplate, StepFieldProperty
 from lims.datastore.models import DataEntry
 from lims.filetemplate.models import FileTemplate, FileTemplateField
-from lims.inventory.models import Location, Item, ItemType, AmountMeasure, ItemTransfer
+from lims.inventory.models import (Location, Item, ItemType, AmountMeasure, ItemTransfer,
+                                   ItemProperty)
 from lims.equipment.models import Equipment
 from .views import ViewPermissionsMixin
 from lims.projects.models import Project, Product, ProductStatus
@@ -1642,6 +1643,12 @@ class RunTestCase(LoggedInTestCase):
         self._task4.capable_equipment.add(self._equipmentSequencer)
         self._task4.input_files.add(self._inputTempl)
         self._task4.output_files.add(self._outputTempl)
+        self._task5 = TaskTemplate.objects.create(name="TaskTempl5",
+                                                  description="Fifth",
+                                                  product_input_not_required=True,
+                                                  labware_not_required=True,
+                                                  created_by=self._joeBloggs)
+        self._task5.capable_equipment.add(self._equipmentSequencer)
 
         calc = "{input1}+{input2}*{output1]}/{variable1}*{prop1}+{product_input_amount}"
         self._calcField = CalculationFieldTemplate.objects.create(template=self._task3,
@@ -1662,6 +1669,14 @@ class RunTestCase(LoggedInTestCase):
                                                               amount=4,
                                                               measure=self._millilitre,
                                                               lookup_type=self._prodinput,
+                                                              from_input_file=False)
+        self._inputField3 = InputFieldTemplate.objects.create(template=self._task3,
+                                                              label='input3',
+                                                              description="Input field 3",
+                                                              amount=4,
+                                                              measure=self._millilitre,
+                                                              lookup_type=self._prodinput,
+                                                              auto_find_in_inventory=True,
                                                               from_input_file=False)
         self._task3.input_fields.add(self._inputField1)
         self._task3.input_fields.add(self._inputField2)
@@ -1788,6 +1803,26 @@ class RunTestCase(LoggedInTestCase):
         self._jimBeamProduct.linked_inventory.add(self._item3)
         self._jimBeamProduct.save()
 
+        # This one uses the product identifier and therefore needs to be underneath the products
+        self._item4 = Item.objects.create(name="item_4", item_type=self._prodinput,
+                                          amount_measure=self._millilitre,
+                                          location=self._location,
+                                          amount_available=30,
+                                          added_by=self._joeBloggs,
+                                          identifier="item4")
+        ItemProperty.objects.create(item=self._item4, name='task_input',
+                                    value="{}/input3".format(self._joeBloggsProduct
+                                                             .product_identifier))
+        self._item5 = Item.objects.create(name="item_5", item_type=self._prodinput,
+                                          amount_measure=self._millilitre,
+                                          location=self._location,
+                                          amount_available=30,
+                                          added_by=self._joeBloggs,
+                                          identifier="item5")
+        ItemProperty.objects.create(item=self._item5, name='task_input',
+                                    value="{}/input3".format(self._jimBeamProduct
+                                                             .product_identifier))
+
         self._run1 = \
             Run.objects.create(
                 name="run1",
@@ -1815,6 +1850,18 @@ class RunTestCase(LoggedInTestCase):
                                                   permissions={"jane_group": "rw"})
         self._run2.save()
 
+        self._runA = \
+            Run.objects.create(
+                name="runA",
+                tasks='%d' % (self._task5.id),
+                started_by=self._janeDoe)
+        self._runA.products.add(self._joeBloggsProduct)
+        self._runA.products.add(self._jimBeamProduct)
+        ViewPermissionsMixin().assign_permissions(instance=self._runA,
+                                                  permissions={"joe_group": "rw",
+                                                               "jane_group": "rw"})
+        self._runA.save()
+
         # We also have to give Joe and Jane permission to view, change and delete runs in
         # general.
         self._joeBloggs.user_permissions.add(
@@ -1834,7 +1881,7 @@ class RunTestCase(LoggedInTestCase):
             Permission.objects.get(codename="delete_run"))
 
     def test_presets(self):
-        self.assertEqual(Run.objects.count(), 2)
+        self.assertEqual(Run.objects.count(), 3)
         self.assertIs(Run.objects.filter(name="run1").exists(), True)
         self.assertIs(Run.objects.filter(name="run2").exists(), True)
 
@@ -1858,9 +1905,9 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 1)
+        self.assertEqual(len(runs["results"]), 2)
         r = runs["results"][0]
-        self.assertEqual(r["name"], "run1")
+        self.assertEqual(r["name"], "runA")
 
     def test_user_list_group(self):
         # Jane can see all because her group permissions permit this
@@ -1868,7 +1915,7 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 2)
+        self.assertEqual(len(runs["results"]), 3)
 
     def test_user_view_own(self):
         self._asJoeBloggs()
@@ -1896,7 +1943,7 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 2)
+        self.assertEqual(len(runs["results"]), 3)
 
     def test_admin_view_any(self):
         self._asAdmin()
@@ -1913,7 +1960,7 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.post("/runs/", new_run, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        self.assertEqual(Run.objects.count(), 3)
+        self.assertEqual(Run.objects.count(), 4)
         self.assertEqual(Run.objects.filter(name="run3").count(), 1)
         r = Run.objects.filter(name="run3").all()[0]
         self.assertEqual(r.started_by, self._janeDoe)
@@ -1924,12 +1971,12 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 1)
+        self.assertEqual(len(runs["results"]), 2)
         self._asJaneDoe()
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 3)
+        self.assertEqual(len(runs["results"]), 4)
 
     def test_admin_create(self):
         # Admin should be able to create a set for someone else
@@ -1940,7 +1987,7 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.post("/runs/", new_run, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        self.assertEqual(Run.objects.count(), 3)
+        self.assertEqual(Run.objects.count(), 4)
         self.assertEqual(Run.objects.filter(name="run3").count(), 1)
         r = Run.objects.filter(name="run3").all()[0]
         self.assertEqual(r.started_by, self._adminUser)
@@ -1951,12 +1998,12 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 1)
+        self.assertEqual(len(runs["results"]), 2)
         self._asJaneDoe()
         response = self._client.get('/runs/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         runs = response.data
-        self.assertEqual(len(runs["results"]), 3)
+        self.assertEqual(len(runs["results"]), 4)
 
     def test_user_edit_own(self):
         self._asJoeBloggs()
@@ -2374,7 +2421,12 @@ class RunTestCase(LoggedInTestCase):
                  "lookup_type": self._prodinput.name, "label": "input2",
                  "amount": 3.0, "template": self._task3.id,
                  "barcode": "", "coordinates": "",
-                 "inventory_identifier": self._item2.id, "from_input_file": False}],
+                 "inventory_identifier": self._item2.id, "from_input_file": False},
+                {"id:": self._inputField3.id, "measure": self._millilitre.symbol,
+                 "lookup_type": self._prodinput.name, "label": "input3",
+                 "amount": 3.0, "template": self._task3.id,
+                 "barcode": "", "coordinates": "",
+                 "auto_find_in_inventory": True, "from_input_file": False}],
             'output_fields': [
                 {"id": self._outputField.id, "measure": self._millilitre.symbol,
                  "lookup_type": self._prodinput.name, "label": "output1",
@@ -2395,7 +2447,7 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # if preview then return [] of ItemTransferPreviewSerializer
         r = response.data["requirements"]
-        self.assertEqual(len(r), 4)
+        self.assertEqual(len(r), 6)
         ir = {x["item"]["identifier"]: x["amount_taken"] for x in r}
         self.assertEqual(ir["i1"], 5)
         self.assertEqual(ir["i2"], 7)
@@ -2460,7 +2512,7 @@ class RunTestCase(LoggedInTestCase):
         uuid = run.task_run_identifier
         # check create ItemTransfers per input item
         its = ItemTransfer.objects.filter(run_identifier=uuid)
-        self.assertEqual(its.count(), 4)
+        self.assertEqual(its.count(), 6)
         # for it in its.all():
         #    self.assertIs(it.transfer_complete, True)
         # check one DataEntry per input product item
@@ -2470,6 +2522,37 @@ class RunTestCase(LoggedInTestCase):
         self.assertEqual(Item.objects.get(id=self._item2.id).amount_available, 13)
         self.assertEqual(Item.objects.get(id=self._item3.id).amount_available, 29)
         self.assertEqual(Item.objects.get(id=self._itemLW.id).amount_available, 9)
+
+    def test_start_task_input_not_required(self):
+        start_task = {"task": json.dumps({
+            "id": self._task4.id,
+            "labware_not_required": True,
+            "product_input_not_required": True,
+            "equipment_choice": self._equipmentSequencer.name,
+            "input_fields": [],
+            'calculation_fields': [],
+            'step_fields': [],
+            'variable_fields': [],
+            'output_fields': [],
+        })}
+        self._asJoeBloggs()
+        response = self._client.post(
+            "/runs/%d/start_task/" % self._runA.id, data=start_task)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["message"], "Task started successfully")
+        # check update WorkflowProduct uuid and active fields for each Product on ActiveWorkflow
+        run = Run.objects.get(id=self._runA.id)
+        # Run me to check tomorrow
+        self.assertEqual(run.data_entries.count(), 2)
+        self.assertIs(run.task_in_progress, True)
+        self.assertIs(run.has_started, True)
+        uuid = run.task_run_identifier
+        # check create ItemTransfers per input item
+        its = ItemTransfer.objects.filter(run_identifier=uuid)
+        self.assertEqual(its.count(), 0)
+        # for it in its.all():
+        #    self.assertIs(it.transfer_complete, True)
+        # check one DataEntry per input product item
 
     def test_monitor_task_inactive(self):
         # Get status and check data response (without starting task first)
@@ -2530,7 +2613,7 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get(
             "/runs/%d/get_file/?file_id=%d" % (self._run1.id, self._equipTempl1.id), format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 5)
+        self.assertEqual(len(response.data), 7)
         data = {(x["product_name"], x["task_input.name"]): x for x in response.data}
         self.assertEqual(data[("P101-2 Product3", "Item_1")],
                          {"labware_amount": 1,
@@ -2640,7 +2723,7 @@ class RunTestCase(LoggedInTestCase):
         response = self._client.get(
             "/runs/%d/get_file/?file_id=%d" % (self._run1.id, self._equipTempl2.id), format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 4)
+        self.assertEqual(len(response.data), 6)
         # TODO Need to fix TaskTemplate.data_to_output_file then implement an appropriate test here
         data = {x["item.identifier"]: x for x in response.data}
         self.assertEqual(data["i1"], {'item.name': 'Item_1',
@@ -2770,13 +2853,15 @@ class RunTestCase(LoggedInTestCase):
         self.assertIs(run.labware.filter(is_active=True).exists(), False)
         # Check new Items from OutputFields
         e = success_entries[0]
-        output_name = '{} {}/{}'.format(e.product.product_identifier,
+        output_name = '{} {} {}'.format(e.product.product_identifier,
                                         e.product.name,
                                         "output1")
         self.assertIs(Item.objects.filter(name=output_name).exists(), True)
         output = Item.objects.get(name=output_name)
         self.assertEqual(output.amount_measure, self._millilitre)
-        self.assertEqual(output.identifier, '{}/{}/0'.format(rtri, 0, 0))
+        self.assertEqual(output.identifier,
+                         '{}/{}/{}'.format(self._jimBeamProduct.product_identifier,
+                                           run.id, run.name))
         self.assertEqual(output.item_type, self._prodinput)
         self.assertEqual(output.location, Location.objects.get(name="Lab"))
         self.assertEqual(output.amount_available, 5.0)
@@ -2802,7 +2887,7 @@ class RunTestCase(LoggedInTestCase):
         runresp = response.data
         self.assertEqual(runresp["name"], "run1")
         self.assertIs(runresp["task_in_progress"], False)
-        self.assertEqual(len(runresp["transfers"]), 4)
+        self.assertEqual(len(runresp["transfers"]), 6)
         self.assertEqual(runresp["started_by"], "Joe Bloggs")
         self.assertIs(runresp["is_active"], True)
         self.assertIs(runresp["has_started"], True)

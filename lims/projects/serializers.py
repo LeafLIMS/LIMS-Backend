@@ -8,9 +8,21 @@ from lims.crm.serializers import CRMProjectSerializer
 from lims.permissions.permissions import (SerializerPermissionsMixin,
                                           SerializerReadOnlyPermissionsMixin)
 from lims.shared.models import Organism
-from .models import (Project, ProjectStatus, Product, ProductStatus, Comment, WorkLog)
+from .models import (Project, ProjectStatus, Product, ProductStatus, Comment, WorkLog,
+                     DeadlineExtension)
 from lims.datastore.serializers import (CompactDataEntrySerializer, AttachmentSerializer,
                                         DataEntrySerializer)
+
+
+class DeadlineExtensionSerializer(serializers.ModelSerializer):
+    extended_by = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username',
+    )
+
+    class Meta:
+        model = DeadlineExtension
+        fields = '__all__'
 
 
 class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer):
@@ -30,6 +42,9 @@ class ProjectSerializer(SerializerPermissionsMixin, serializers.ModelSerializer)
     )
     crm_project = CRMProjectSerializer(read_only=True)
     links = serializers.JSONField(required=False, allow_null=True)
+    past_deadline = serializers.BooleanField(read_only=True)
+    warn_deadline = serializers.BooleanField(read_only=True)
+    deadline_extensions = DeadlineExtensionSerializer(read_only=True, many=True)
 
     class Meta:
         model = Project

@@ -46,7 +46,9 @@ from .models import (Workflow,  # noqa
                      CalculationFieldTemplate)  # noqa
 from .serializers import (WorkflowSerializer, SimpleTaskTemplateSerializer,  # noqa
                           TaskTemplateSerializer,  # noqa
+                          TaskTemplateNoProductInputSerializer,  # noqa
                           TaskValuesSerializer,  # noqa
+                          TaskValuesNoProductInputSerializer,  # noqa
                           RunSerializer,  # noqa
                           DetailedRunSerializer,  # noqa
                           InputFieldTemplateSerializer,  # noqa
@@ -173,16 +175,18 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         if run.exclude:
             excludes = [v for v in run.exclude.split(',') if v != '']
         task_input_items = {}
-        # TODO: Allow excludes
         for p in run.products.all():
-            input_type_mdl = ItemType.objects.get(name=input_type)
-            # Get all decendents of the item type
-            with_children = input_type_mdl.get_descendants(include_self=True)
-            # Get list of names of types
-            itn = [t.name for t in with_children]
-            items_picked = p.linked_inventory.filter(item_type__name__in=itn) \
-                .exclude(id__in=excludes)
-            task_input_items[p] = list(items_picked)
+            if input_type:
+                input_type_mdl = ItemType.objects.get(name=input_type)
+                # Get all decendents of the item type
+                with_children = input_type_mdl.get_descendants(include_self=True)
+                # Get list of names of types
+                itn = [t.name for t in with_children]
+                items_picked = p.linked_inventory.filter(item_type__name__in=itn) \
+                    .exclude(id__in=excludes)
+                task_input_items[p] = list(items_picked)
+            else:
+                task_input_items[p] = []
         return task_input_items
 
     def _generate_data_dict(self, input_items, task_data):
@@ -367,6 +371,16 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         for key, item in data_items.items():
             data_item_amounts[key] = {}
             for field in item['input_fields']:
+                if field['auto_find_in_inventory']:
+                    identifier = '{}/{}'.format(key, field['label'])
+                    try:
+                        lookup_item = Item.objects.filter(properties__name='task_input',
+                                                          properties__value=identifier)[0]
+                    except:
+                        raise serializers.ValidationError({'message':
+                                                          'Item does not exist!'})
+                    else:
+                        field['inventory_identifier'] = lookup_item.id
                 self._update_item_amounts(field, key, data_item_amounts, sum_item_amounts)
 
             for identifier, field in item['product_inputs'].items():
@@ -469,7 +483,10 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
         # Get task data from request as may have been edited to
         # suit current situation.
         task_data = json.loads(self.request.data.get('task', '{}'))
-        serialized_task = TaskValuesSerializer(data=task_data)
+        if task_data.get('product_input_not_required', False):
+            serialized_task = TaskValuesNoProductInputSerializer(data=task_data)
+        else:
+            serialized_task = TaskValuesSerializer(data=task_data)
 
         # Get a list of input file data to be parsed
         file_data = self.request.data.getlist('input_files', [])
@@ -488,7 +505,7 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             task = run.get_task_at_index(run.current_task)
 
             # Get items from products
-            product_type = serialized_task.validated_data['product_input']
+            product_type = serialized_task.validated_data.get('product_input', None)
             product_input_items = self._get_product_input_items(product_type)
 
             # Process task data against input_items
@@ -508,16 +525,21 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             transfers = self._create_item_transfers(sum_item_amounts, error_items)
 
             # Check if you can actually use the equipment
-            equipment_name = serialized_task.validated_data['equipment_choice']
-            try:
-                equipment = Equipment.objects.get(name=equipment_name)
-            except Equipment.DoesNotExist:
-                raise serializers.ValidationError({'message':
-                                                  'Equipment does not exist!'})
+            if task.capable_equipment.count() > 0:
+                equipment_name = serialized_task.validated_data['equipment_choice']
+                try:
+                    equipment = Equipment.objects.get(name=equipment_name)
+                except Equipment.DoesNotExist:
+                    raise serializers.ValidationError({'message':
+                                                       'Equipment does not exist!'})
+                else:
+                    equipment_status = equipment.status
+            else:
+                equipment_status = 'idle'
 
             if is_check:
                 check_output = {
-                    'equipment_status': equipment.status,
+                    'equipment_status': equipment_status,
                     'errors': errors,
                     'requirements': []
                 }
@@ -526,12 +548,13 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     check_output['requirements'].append(st.data)
                 return Response(check_output)
             else:
-                if equipment.status != 'idle':
-                    raise serializers.ValidationError({'message':
-                                                      'Equipment is currently in use'})
-                equipment.status = 'active'
-                equipment.save()
-                run.equipment_used = equipment
+                if task.capable_equipment.count() > 0:
+                    if equipment.status != 'idle':
+                        raise serializers.ValidationError({'message':
+                                                          'Equipment is currently in use'})
+                    equipment.status = 'active'
+                    equipment.save()
+                    run.equipment_used = equipment
 
                 if not valid_amounts:
                     raise ValidationError({'message': '\n'.join(errors)})
@@ -582,10 +605,11 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             transfers_for_this_task = run.transfers.filter(run_identifier=run.task_run_identifier)
             data_entries = DataEntry.objects.filter(task_run_identifier=run.task_run_identifier)
 
-            equipment = run.equipment_used
-            equipment.status = 'idle'
-            equipment.save()
-            run.equipment_used = None
+            if run.equipment_used:
+                equipment = run.equipment_used
+                equipment.status = 'idle'
+                equipment.save()
+                run.equipment_used = None
 
             # Transfer all the things taken back into the inventory
             for t in transfers_for_this_task:
@@ -779,12 +803,12 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
             runindex = 0
             for e in entries:
                 for index, output in enumerate(e.data['output_fields']):
-                    output_name = '{} {}/{}'.format(e.product.product_identifier,
+                    output_name = '{} {} {}'.format(e.product.product_identifier,
                                                     e.product.name,
                                                     output['label'])
                     measure = AmountMeasure.objects.get(symbol=output['measure'])
-                    identifier = '{}/{}/{}'.format(run.task_run_identifier,
-                                                   runindex, index)
+                    identifier = '{}/{}/{}'.format(e.product.product_identifier,
+                                                   e.run.id, e.run.name)
                     runindex += 1
                     location = Location.objects.get(name='Lab')
                     item_type = ItemType.objects.get(name=output['lookup_type'])
@@ -798,6 +822,8 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                         added_by=request.user,
                     )
                     new_item.save()
+                    # Get permissions from project for item
+                    self.clone_group_permissions(e.product.project, new_item)
 
                     product_input_ids = [p for p in e.data['product_inputs']]
                     product_items = Item.objects.filter(id__in=product_input_ids)
@@ -807,10 +833,11 @@ class RunViewSet(AuditTrailViewMixin, ViewPermissionsMixin, StatsViewMixin, view
                     e.save()
 
             run.task_in_progress = False
-            equipment = run.equipment_used
-            equipment.status = 'idle'
-            equipment.save()
-            run.equipment_used = None
+            if run.equipment_used:
+                equipment = run.equipment_used
+                equipment.status = 'idle'
+                equipment.save()
+                run.equipment_used = None
 
             # advance task by one OR end if no more tasks
             if run.current_task == len(run.get_task_list()) - 1:
@@ -870,6 +897,11 @@ class TaskViewSet(AuditTrailViewMixin, ViewPermissionsMixin, viewsets.ModelViewS
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
     search_fields = ('name', 'created_by__username',)
     filter_class = TaskFilterSet
+
+    def get_serializer_class(self):
+        if self.request.data.get('product_input_not_required', False):
+            return TaskTemplateNoProductInputSerializer
+        return TaskTemplateSerializer
 
     def perform_create(self, serializer):
         serializer, permissions = self.clean_serializer_of_permissions(serializer)

@@ -21,6 +21,7 @@ from lims.permissions.permissions import (IsInAdminGroupOrRO,
                                           ExtendedObjectPermissionsFilter)
 from lims.shared.mixins import StatsViewMixin, AuditTrailViewMixin
 from lims.filetemplate.models import FileTemplate
+from lims.projects.models import Product
 from .models import Set, Item, ItemTransfer, ItemType, Location, AmountMeasure
 from .serializers import (AmountMeasureSerializer, ItemTypeSerializer, LocationSerializer,
                           ItemSerializer, DetailedItemSerializer, SetSerializer,
@@ -62,7 +63,7 @@ class ItemTypeViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = ItemType.objects.all()
     serializer_class = ItemTypeSerializer
     permission_classes = (IsInAdminGroupOrRO,)
-    search_fields = ('name',)
+    search_fields = ('name', 'parent__name',)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -77,10 +78,10 @@ class LocationViewSet(viewsets.ModelViewSet, LeveledMixin):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
     permission_classes = (IsInAdminGroupOrRO,)
-    search_fields = ('name',)
+    search_fields = ('name', 'parent__name')
 
     def filter_queryset(self, queryset):
-        super(LocationViewSet, self).filter_queryset(queryset)
+        queryset = super(LocationViewSet, self).filter_queryset(queryset)
         # Set ordering explicitly as django-filter borks the defaults
         return queryset.order_by('tree_id', 'lft')
 
@@ -126,7 +127,8 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
     permission_classes = (ExtendedObjectPermissions,)
     filter_backends = (SearchFilter, DjangoFilterBackend,
                        OrderingFilter, ExtendedObjectPermissionsFilter,)
-    search_fields = ('name', 'identifier', 'item_type__name', 'location__name',)
+    search_fields = ('name', 'identifier', 'item_type__name', 'location__name',
+                     'location__parent__name')
     filter_class = InventoryFilterSet
 
     def get_serializer_class(self):
@@ -176,15 +178,12 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
                 return Response({'message': 'File template does not exist'}, status=404)
             encoding = 'utf-8' if request.encoding is None else request.encoding
             f = io.TextIOWrapper(uploaded_file.file, encoding=encoding)
-            # f = io.StringIO("".join(uploaded_file))
-            items_to_import = filetemplate.read(f)
+            items_to_import = filetemplate.read(f, as_list=True)
             saved = []
             rejected = []
             if items_to_import:
-                for identifier, item_data in items_to_import.items():
-                    item_data['identifier'] = ' '.join(identifier)
+                for item_data in items_to_import:
                     item_data['assign_groups'] = json.loads(permissions)
-                    # item_data['assign_groups'] = permissions
                     if 'properties' not in item_data:
                         item_data['properties'] = []
                     '''
@@ -200,6 +199,14 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
                         item.validated_data['added_by'] = request.user
                         instance = item.save()
                         self.assign_permissions(instance, parsed_permissions)
+                        if 'product' in item_data:
+                            try:
+                                prod = item_data['product']
+                                product = Product.objects.get(product_identifier=prod)
+                            except:
+                                pass
+                            else:
+                                product.linked_inventory.add(instance)
                     else:
                         item_data['errors'] = item.errors
                         rejected.append(item_data)
@@ -210,6 +217,31 @@ class InventoryViewSet(LeveledMixin, StatsViewMixin, ViewPermissionsMixin, views
                 'rejected': rejected
             }
         return Response(response_data)
+
+    @list_route(methods=['POST'])
+    def export_items(self, request):
+        # The ID of the file template
+        file_template_id = request.data.get('filetemplate', None)
+        # The ID's of items to get
+        selected = request.data.get('selected', None)
+        if file_template_id:
+            if selected:
+                ids = selected.strip(',').split(',')
+                items = Item.objects.filter(pk__in=ids)
+            else:
+                # The query used to get the results
+                # Query params in URL used NOT in .data
+                items = self.filter_queryset(self.get_queryset())
+            serializer = DetailedItemSerializer(items, many=True)
+            try:
+                file_template = FileTemplate.objects.get(pk=file_template_id)
+            except:
+                return Response({'message': 'File template does not exist'}, status=404)
+            with io.StringIO() as output_file:
+                output_file = file_template.write(output_file, serializer.data)
+                output_file.seek(0)
+                return Response(output_file.read(), content_type='text/csv')
+        return Response({'Please supply a file template and data to export'}, status=400)
 
     @detail_route(methods=['POST'])
     def transfer(self, request, pk=None):
