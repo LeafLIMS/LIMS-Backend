@@ -2,7 +2,7 @@ amqp==2.2.2
 asgi-redis==1.4.2
 asgiref==1.1.2
 attrs==17.2.0
-autobahn==17.6.2
+autobahn==20.12.3
 Automat==0.6.0
 billiard==3.5.0.3
 biopython==1.66
