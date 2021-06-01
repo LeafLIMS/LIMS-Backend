@@ -69,7 +69,7 @@ tlslite==0.4.8
 Twisted==17.5.0
 txaio==2.8.0
 typing==3.6.4
-urllib3==1.21.1
+urllib3==1.26.5
 validators==0.11.2
 vine==1.1.4
 zope.interface==4.4.2
